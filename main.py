@@ -1,5 +1,5 @@
 def main():
-    print("Hello from allinoneeg!")
+    print("Hello from All In One EEG!")
 
 
 if __name__ == "__main__":
