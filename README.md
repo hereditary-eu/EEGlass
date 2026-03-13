@@ -1,21 +1,26 @@
-# bun-react-template
+# All In On(e) EEG
+
+Combination of all frontend and backend utilities, and baseline for xEEG dashboard development.
 
 To install dependencies:
 
 ```bash
+uv install
 bun install
 ```
 
 To start a development server:
 
 ```bash
+uv run fastapi dev backend/app.py
 bun dev
 ```
 
-To run for production:
+To format code:
 
 ```bash
-bun start
+ruff format
+prettier -w .
 ```
 
-This project was created using `bun init` in bun v1.3.10. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+Also useful: `ruff check --fix --unsafe-fixes`.
