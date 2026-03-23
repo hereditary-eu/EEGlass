@@ -1,0 +1,138 @@
+/* ================================
+   Root Variables and Global Styles
+=================================== */
+.neuro-tool {
+  /* Font settings */
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  line-height: 1.5;
+
+  /* Color scheme and theme colors */
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  /* Font rendering optimizations */
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ======================
+   Typography & Structure
+========================= */
+.neuro-tool {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100vh;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+}
+
+.neuro-tool h1 {
+  font-size: 2.8em !important;
+  line-height: 1.1;
+  margin: 0 0 1rem 0;
+  padding: 0;
+}
+
+/* ===============
+   Link Styling
+================= */
+.neuro-tool a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+
+.neuro-tool a:hover {
+  color: #535bf2;
+}
+
+/* ===============
+   Button Styling
+================= */
+.neuro-tool button,
+.neuro-tool .neuro-button {
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: 500;
+  padding: 0.4em 0.5em;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+  /* margin-top: 5px; */
+  /* margin-bottom: 1px; */
+  color: white;
+}
+
+.neuro-tool button:hover,
+.neuro-tool .neuro-button:hover {
+  border-color: #646cff;
+}
+
+.neuro-tool button:focus,
+.neuro-tool button:focus-visible,
+.neuro-tool .neuro-button:focus,
+.neuro-tool .neuro-button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* ====================
+   Custom Button Classes
+======================= */
+.neuro-tool .btn-dark,
+.neuro-tool .neuro-button {
+  background-color: #1a1a1a;
+  border-color: #1a1a1a;
+}
+
+.neuro-tool .btn-dark:hover,
+.neuro-tool .neuro-button:hover {
+  background-color: #1a1a1a !important;
+  border-color: #646cff !important;
+}
+
+/* ======================
+   Offcanvas Dark Mode
+========================= */
+.neuro-tool .dark-offcanvas {
+  background-color: #1e1e1e !important;
+  color: white; /* Improves readability */
+}
+
+.neuro-tool .dark-offcanvas .btn-close {
+  filter: invert(1); /* Makes the "x" white */
+  opacity: 0.8;
+}
+
+.neuro-tool .dark-offcanvas .btn-close:hover {
+  filter: invert(1);
+  opacity: 1;
+}
+
+.neuro-tool input {
+  color: white;
+  /* background-color: #2b2a33; */
+  background-color: #2f2f2f;
+
+  border-radius: 2px;
+  border-color: #777;
+  border-width: 2px;
+  border-style: solid;
+}
+
+.neuro-tool .neuro-close-button {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 999px;
+  line-height: 1;
+  font-weight: 700;
+}

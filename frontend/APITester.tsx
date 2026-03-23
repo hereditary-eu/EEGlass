@@ -1,4 +1,5 @@
 import { useRef, type FormEvent } from "react";
+import { buildApiUrl } from "./shared/runtimeConfig";
 
 export function APITester() {
   const responseInputRef = useRef<HTMLTextAreaElement>(null);
@@ -31,7 +32,7 @@ export function APITester() {
         <input
           type="text"
           name="endpoint"
-          defaultValue="http://localhost:8000/"
+          defaultValue={buildApiUrl("/")}
           className="url-input"
           placeholder="/api/hello"
         />

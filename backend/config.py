@@ -1,9 +1,12 @@
+import logging
 import os
 from openai import OpenAI
-from backend.models.chatbot import ChatRequest
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
 
 class CONFIG:
     # APP
@@ -29,16 +32,29 @@ class CONFIG:
     LOG_LEVEL = "DEBUG"
 
 
-    # chatbot
+    # chatbot — only construct client when OPENAI_API_KEY is set (avoids import-time crash)
+    _api_key = os.getenv("OPENAI_API_KEY")
     if os.getenv("SERVER") == "true":
         MODEL = os.getenv("OPENAI_MODEL", "meta-llama/Llama-3.2-3B-Instruct")
-        client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv(
-                "OPENAI_BASE_URL", "https://hereditary.cgv.tugraz.at/lm/api/v1"
-            ),
-        )
+        if _api_key:
+            client = OpenAI(
+                api_key=_api_key,
+                base_url=os.getenv(
+                    "OPENAI_BASE_URL", "https://hereditary.cgv.tugraz.at/lm/api/v1"
+                ),
+            )
+        else:
+            client = None
+            logger.warning(
+                "OPENAI_API_KEY is not set; chatbot routes will return 503 until it is configured."
+            )
     else:
         MODEL = "gpt-4o-mini"
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    
+        if _api_key:
+            client = OpenAI(api_key=_api_key)
+        else:
+            client = None
+            logger.warning(
+                "OPENAI_API_KEY is not set; chatbot routes will return 503 until it is configured."
+            )
+

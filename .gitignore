@@ -31,3 +31,6 @@ coverage
 
 # data
 data/datasets/
+
+# ruff
+.ruff_cache/
