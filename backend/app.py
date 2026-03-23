@@ -8,11 +8,14 @@ from backend.routers import (
     dataset_router,
     clustering_router,
     shapley_router,
+    chat_router,
 )
 
 
 def create_app():
-    app = FastAPI()
+    app = FastAPI(
+        title=CONFIG.TITLE,
+    )
 
     app.add_middleware(
         CORSMiddleware,
@@ -26,6 +29,7 @@ def create_app():
     app.include_router(dataset_router)
     app.include_router(clustering_router)
     app.include_router(shapley_router)
+    app.include_router(chat_router)
 
     return app
 
