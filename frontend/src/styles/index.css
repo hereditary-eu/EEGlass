@@ -1,0 +1,102 @@
+:root {
+  color: #f3f5f7;
+  background: #101214;
+  font-family:
+    Inter,
+    "Segoe UI",
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  --color-white: #f8fafc;
+  --color-white-gray: rgb(255 255 255 / 10%);
+  --color-white-accent: rgb(255 255 255 / 8%);
+  --color-white-accent-transparent: rgb(255 255 255 / 8%);
+  --color-white-half-transparent: rgb(255 255 255 / 12%);
+  --color-white-transparent: rgb(15 23 42 / 92%);
+  --color-black: #020617;
+  --color-black-transparent: rgb(0 0 0 / 24%);
+  --color-gray-dark: #e2e8f0;
+  --color-gray: #aeb8c5;
+  --color-gray-light: #7b8794;
+  --color-gray-lighter: rgb(255 255 255 / 12%);
+  --color-blue-accent: #7dd3fc;
+  --color-red-accent-transparent: rgb(248 113 113 / 18%);
+  --color-table-rows-odd: rgb(255 255 255 / 4%);
+  --color-table-rows-even: rgb(255 255 255 / 2%);
+  --color-table-rows-hover: rgb(125 211 252 / 12%);
+  --svg-url-compress: url("../assets/compress.svg");
+  --svg-url-expand: url("../assets/expand.svg");
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #101214;
+  color: #f3f5f7;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.app-layout {
+  width: min(1600px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.app-header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.app-eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.74rem;
+  color: #8f9aa8;
+}
+
+.app-title {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 1.05;
+}
+
+.app-subtitle {
+  margin: 0;
+  max-width: 70ch;
+  color: #aeb8c5;
+}
+
+.app-section {
+  padding: 1.5rem;
+  border: 1px solid #2b3138;
+  border-radius: 20px;
+  background: #181b20;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 24%);
+}
+
+.app-section-title {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  color: #f8fafc;
+}

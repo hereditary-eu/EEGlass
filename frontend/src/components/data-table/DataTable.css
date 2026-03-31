@@ -1,0 +1,481 @@
+.cif-data-table.tablePanelContent {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  justify-content: flex-start;
+  min-height: 0;
+  background: #f8fafc;
+  color: #0f172a;
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: inset 0 0 0 1px rgb(15 23 42 / 8%);
+}
+
+.cif-data-table .panelHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  margin-bottom: -4px;
+  padding-bottom: 5px;
+  border-bottom: 2px solid rgb(15 23 42 / 12%);
+  flex-shrink: 0;
+  justify-content: flex-start;
+}
+
+.cif-data-table .headerOptions {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.cif-data-table .hiddenColumnsTags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+
+.cif-data-table .columnTag {
+  display: inline-block;
+  padding: 2px 8px;
+  margin: 2px;
+  background-color: rgb(15 23 42 / 6%);
+  border: 1px solid rgb(15 23 42 / 10%);
+  border-radius: 12px;
+  font-size: 12px;
+  color: #0f172a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cif-data-table .columnTag:hover {
+  background-color: rgb(248 113 113 / 14%);
+  color: #0f172a;
+}
+
+.cif-data-table .viewModeSwitch {
+  display: flex;
+  gap: 2px;
+  margin-right: 8px;
+  background: rgb(15 23 42 / 8%);
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.cif-data-table .viewModeButton {
+  border: none;
+  background: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.cif-data-table .viewModeButtonActive {
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 12%);
+}
+
+.cif-data-table .viewModeButton:hover:not(.viewModeButtonActive) {
+  background: rgb(255 255 255 / 65%);
+}
+
+.cif-data-table .toggleViewButton {
+  width: 24px;
+  height: 24px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 10px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+}
+
+.cif-data-table .compressButton {
+  background-image: var(--svg-url-compress);
+  background-size: 90%;
+}
+
+.cif-data-table .compressButton:hover {
+  background-size: 80%;
+}
+
+.cif-data-table .expandButton {
+  background-image: var(--svg-url-expand);
+  background-size: 90%;
+}
+
+.cif-data-table .expandButton:hover {
+  background-size: 100%;
+}
+
+.cif-data-table .tableContainer {
+  width: 100%;
+  height: 70vh;
+  margin: 10px auto 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  border-radius: 8px;
+  box-shadow: 0 12px 24px rgb(15 23 42 / 10%);
+  max-height: 100%;
+  flex: 1;
+  align-self: flex-start;
+  max-width: 100%;
+  border: 1px solid rgb(15 23 42 / 10%);
+  background: #fff;
+}
+
+.cif-data-table .table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: auto;
+}
+
+.cif-data-table .headerCell {
+  background-color: #e2e8f0;
+  text-align: left;
+  text-transform: uppercase;
+  position: relative;
+  overflow: visible;
+  z-index: 2;
+  color: #0f172a;
+}
+
+.cif-data-table .headerCellSelected {
+  background-color: #7dd3fc;
+  color: #082f49;
+}
+
+.cif-data-table .dataCell {
+  padding-left: 2px;
+  padding-right: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cif-data-table .selectedCell {
+  background-color: rgb(125 211 252 / 18%);
+}
+
+.cif-data-table .bodyRowOdd {
+  background-color: #fff;
+}
+
+.cif-data-table .bodyRowEven {
+  background-color: #f8fafc;
+}
+
+.cif-data-table .bodyRowOdd:hover,
+.cif-data-table .bodyRowEven:hover {
+  background-color: rgb(125 211 252 / 14%);
+  cursor: pointer;
+}
+
+.cif-data-table .columnHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  cursor: pointer;
+  overflow: visible;
+  z-index: 3;
+}
+
+.cif-data-table .sortedAsc::after {
+  content: " \2191";
+  margin-left: 4px;
+}
+
+.cif-data-table .sortedDesc::after {
+  content: " \2193";
+  margin-left: 4px;
+}
+
+.cif-data-table .columnDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  display: none;
+  background: #fff;
+  border: 1px solid rgb(15 23 42 / 10%);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px var(--color-black-transparent);
+  z-index: 20;
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+.cif-data-table .columnHeader:hover .columnDropdown,
+.cif-data-table .columnHeader:focus-within .columnDropdown {
+  display: block;
+}
+
+.cif-data-table .dropdownItem {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cif-data-table .dropdownItem:hover {
+  background: rgb(15 23 42 / 6%);
+}
+
+.cif-data-table .dropdownItemText {
+  font-size: 12px;
+  color: #0f172a;
+}
+
+.cif-data-table .compressedViewContainer {
+  display: flex;
+  gap: 20px;
+  max-width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.cif-data-table .compressedTableContainer {
+  width: 100%;
+  height: auto;
+  margin: 10px 0;
+  overflow: auto;
+  border-radius: 8px;
+  box-shadow: 0 12px 24px rgb(15 23 42 / 10%);
+  max-height: 100%;
+  align-self: flex-start;
+  max-width: 100%;
+  border: 1px solid rgb(15 23 42 / 10%);
+  background: #fff;
+}
+
+.cif-data-table .panel.expanded .compressedTableContainer {
+  max-width: 50%;
+}
+
+.cif-data-table .compressedTable {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+}
+
+.cif-data-table .compressedTable th {
+  height: 30px;
+  padding-left: 10px;
+  background-color: #e2e8f0;
+  text-align: left;
+  text-transform: uppercase;
+  color: #0f172a;
+}
+
+.cif-data-table .compressedTable th,
+.cif-data-table .compressedTable td {
+  padding: 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cif-data-table .compressedTable th:first-child,
+.cif-data-table .compressedTable td:first-child {
+  width: 50%;
+}
+
+.cif-data-table .compressedTable th:nth-child(2),
+.cif-data-table .compressedTable td:nth-child(2) {
+  width: 15%;
+  text-align: center;
+}
+
+.cif-data-table .compressedTable th:last-child,
+.cif-data-table .compressedTable td:last-child {
+  width: 35%;
+  text-align: center;
+}
+
+.cif-data-table .columnName {
+  cursor: pointer;
+  font-weight: 500;
+  height: 30px;
+  padding-left: 10px;
+}
+
+.cif-data-table .columnName:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.cif-data-table .selectedCompressedColumn {
+  background-color: #7dd3fc;
+  color: #082f49;
+}
+
+.cif-data-table .histogramContainer {
+  flex: 1;
+  padding: 15px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 12px 24px rgb(15 23 42 / 10%);
+  overflow: auto;
+  border: 1px solid rgb(15 23 42 / 10%);
+}
+
+.cif-data-table .histogramHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.cif-data-table .closeButton {
+  background: none;
+  border: none;
+  color: #475569;
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.cif-data-table .closeButton:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.cif-data-table .closeButton:active {
+  background-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.cif-data-table .importanceCell {
+  width: 90px;
+}
+
+.cif-data-table .importanceContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cif-data-table .importanceRank {
+  font-size: 0.85em;
+  font-weight: bold;
+  min-width: 30px;
+}
+
+.cif-data-table .importanceBarContainer {
+  flex-grow: 1;
+  height: 12px;
+  background-color: #f0f0f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.cif-data-table .importanceBar {
+  height: 100%;
+  background-color: #4a90e2;
+  border-radius: 6px;
+}
+
+.cif-data-table .tinyHistogramCell {
+  width: 120px;
+  vertical-align: middle;
+  cursor: pointer;
+  background: rgb(15 23 42 / 4%);
+  text-align: center;
+}
+
+.cif-data-table .tinyHistogramButton {
+  background: none;
+  border: none;
+}
+
+.cif-data-table .tinyHistogramClickable:hover {
+  cursor: pointer;
+}
+
+.cif-data-table .nonNumericalIndicator {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.cif-data-table .heatmapRow {
+  position: relative;
+  transition: height 0.12s ease;
+}
+
+.cif-data-table .heatmapRowHovered {
+  height: 24px;
+}
+
+.cif-data-table .hoveredCellContent {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  transform: translateY(-50%);
+  z-index: 2;
+  align-items: flex-start;
+  justify-content: flex-start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+  box-sizing: border-box;
+  color: #0f172a;
+  font-weight: 500;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 35%);
+}
+
+.cif-data-table .heatmapCell {
+  height: 100%;
+  text-align: center;
+  font-size: 0;
+  background: hsl(200, 70%, calc(100% - (var(--normalized-value) * 50%)));
+  width: 1px;
+  min-width: 32px;
+  box-sizing: border-box;
+  position: relative;
+  padding: 0;
+}
+
+.cif-data-table .heatmapRow:hover .heatmapCell {
+  font-size: 12px;
+  overflow: visible;
+}
+
+.cif-data-table .heatmapRow:hover .hoveredCellContent,
+.cif-data-table .heatmapRowHovered .hoveredCellContent {
+  display: flex;
+}
+
+.cif-data-table .virtualSpacerRow:hover {
+  background: transparent;
+  cursor: default;
+}
+
+.cif-data-table .virtualSpacerCell {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}

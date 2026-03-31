@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bun frontend/index.ts",
     "dev:hot": "bun --hot frontend/index.ts",
-    "build": "bun build ./frontend/index.html ./frontend/clustersinfocus.html ./frontend/neurodegenvis.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*'",
+    "build": "bun build ./frontend/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*'",
     "start": "NODE_ENV=production bun frontend/index.ts"
   },
   "dependencies": {
