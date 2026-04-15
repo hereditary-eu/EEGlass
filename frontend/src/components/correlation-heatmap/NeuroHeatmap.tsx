@@ -1,7 +1,7 @@
-import { useState } from "react";
-
 import "../pca-biplot/NeurodegenVis.css";
+import type { FeatureId, FeaturePair } from "../../types";
 import type { NeuroPatient } from "../../types/neuro";
+import { useControllableState } from "../../utils/useControllableState";
 import {
   createMockNeuroDataset,
   NEURO_COVARIATE_FEATURES,
@@ -10,21 +10,41 @@ import {
 } from "../../utils/neurodegenvis/mockData";
 import { NeuroHeatmapPlot } from "./Heatmap";
 
-interface CorrelationHeatmapProps {
+export interface CorrelationHeatmapProps {
   patientsData: NeuroPatient[];
-  covariateFeatures?: string[];
-  initialSelectedCovariateFeatures?: string[];
-  initialSelectedFeatures?: [string, string];
+  covariateFeatures?: FeatureId[];
+  selectedCovariateFeatures?: FeatureId[];
+  selectedFeaturePair?: FeaturePair;
+  defaultSelectedCovariateFeatures?: FeatureId[];
+  defaultSelectedFeaturePair?: FeaturePair;
+  initialSelectedCovariateFeatures?: FeatureId[];
+  initialSelectedFeatures?: FeaturePair;
+  onSelectedCovariateFeaturesChange?: (features: FeatureId[]) => void;
+  onSelectedFeaturePairChange?: (featurePair: FeaturePair) => void;
 }
 
 export function CorrelationHeatmap({
   patientsData,
   covariateFeatures = NEURO_COVARIATE_FEATURES,
-  initialSelectedCovariateFeatures = NEURO_INITIAL_COVARIATE_FEATURES,
-  initialSelectedFeatures = NEURO_INITIAL_SCATTER_FEATURES,
+  selectedCovariateFeatures,
+  selectedFeaturePair,
+  defaultSelectedCovariateFeatures,
+  defaultSelectedFeaturePair,
+  initialSelectedCovariateFeatures,
+  initialSelectedFeatures,
+  onSelectedCovariateFeaturesChange,
+  onSelectedFeaturePairChange,
 }: CorrelationHeatmapProps) {
-  const [selectedCovariateFeatures, setSelectedCovariateFeatures] = useState(initialSelectedCovariateFeatures);
-  const [selectedFeatures, setSelectedFeatures] = useState<[string, string]>(initialSelectedFeatures);
+  const [resolvedSelectedCovariateFeatures, setSelectedCovariateFeatures] = useControllableState({
+    value: selectedCovariateFeatures,
+    defaultValue: defaultSelectedCovariateFeatures ?? initialSelectedCovariateFeatures ?? NEURO_INITIAL_COVARIATE_FEATURES,
+    onChange: onSelectedCovariateFeaturesChange,
+  });
+  const [resolvedSelectedFeaturePair, setSelectedFeaturePair] = useControllableState({
+    value: selectedFeaturePair,
+    defaultValue: defaultSelectedFeaturePair ?? initialSelectedFeatures ?? NEURO_INITIAL_SCATTER_FEATURES,
+    onChange: onSelectedFeaturePairChange,
+  });
 
   const handleCheckboxChange = (feature: string) => {
     setSelectedCovariateFeatures((current) => {
@@ -47,7 +67,7 @@ export function CorrelationHeatmap({
           <label key={feature}>
             <input
               type="checkbox"
-              checked={selectedCovariateFeatures.includes(feature)}
+              checked={resolvedSelectedCovariateFeatures.includes(feature)}
               onChange={() => handleCheckboxChange(feature)}
             />
             {feature}
@@ -56,14 +76,14 @@ export function CorrelationHeatmap({
       </div>
 
       <p className="neurodegenvis-caption">
-        Selected pair: <strong>{selectedFeatures[0]}</strong> vs <strong>{selectedFeatures[1]}</strong>
+        Selected pair: <strong>{resolvedSelectedFeaturePair[0]}</strong> vs <strong>{resolvedSelectedFeaturePair[1]}</strong>
       </p>
 
       <NeuroHeatmapPlot
         patientsData={patientsData}
-        covariateFeatures={selectedCovariateFeatures}
-        selectedFeatures={selectedFeatures}
-        onSelectedFeaturesChange={setSelectedFeatures}
+        covariateFeatures={resolvedSelectedCovariateFeatures}
+        selectedFeatures={resolvedSelectedFeaturePair}
+        onSelectedFeaturesChange={setSelectedFeaturePair}
       />
     </div>
   );

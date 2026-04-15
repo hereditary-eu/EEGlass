@@ -1,7 +1,9 @@
 import { useState } from "react";
 
 import "./NeurodegenVis.css";
+import type { FeatureId } from "../../types";
 import type { NeuroPatient } from "../../types/neuro";
+import { useControllableState } from "../../utils/useControllableState";
 import { MultiSelectDropdown } from "./MultiSelectDropdown";
 import {
   createMockNeuroDataset,
@@ -10,12 +12,18 @@ import {
 } from "../../utils/neurodegenvis/mockData";
 import { NeuroPcaBiplot } from "./PcaBiplot";
 
-interface PcaBiplotPanelProps {
+export interface PcaBiplotPanelProps {
   patientsData: NeuroPatient[];
   loadings: number[][];
-  numericFeatures?: string[];
-  initialBiplotFeatures?: string[];
+  numericFeatures?: FeatureId[];
+  biplotFeatures?: FeatureId[];
+  k?: number;
+  defaultBiplotFeatures?: FeatureId[];
+  defaultK?: number;
+  initialBiplotFeatures?: FeatureId[];
   initialK?: number;
+  onBiplotFeaturesChange?: (features: FeatureId[]) => void;
+  onKChange?: (k: number) => void;
   onRunClustering?: (k: number) => NeuroPatient[];
 }
 
@@ -23,20 +31,34 @@ export function PcaBiplotPanel({
   patientsData: initialPatientsData,
   loadings,
   numericFeatures = NEURO_PCA_FEATURES,
-  initialBiplotFeatures = NEURO_INITIAL_BIPLOT_FEATURES,
-  initialK = 3,
+  biplotFeatures,
+  k,
+  defaultBiplotFeatures,
+  defaultK,
+  initialBiplotFeatures,
+  initialK,
+  onBiplotFeaturesChange,
+  onKChange,
   onRunClustering,
 }: PcaBiplotPanelProps) {
   const [patientsData, setPatientsData] = useState(initialPatientsData);
-  const [biplotFeatures, setBiplotFeatures] = useState(initialBiplotFeatures);
-  const [k, setK] = useState(initialK);
+  const [resolvedBiplotFeatures, setBiplotFeatures] = useControllableState({
+    value: biplotFeatures,
+    defaultValue: defaultBiplotFeatures ?? initialBiplotFeatures ?? NEURO_INITIAL_BIPLOT_FEATURES,
+    onChange: onBiplotFeaturesChange,
+  });
+  const [resolvedK, setK] = useControllableState({
+    value: k,
+    defaultValue: defaultK ?? initialK ?? 3,
+    onChange: onKChange,
+  });
 
   const rerunClustering = () => {
     if (!onRunClustering) {
       return;
     }
 
-    setPatientsData(onRunClustering(k));
+    setPatientsData(onRunClustering(resolvedK));
   };
 
   return (
@@ -45,7 +67,7 @@ export function PcaBiplotPanel({
         <h4 className="plot-headings">PCA analysis</h4>
         <MultiSelectDropdown
           options={numericFeatures}
-          selectedOptions={biplotFeatures}
+          selectedOptions={resolvedBiplotFeatures}
           onSelectedOptionsChange={setBiplotFeatures}
         />
       </div>
@@ -55,7 +77,7 @@ export function PcaBiplotPanel({
         <input
           type="number"
           id="kmeans-input"
-          value={k}
+          value={resolvedK}
           onChange={(event) => setK(Number(event.target.value))}
           min="1"
           max="9"
@@ -69,8 +91,8 @@ export function PcaBiplotPanel({
         patientsData={patientsData}
         numericFeatures={numericFeatures}
         loadings={loadings}
-        biplotFeatures={biplotFeatures}
-        showKMeans={k > 1}
+        biplotFeatures={resolvedBiplotFeatures}
+        showKMeans={resolvedK > 1}
       />
     </div>
   );

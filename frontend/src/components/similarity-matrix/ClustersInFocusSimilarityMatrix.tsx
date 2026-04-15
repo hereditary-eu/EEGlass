@@ -2,7 +2,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import "./ClusterSimilarityMatrix.css";
 import { ClusterSimilarityMatrix } from "./ClusterSimilarityMatrix";
-import type { ClusterSimilarityResponse } from "../../types";
+import type {
+  ClusterSimilarityResponse,
+  FeaturePair,
+  SimilarityAggregationMethod,
+  SimilarityColorRangeMode,
+  SimilarityReorderMethod,
+  SimilarityViewMode,
+} from "../../types";
+import { useControllableState } from "../../utils/useControllableState";
 
 const MOCK_FEATURES = [
   "age",
@@ -20,7 +28,7 @@ const MOCK_FEATURES = [
 ];
 
 function createMockSimilarities(
-  selectedColumns: [string, string],
+  selectedFeaturePair: FeaturePair,
   selectedCluster: number,
   availableFeatures: string[],
 ): ClusterSimilarityResponse[] {
@@ -29,7 +37,7 @@ function createMockSimilarities(
       availableFeatures.slice(rowIndex + 1).map((feature2, offset) => {
         const colIndex = rowIndex + offset + 1;
         const selectedBoost =
-          selectedColumns.includes(feature1) || selectedColumns.includes(feature2) ? 0.18 : 0;
+          selectedFeaturePair.includes(feature1) || selectedFeaturePair.includes(feature2) ? 0.18 : 0;
         const lexicalFactor = Math.abs(feature1.length - feature2.length) * 0.02;
         const distanceFactor = Math.abs(rowIndex - colIndex) / Math.max(1, availableFeatures.length - 1);
         const clusterShift = selectedCluster * 0.03;
@@ -50,30 +58,88 @@ function createMockSimilarities(
     .sort((left, right) => right.similarity - left.similarity);
 }
 
-interface SimilarityMatrixViewerProps {
+export interface SimilarityMatrixViewerProps {
   availableFeatures: string[];
-  selectedCluster: number;
-  selectedColumns: [string, string];
+  selectedCluster?: number;
+  selectedFeaturePair?: FeaturePair;
+  selectedColumns?: FeaturePair;
+  viewMode?: SimilarityViewMode;
+  filterHighSimilarity?: boolean;
+  aggregationMethod?: SimilarityAggregationMethod;
+  colorRangeMode?: SimilarityColorRangeMode;
+  reorderMethod?: SimilarityReorderMethod;
+  defaultSelectedCluster?: number;
+  defaultSelectedFeaturePair?: FeaturePair;
+  defaultViewMode?: SimilarityViewMode;
+  defaultFilterHighSimilarity?: boolean;
+  defaultAggregationMethod?: SimilarityAggregationMethod;
+  defaultColorRangeMode?: SimilarityColorRangeMode;
+  defaultReorderMethod?: SimilarityReorderMethod;
+  onSelectedClusterChange?: (cluster: number) => void;
+  onSelectedFeaturePairChange?: (featurePair: FeaturePair) => void;
+  onViewModeChange?: (viewMode: SimilarityViewMode) => void;
+  onFilterHighSimilarityChange?: (filterHighSimilarity: boolean) => void;
+  onAggregationMethodChange?: (aggregationMethod: SimilarityAggregationMethod) => void;
+  onColorRangeModeChange?: (colorRangeMode: SimilarityColorRangeMode) => void;
+  onReorderMethodChange?: (reorderMethod: SimilarityReorderMethod) => void;
 }
 
 export function SimilarityMatrixViewer({
   availableFeatures,
   selectedCluster,
+  selectedFeaturePair,
   selectedColumns,
+  viewMode,
+  filterHighSimilarity,
+  aggregationMethod,
+  colorRangeMode,
+  reorderMethod,
+  defaultSelectedCluster = 0,
+  defaultSelectedFeaturePair,
+  defaultViewMode = "matrix",
+  defaultFilterHighSimilarity = false,
+  defaultAggregationMethod,
+  defaultColorRangeMode,
+  defaultReorderMethod,
+  onSelectedClusterChange,
+  onSelectedFeaturePairChange,
+  onViewModeChange,
+  onFilterHighSimilarityChange,
+  onAggregationMethodChange,
+  onColorRangeModeChange,
+  onReorderMethodChange,
 }: SimilarityMatrixViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 760, height: 520 });
-  const [viewMode, setViewMode] = useState<"similarity" | "matrix">("matrix");
-  const [filterHighSimilarity, setFilterHighSimilarity] = useState(false);
+  const [resolvedSelectedCluster] = useControllableState({
+    value: selectedCluster,
+    defaultValue: defaultSelectedCluster,
+    onChange: onSelectedClusterChange,
+  });
+  const [resolvedSelectedFeaturePair] = useControllableState({
+    value: selectedFeaturePair ?? selectedColumns,
+    defaultValue: defaultSelectedFeaturePair ?? selectedColumns ?? ["mmse", "moca"],
+    onChange: onSelectedFeaturePairChange,
+  });
+  const [resolvedViewMode, setViewMode] = useControllableState({
+    value: viewMode,
+    defaultValue: defaultViewMode,
+    onChange: onViewModeChange,
+  });
+  const [resolvedFilterHighSimilarity, setFilterHighSimilarity] = useControllableState({
+    value: filterHighSimilarity,
+    defaultValue: defaultFilterHighSimilarity,
+    onChange: onFilterHighSimilarityChange,
+  });
 
   const similarities = useMemo(
-    () => createMockSimilarities(selectedColumns, selectedCluster, availableFeatures),
-    [availableFeatures, selectedCluster, selectedColumns],
+    () => createMockSimilarities(resolvedSelectedFeaturePair, resolvedSelectedCluster, availableFeatures),
+    [availableFeatures, resolvedSelectedCluster, resolvedSelectedFeaturePair],
   );
 
   const filteredSimilarities = useMemo(
-    () => (filterHighSimilarity ? similarities.filter((item) => item.similarity > 0.5) : similarities),
-    [filterHighSimilarity, similarities],
+    () => (resolvedFilterHighSimilarity ? similarities.filter((item) => item.similarity > 0.5) : similarities),
+    [resolvedFilterHighSimilarity, similarities],
   );
 
   useEffect(() => {
@@ -105,23 +171,23 @@ export function SimilarityMatrixViewer({
     <div className="cif-similarity-card">
       <div className="cif-similarity-header">
         <p className="cif-similarity-meta">
-          Mocked backend response for cluster <strong>{selectedCluster + 1}</strong> and feature pair{" "}
+          Mocked backend response for cluster <strong>{resolvedSelectedCluster + 1}</strong> and feature pair{" "}
           <strong>
-            {selectedColumns[0]} / {selectedColumns[1]}
+            {resolvedSelectedFeaturePair[0]} / {resolvedSelectedFeaturePair[1]}
           </strong>
           .
         </p>
         <div className="cif-similarity-view-mode">
           <button
             type="button"
-            className={`cif-similarity-view-button ${viewMode === "similarity" ? "is-active" : ""}`}
+            className={`cif-similarity-view-button ${resolvedViewMode === "similarity" ? "is-active" : ""}`}
             onClick={() => setViewMode("similarity")}
           >
             List
           </button>
           <button
             type="button"
-            className={`cif-similarity-view-button ${viewMode === "matrix" ? "is-active" : ""}`}
+            className={`cif-similarity-view-button ${resolvedViewMode === "matrix" ? "is-active" : ""}`}
             onClick={() => setViewMode("matrix")}
           >
             Matrix
@@ -129,19 +195,19 @@ export function SimilarityMatrixViewer({
         </div>
       </div>
 
-      {viewMode === "similarity" ? (
+      {resolvedViewMode === "similarity" ? (
         <div className="cif-similarity-list">
           <div className="cif-similarity-list-toolbar">
             <div className="cif-similarity-cluster-info">
-              Cluster {selectedCluster + 1} of feature pair:{" "}
+              Cluster {resolvedSelectedCluster + 1} of feature pair:{" "}
               <i>
-                {selectedColumns[0]} and {selectedColumns[1]}
+                {resolvedSelectedFeaturePair[0]} and {resolvedSelectedFeaturePair[1]}
               </i>
             </div>
             <label className="cif-similarity-filter">
               <input
                 type="checkbox"
-                checked={filterHighSimilarity}
+                checked={resolvedFilterHighSimilarity}
                 onChange={(event) => setFilterHighSimilarity(event.target.checked)}
               />
               Show only high similarity (&gt; 50%)
@@ -188,9 +254,18 @@ export function SimilarityMatrixViewer({
           <ClusterSimilarityMatrix
             width={dimensions.width}
             height={dimensions.height}
-            selectedCluster={selectedCluster}
-            selectedColumns={selectedColumns}
+            selectedCluster={resolvedSelectedCluster}
+            selectedFeaturePair={resolvedSelectedFeaturePair}
             availableFeatures={availableFeatures}
+            aggregationMethod={aggregationMethod}
+            colorRangeMode={colorRangeMode}
+            reorderMethod={reorderMethod}
+            defaultAggregationMethod={defaultAggregationMethod}
+            defaultColorRangeMode={defaultColorRangeMode}
+            defaultReorderMethod={defaultReorderMethod}
+            onAggregationMethodChange={onAggregationMethodChange}
+            onColorRangeModeChange={onColorRangeModeChange}
+            onReorderMethodChange={onReorderMethodChange}
           />
         </div>
       )}
@@ -199,5 +274,11 @@ export function SimilarityMatrixViewer({
 }
 
 export function SimilarityMatrixViewerMock() {
-  return <SimilarityMatrixViewer availableFeatures={MOCK_FEATURES} selectedCluster={1} selectedColumns={["mmse", "moca"]} />;
+  return (
+    <SimilarityMatrixViewer
+      availableFeatures={MOCK_FEATURES}
+      defaultSelectedCluster={1}
+      defaultSelectedFeaturePair={["mmse", "moca"]}
+    />
+  );
 }

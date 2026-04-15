@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import "./ScatterplotClustered.css";
+import { useControllableState } from "../../utils/useControllableState";
 import ScatterplotClustered from "./ScatterplotClustered";
 
 function createMockClusteredScatterData() {
@@ -20,12 +21,15 @@ function createMockClusteredScatterData() {
   );
 }
 
-interface ClusteredScatterplotViewerProps {
+export interface ClusteredScatterplotViewerProps {
   data: number[][];
   xLabel: string;
   yLabel: string;
   k: number;
   height?: number;
+  selectedCluster?: number | null;
+  defaultSelectedCluster?: number | null;
+  onSelectedClusterChange?: (cluster: number | null) => void;
 }
 
 export function ClusteredScatterplotViewer({
@@ -34,13 +38,20 @@ export function ClusteredScatterplotViewer({
   yLabel,
   k,
   height = 420,
+  selectedCluster,
+  defaultSelectedCluster = null,
+  onSelectedClusterChange,
 }: ClusteredScatterplotViewerProps) {
-  const [selectedCluster, setSelectedCluster] = useState<number | null>(null);
+  const [resolvedSelectedCluster, setSelectedCluster] = useControllableState({
+    value: selectedCluster,
+    defaultValue: defaultSelectedCluster,
+    onChange: onSelectedClusterChange,
+  });
 
   return (
     <div className="cif-scatterplot-card">
       <p className="cif-scatterplot-meta">
-        Selected cluster: <strong>{selectedCluster !== null ? selectedCluster + 1 : "none"}</strong>
+        Selected cluster: <strong>{resolvedSelectedCluster !== null ? resolvedSelectedCluster + 1 : "none"}</strong>
       </p>
       <ScatterplotClustered
         data={data}

@@ -2,6 +2,13 @@ import React, { useCallback, useMemo, useState } from "react";
 import { VariableSizeGrid as Grid } from "react-window";
 
 import "./ClusterSimilarityMatrix.css";
+import type {
+  FeaturePair,
+  SimilarityAggregationMethod,
+  SimilarityColorRangeMode,
+  SimilarityReorderMethod,
+} from "../../types";
+import { useControllableState } from "../../utils/useControllableState";
 
 const rootClass = "cif-cluster-similarity-matrix";
 const styles = {
@@ -58,15 +65,25 @@ interface CellData {
   featurePairMatrixData: FeaturePairMatrixData;
   onCellHover: (rowIndex: number, colIndex: number, event: React.MouseEvent) => void;
   onCellLeave: () => void;
-  colorRangeMode: "min-max" | "full";
+  colorRangeMode: SimilarityColorRangeMode;
 }
 
-interface ClusterSimilarityMatrixProps {
+export interface ClusterSimilarityMatrixProps {
   width: number;
   height: number;
   selectedCluster: number;
-  selectedColumns: [string, string];
+  selectedFeaturePair?: FeaturePair;
+  selectedColumns?: FeaturePair;
   availableFeatures: string[];
+  aggregationMethod?: SimilarityAggregationMethod;
+  colorRangeMode?: SimilarityColorRangeMode;
+  reorderMethod?: SimilarityReorderMethod;
+  defaultAggregationMethod?: SimilarityAggregationMethod;
+  defaultColorRangeMode?: SimilarityColorRangeMode;
+  defaultReorderMethod?: SimilarityReorderMethod;
+  onAggregationMethodChange?: (aggregationMethod: SimilarityAggregationMethod) => void;
+  onColorRangeModeChange?: (colorRangeMode: SimilarityColorRangeMode) => void;
+  onReorderMethodChange?: (reorderMethod: SimilarityReorderMethod) => void;
 }
 
 const CELL_SIZE = 16;
@@ -142,8 +159,8 @@ MatrixCell.displayName = "MatrixCell";
 function reorderFeatures(
   features: string[],
   similarities: number[][],
-  reorderMethod: "none" | "optimal" | "average",
-  selectedColumns: [string, string],
+  reorderMethod: SimilarityReorderMethod,
+  selectedFeaturePair: FeaturePair,
 ) {
   if (reorderMethod === "none") {
     return { features, similarities };
@@ -152,7 +169,7 @@ function reorderFeatures(
   const averageScores = features.map((_, index) => ({
     index,
     score: similarities[index].reduce((sum, value) => sum + value, 0) / similarities[index].length,
-    selected: selectedColumns.includes(features[index]),
+    selected: selectedFeaturePair.includes(features[index]),
   }));
 
   const sortedIndexes =
@@ -169,7 +186,7 @@ function reorderFeatures(
   return { features: orderedFeatures, similarities: orderedSimilarities };
 }
 
-function aggregateSimilarity(baseValue: number, aggregationMethod: string) {
+function aggregateSimilarity(baseValue: number, aggregationMethod: SimilarityAggregationMethod) {
   switch (aggregationMethod) {
     case "min":
       return Math.max(0, baseValue - 0.12);
@@ -183,14 +200,14 @@ function aggregateSimilarity(baseValue: number, aggregationMethod: string) {
 }
 
 function createMockFeaturePairSimilarityMatrix(
-  selectedColumns: [string, string],
+  selectedFeaturePair: FeaturePair,
   selectedCluster: number,
   availableFeatures: string[],
-  aggregationMethod: string,
-  reorderMethod: "none" | "optimal" | "average",
+  aggregationMethod: SimilarityAggregationMethod,
+  reorderMethod: SimilarityReorderMethod,
 ): FeaturePairMatrixData {
   const features = [...availableFeatures];
-  const selectedSet = new Set(selectedColumns);
+  const selectedSet = new Set(selectedFeaturePair);
 
   const similarities = features.map((rowFeature, rowIndex) =>
     features.map((colFeature, colIndex) => {
@@ -209,7 +226,7 @@ function createMockFeaturePairSimilarityMatrix(
     }),
   );
 
-  const reordered = reorderFeatures(features, similarities, reorderMethod, selectedColumns);
+  const reordered = reorderFeatures(features, similarities, reorderMethod, selectedFeaturePair);
   const nonDiagonalValues = reordered.similarities.flatMap((row, rowIndex) =>
     row.filter((_, colIndex) => colIndex !== rowIndex),
   );
@@ -229,13 +246,36 @@ export function ClusterSimilarityMatrix({
   width,
   height,
   selectedCluster,
+  selectedFeaturePair,
   selectedColumns,
   availableFeatures,
+  aggregationMethod,
+  colorRangeMode,
+  reorderMethod,
+  defaultAggregationMethod = "max",
+  defaultColorRangeMode = "min-max",
+  defaultReorderMethod = "none",
+  onAggregationMethodChange,
+  onColorRangeModeChange,
+  onReorderMethodChange,
 }: ClusterSimilarityMatrixProps) {
   const [showConfig, setShowConfig] = useState(false);
-  const [aggregationMethod, setAggregationMethod] = useState("max");
-  const [colorRangeMode, setColorRangeMode] = useState<"min-max" | "full">("min-max");
-  const [reorderMethod, setReorderMethod] = useState<"none" | "optimal" | "average">("none");
+  const resolvedSelectedFeaturePair = selectedFeaturePair ?? selectedColumns ?? ["mmse", "moca"];
+  const [resolvedAggregationMethod, setAggregationMethod] = useControllableState({
+    value: aggregationMethod,
+    defaultValue: defaultAggregationMethod,
+    onChange: onAggregationMethodChange,
+  });
+  const [resolvedColorRangeMode, setColorRangeMode] = useControllableState({
+    value: colorRangeMode,
+    defaultValue: defaultColorRangeMode,
+    onChange: onColorRangeModeChange,
+  });
+  const [resolvedReorderMethod, setReorderMethod] = useControllableState({
+    value: reorderMethod,
+    defaultValue: defaultReorderMethod,
+    onChange: onReorderMethodChange,
+  });
   const [tooltip, setTooltip] = useState<TooltipState>({
     visible: false,
     x: 0,
@@ -246,13 +286,13 @@ export function ClusterSimilarityMatrix({
   const featurePairMatrixData = useMemo(
     () =>
       createMockFeaturePairSimilarityMatrix(
-        selectedColumns,
+        resolvedSelectedFeaturePair,
         selectedCluster,
         availableFeatures,
-        aggregationMethod,
-        reorderMethod,
+        resolvedAggregationMethod,
+        resolvedReorderMethod,
       ),
-    [aggregationMethod, availableFeatures, reorderMethod, selectedCluster, selectedColumns],
+    [availableFeatures, resolvedAggregationMethod, resolvedReorderMethod, resolvedSelectedFeaturePair, selectedCluster],
   );
 
   const handleCellHover = useCallback(
@@ -286,9 +326,9 @@ export function ClusterSimilarityMatrix({
       featurePairMatrixData,
       onCellHover: handleCellHover,
       onCellLeave: handleCellLeave,
-      colorRangeMode,
+      colorRangeMode: resolvedColorRangeMode,
     }),
-    [colorRangeMode, featurePairMatrixData, handleCellHover, handleCellLeave],
+    [resolvedColorRangeMode, featurePairMatrixData, handleCellHover, handleCellLeave],
   );
 
   const gridSize = featurePairMatrixData.features.length + 1;
@@ -303,12 +343,12 @@ export function ClusterSimilarityMatrix({
     <div className={`${rootClass} ${styles.container}`}>
       <div className={styles.header}>
         <div>
-          Feature Pair Matrix for Cluster {selectedCluster + 1} ({selectedColumns[0]}, {selectedColumns[1]}):{" "}
+          Feature Pair Matrix for Cluster {selectedCluster + 1} ({resolvedSelectedFeaturePair[0]},{" "}
+          {resolvedSelectedFeaturePair[1]}):{" "}
           {featurePairMatrixData.features.length} features,
-          <span className={styles.aggregationIndicator}> Aggregation: {aggregationMethod.toUpperCase()}, </span>
+          <span className={styles.aggregationIndicator}> Aggregation: {resolvedAggregationMethod.toUpperCase()}, </span>
           <span className={styles.colorRangeIndicator}>
-            {" "}
-            Color Range: {colorRangeMode === "full" ? "0-100%" : "Min-Max"}
+            {" "}Color Range: {resolvedColorRangeMode === "full" ? "0-100%" : "Min-Max"}
           </span>
         </div>
         <div className={styles.controls}>
@@ -331,8 +371,8 @@ export function ClusterSimilarityMatrix({
               <label htmlFor="similarity-aggregation">Aggregation Method:</label>
               <select
                 id="similarity-aggregation"
-                value={aggregationMethod}
-                onChange={(event) => setAggregationMethod(event.target.value)}
+                value={resolvedAggregationMethod}
+                onChange={(event) => setAggregationMethod(event.target.value as SimilarityAggregationMethod)}
                 className={styles.configSelect}
               >
                 <option value="max">Maximum</option>
@@ -349,8 +389,8 @@ export function ClusterSimilarityMatrix({
               <label htmlFor="similarity-color-range">Color Range:</label>
               <select
                 id="similarity-color-range"
-                value={colorRangeMode}
-                onChange={(event) => setColorRangeMode(event.target.value as "min-max" | "full")}
+                value={resolvedColorRangeMode}
+                onChange={(event) => setColorRangeMode(event.target.value as SimilarityColorRangeMode)}
                 className={styles.configSelect}
               >
                 <option value="min-max">Min-Max Range</option>
@@ -365,8 +405,8 @@ export function ClusterSimilarityMatrix({
               <label htmlFor="similarity-reorder">Reorder Method:</label>
               <select
                 id="similarity-reorder"
-                value={reorderMethod}
-                onChange={(event) => setReorderMethod(event.target.value as "none" | "optimal" | "average")}
+                value={resolvedReorderMethod}
+                onChange={(event) => setReorderMethod(event.target.value as SimilarityReorderMethod)}
                 className={styles.configSelect}
               >
                 <option value="none">Original Order</option>

@@ -1,7 +1,7 @@
-import { useState } from "react";
-
 import "../pca-biplot/NeurodegenVis.css";
+import type { FeatureId } from "../../types";
 import type { NeuroPatient } from "../../types/neuro";
+import { useControllableState } from "../../utils/useControllableState";
 import {
   createMockNeuroDataset,
   NEURO_CATEGORICAL_FEATURES,
@@ -11,28 +11,67 @@ import {
 import { NeuroHistogram } from "./Histogram";
 import { NeuroScatterplot } from "./Scatterplot";
 
-interface ScatterHistogramProps {
+export interface ScatterHistogramProps {
   patientsData: NeuroPatient[];
-  plottableFeatures?: string[];
-  categoricalFeatures?: string[];
-  initialXFeature?: string;
-  initialYFeature?: string;
-  initialCategoricalFeature?: string;
+  plottableFeatures?: FeatureId[];
+  categoricalFeatures?: FeatureId[];
+  selectedXFeature?: FeatureId;
+  selectedYFeature?: FeatureId;
+  selectedCategoricalFeature?: FeatureId;
   k?: number;
+  defaultSelectedXFeature?: FeatureId;
+  defaultSelectedYFeature?: FeatureId;
+  defaultSelectedCategoricalFeature?: FeatureId;
+  defaultK?: number;
+  initialXFeature?: FeatureId;
+  initialYFeature?: FeatureId;
+  initialCategoricalFeature?: FeatureId;
+  onSelectedXFeatureChange?: (feature: FeatureId) => void;
+  onSelectedYFeatureChange?: (feature: FeatureId) => void;
+  onSelectedCategoricalFeatureChange?: (feature: FeatureId) => void;
+  onKChange?: (k: number) => void;
 }
 
 export function ScatterHistogram({
   patientsData,
   plottableFeatures = NEURO_PLOTTABLE_FEATURES,
   categoricalFeatures = NEURO_CATEGORICAL_FEATURES,
-  initialXFeature = NEURO_INITIAL_SCATTER_FEATURES[0],
-  initialYFeature = NEURO_INITIAL_SCATTER_FEATURES[1],
-  initialCategoricalFeature = "None",
-  k = 3,
+  selectedXFeature,
+  selectedYFeature,
+  selectedCategoricalFeature,
+  k,
+  defaultSelectedXFeature,
+  defaultSelectedYFeature,
+  defaultSelectedCategoricalFeature,
+  defaultK = 3,
+  initialXFeature,
+  initialYFeature,
+  initialCategoricalFeature,
+  onSelectedXFeatureChange,
+  onSelectedYFeatureChange,
+  onSelectedCategoricalFeatureChange,
+  onKChange,
 }: ScatterHistogramProps) {
-  const [xFeature, setXFeature] = useState(initialXFeature);
-  const [yFeature, setYFeature] = useState(initialYFeature);
-  const [categoricalFeature, setCategoricalFeature] = useState(initialCategoricalFeature);
+  const [xFeature, setXFeature] = useControllableState({
+    value: selectedXFeature,
+    defaultValue: defaultSelectedXFeature ?? initialXFeature ?? NEURO_INITIAL_SCATTER_FEATURES[0],
+    onChange: onSelectedXFeatureChange,
+  });
+  const [yFeature, setYFeature] = useControllableState({
+    value: selectedYFeature,
+    defaultValue: defaultSelectedYFeature ?? initialYFeature ?? NEURO_INITIAL_SCATTER_FEATURES[1],
+    onChange: onSelectedYFeatureChange,
+  });
+  const [categoricalFeature, setCategoricalFeature] = useControllableState({
+    value: selectedCategoricalFeature,
+    defaultValue: defaultSelectedCategoricalFeature ?? initialCategoricalFeature ?? "None",
+    onChange: onSelectedCategoricalFeatureChange,
+  });
+  const [resolvedK] = useControllableState({
+    value: k,
+    defaultValue: defaultK,
+    onChange: onKChange,
+  });
 
   const isHistogram = xFeature === yFeature;
 
@@ -83,7 +122,7 @@ export function ScatterHistogram({
           patientsData={patientsData}
           selectedFeature={xFeature}
           categoricalFeature={categoricalFeature}
-          kMeanClusters={k}
+          kMeanClusters={resolvedK}
         />
       ) : (
         <NeuroScatterplot
@@ -91,7 +130,7 @@ export function ScatterHistogram({
           yFeature={yFeature}
           patientsData={patientsData}
           categoricalFeature={categoricalFeature}
-          kMeanClusters={k}
+          kMeanClusters={resolvedK}
           showCategoryAverage
         />
       )}
