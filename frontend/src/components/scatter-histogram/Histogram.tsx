@@ -99,7 +99,7 @@ export function NeuroHistogram({
             }
           : {}),
       },
-      style: `--plot-background: black; font-size: ${NEURO_FONT_SIZE}`,
+      style: `--plot-background: #fbfcfd; font-size: ${NEURO_FONT_SIZE}`,
     });
 
     if (histogramRef.current) {

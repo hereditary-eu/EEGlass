@@ -61,7 +61,7 @@ export interface EegTimeseriesProps {
 }
 
 const PADDING = {
-  left: 36,
+  left: 58,
   right: 24,
   top: 18,
   bottom: 10,
@@ -73,7 +73,7 @@ const WINDOW_ANNOTATION_ROW_HEIGHT = 14;
 const WINDOW_ANNOTATION_ROW_GAP = 3;
 const WINDOW_ANNOTATION_TOP_GAP = 8;
 const DEFAULT_WINDOW_SIZE_SECONDS = 2;
-const CHANNEL_COLORS = ["#7dd3fc", "#f9a8d4", "#86efac", "#facc15", "#c4b5fd"];
+const CHANNEL_COLORS = ["#0f6ea8", "#be185d", "#15803d", "#b45309", "#6d28d9"];
 const DEFAULT_WINDOW_ANNOTATION_ROWS: TimeseriesWindowAnnotationRow[] = [
   { id: "annotation-row-1" },
   { id: "annotation-row-2" },
@@ -102,6 +102,8 @@ export function EegTimeseries({
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [view, setView] = useState<TimeseriesView>(() => createInitialView(samples, channels));
   const [drag, setDrag] = useState<DragState | null>(null);
+  const viewRef = useRef(view);
+  const dragRef = useRef<DragState | null>(null);
   const [resolvedSelectedTimeRange, setSelectedTimeRange] = useControllableState({
     value: selectedTimeRange,
     defaultValue: defaultSelectedTimeRange,
@@ -116,8 +118,18 @@ export function EegTimeseries({
   const sampleCount = getMaxSampleCount(samples, channels);
   const duration = samplingFrequency > 0 ? sampleCount / samplingFrequency : 0;
 
+  function setSyncedView(nextView: TimeseriesView) {
+    viewRef.current = nextView;
+    setView(nextView);
+  }
+
+  function setSyncedDrag(nextDrag: DragState | null) {
+    dragRef.current = nextDrag;
+    setDrag(nextDrag);
+  }
+
   useEffect(() => {
-    setView(createInitialView(samples, channels));
+    setSyncedView(createInitialView(samples, channels));
   }, [channels, samples]);
 
   useEffect(() => {
@@ -126,7 +138,7 @@ export function EegTimeseries({
     }
 
     previousResetViewSignalRef.current = resetViewSignal;
-    setView(createInitialView(samples, channels));
+    setSyncedView(createInitialView(samples, channels));
     onResetView?.();
   }, [channels, onResetView, resetViewSignal, samples]);
 
@@ -194,6 +206,7 @@ export function EegTimeseries({
       return;
     }
 
+    event.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) {
       return;
@@ -201,35 +214,38 @@ export function EegTimeseries({
 
     canvas.setPointerCapture(event.pointerId);
     const point = getCanvasPoint(event, canvas);
+    const currentView = viewRef.current;
 
     if (event.button === 2) {
-      setDrag({
+      setSyncedDrag({
         mode: "select",
         startX: point.x,
         startY: point.y,
-        startOffset: view.xOffset,
-        startTime: xToTime(point.x, geometry, view, duration),
+        startOffset: currentView.xOffset,
+        startTime: xToTime(point.x, geometry, currentView, duration),
         currentX: point.x,
       });
       return;
     }
 
-    setDrag({
+    setSyncedDrag({
       mode: "pan",
       startX: point.x,
       startY: point.y,
-      startOffset: view.xOffset,
+      startOffset: currentView.xOffset,
     });
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) {
       return;
     }
 
     const point = getCanvasPoint(event, canvas);
-    if (!drag) {
+    const activeDrag = dragRef.current;
+    if (!activeDrag) {
       const nextHoveredChannel = getChannelAtPoint(point, geometry, channels);
       if (nextHoveredChannel !== resolvedHoveredChannel) {
         setHoveredChannel(nextHoveredChannel);
@@ -237,23 +253,30 @@ export function EegTimeseries({
       return;
     }
 
-    if (drag.mode === "pan") {
-      const nextOffset = clampOffset(drag.startOffset + point.x - drag.startX, view.xScale, geometry.plotWidth);
-      setView((current) => ({ ...current, xOffset: nextOffset }));
+    if (activeDrag.mode === "pan") {
+      const currentView = viewRef.current;
+      const nextOffset = clampOffset(
+        activeDrag.startOffset + point.x - activeDrag.startX,
+        currentView.xScale,
+        geometry.plotWidth,
+      );
+      setSyncedView({ ...currentView, xOffset: nextOffset });
       return;
     }
 
-    setDrag((current) => (current ? { ...current, currentX: point.x } : current));
+    setSyncedDrag({ ...activeDrag, currentX: point.x });
   };
 
   const handlePointerLeave = () => {
-    if (!drag && resolvedHoveredChannel !== null) {
+    if (!dragRef.current && resolvedHoveredChannel !== null) {
       setHoveredChannel(null);
     }
   };
 
   const handlePointerUp = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!drag) {
+    event.preventDefault();
+    const activeDrag = dragRef.current;
+    if (!activeDrag) {
       return;
     }
 
@@ -262,17 +285,17 @@ export function EegTimeseries({
       canvas.releasePointerCapture(event.pointerId);
     }
 
-    if (drag.mode === "select" && drag.startTime !== undefined && drag.currentX !== undefined) {
-      const endTime = xToTime(drag.currentX, geometry, view, duration);
-      if (Math.abs(endTime - drag.startTime) > 0.01) {
+    if (activeDrag.mode === "select" && activeDrag.startTime !== undefined && activeDrag.currentX !== undefined) {
+      const endTime = xToTime(activeDrag.currentX, geometry, viewRef.current, duration);
+      if (Math.abs(endTime - activeDrag.startTime) > 0.01) {
         setSelectedTimeRange({
-          start: Math.max(0, Math.min(drag.startTime, endTime)),
-          end: Math.min(duration, Math.max(drag.startTime, endTime)),
+          start: Math.max(0, Math.min(activeDrag.startTime, endTime)),
+          end: Math.min(duration, Math.max(activeDrag.startTime, endTime)),
         });
       }
     }
 
-    setDrag(null);
+    setSyncedDrag(null);
   };
 
   const handleWheel = (event: React.WheelEvent<HTMLCanvasElement>) => {
@@ -300,11 +323,13 @@ export function EegTimeseries({
       const nextStart = anchorTime - (relativeX / geometry.plotWidth) * nextVisibleDuration;
       const nextOffset = clampOffset((-nextStart / nextVisibleDuration) * geometry.plotWidth, nextScale, geometry.plotWidth);
 
-      return {
+      const nextView = {
         ...current,
         xScale: nextScale,
         xOffset: nextOffset,
       };
+      viewRef.current = nextView;
+      return nextView;
     });
   };
 
@@ -369,7 +394,7 @@ function renderTimeseries({
 
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#181b20";
+  ctx.fillStyle = "#fbfcfd";
   ctx.fillRect(0, 0, width, height);
 
   const geometry = createPlotGeometry(width, height, getAnnotationRowCount(windowAnnotationRows));
@@ -386,7 +411,7 @@ function renderTimeseries({
   const startIndex = Math.max(0, Math.floor(visibleStartTime * samplingFrequency));
   const endIndex = Math.min(sampleCount, Math.ceil(visibleEndTime * samplingFrequency));
 
-  drawSelection(ctx, geometry, view, duration, selectedTimeRange, "#7dd3fc33");
+  drawSelection(ctx, geometry, view, duration, selectedTimeRange, "rgb(14 116 144 / 18%)");
   if (drag?.mode === "select" && drag.startTime !== undefined && drag.currentX !== undefined) {
     drawDragSelection(ctx, geometry, view, duration, drag);
   }
@@ -402,7 +427,7 @@ function renderTimeseries({
       values: samples[channel] ?? [],
       channelIndex: index,
       channelCount: channels.length,
-      color: CHANNEL_COLORS[index % CHANNEL_COLORS.length] ?? "#7dd3fc",
+      color: CHANNEL_COLORS[index % CHANNEL_COLORS.length] ?? "#0f6ea8",
       samplingFrequency,
       startIndex,
       endIndex,
@@ -477,7 +502,7 @@ function drawWindowAnnotationRows(
 
   normalizedRows.forEach((row, rowIndex) => {
     const rowTop = geometry.annotationTop + rowIndex * (rowHeight + WINDOW_ANNOTATION_ROW_GAP);
-    ctx.fillStyle = "rgb(255 255 255 / 4%)";
+    ctx.fillStyle = "#eef3f6";
     ctx.fillRect(PADDING.left, rowTop, geometry.plotWidth, rowHeight);
 
     if (duration <= 0 || visibleDuration <= 0) {
@@ -508,41 +533,46 @@ function drawWindowAnnotationRows(
       ctx.fillRect(left + 0.5, rowTop, Math.max(1, right - left - 1), rowHeight);
 
       if (value !== null && right - left > 30) {
-        ctx.fillStyle = "#f8fafc";
+        ctx.fillStyle = "#17212b";
         ctx.font = "10px Inter, Segoe UI, sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(String(value), left + (right - left) / 2, rowTop + rowHeight / 2);
       }
     }
-
-    if (row.label) {
-      ctx.fillStyle = "#7b8794";
-      ctx.font = "10px Inter, Segoe UI, sans-serif";
-      ctx.textAlign = "right";
-      ctx.textBaseline = "middle";
-      ctx.fillText(row.label, PADDING.left - 8, rowTop + rowHeight / 2);
-    }
   });
 
   ctx.restore();
 
-  ctx.strokeStyle = "#2b3138";
+  ctx.strokeStyle = "#d7e0e8";
   ctx.lineWidth = 1;
   normalizedRows.forEach((_row, rowIndex) => {
     const rowTop = geometry.annotationTop + rowIndex * (rowHeight + WINDOW_ANNOTATION_ROW_GAP);
     ctx.strokeRect(PADDING.left, rowTop, geometry.plotWidth, rowHeight);
   });
+
+  ctx.fillStyle = "#334155";
+  ctx.font = "11px Inter, Segoe UI, sans-serif";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  normalizedRows.forEach((row, rowIndex) => {
+    if (!row.label) {
+      return;
+    }
+
+    const rowTop = geometry.annotationTop + rowIndex * (rowHeight + WINDOW_ANNOTATION_ROW_GAP);
+    ctx.fillText(row.label, PADDING.left - 10, rowTop + rowHeight / 2);
+  });
 }
 
 function getDefaultAnnotationColor(rowIndex: number, windowIndex: number): string {
   const palette = [
-    ["rgb(125 211 252 / 18%)", "rgb(125 211 252 / 12%)"],
-    ["rgb(134 239 172 / 18%)", "rgb(134 239 172 / 12%)"],
-    ["rgb(249 168 212 / 18%)", "rgb(249 168 212 / 12%)"],
+    ["rgb(14 116 144 / 16%)", "rgb(14 116 144 / 10%)"],
+    ["rgb(21 128 61 / 16%)", "rgb(21 128 61 / 10%)"],
+    ["rgb(190 24 93 / 14%)", "rgb(190 24 93 / 9%)"],
   ];
   const rowPalette = palette[rowIndex] ?? palette[0];
-  return rowPalette[windowIndex % rowPalette.length] ?? "rgb(255 255 255 / 8%)";
+  return rowPalette[windowIndex % rowPalette.length] ?? "rgb(23 33 43 / 8%)";
 }
 
 function drawChannel(
@@ -594,7 +624,7 @@ function drawChannel(
   const channelHeight = geometry.plotHeight / channelCount;
 
   if (isHighlighted) {
-    ctx.fillStyle = "rgb(125 211 252 / 8%)";
+    ctx.fillStyle = "rgb(14 116 144 / 10%)";
     ctx.fillRect(PADDING.left, channelTop, geometry.plotWidth, channelHeight);
   }
 
@@ -671,7 +701,7 @@ function drawGridAndAxes(
   visibleStartTime: number,
   visibleDuration: number,
 ) {
-  ctx.strokeStyle = "#2b3138";
+  ctx.strokeStyle = "#d7e0e8";
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(PADDING.left, PADDING.top);
@@ -681,7 +711,7 @@ function drawGridAndAxes(
   ctx.stroke();
 
   ctx.font = "10px Inter, Segoe UI, sans-serif";
-  ctx.fillStyle = "#7b8794";
+  ctx.fillStyle = "#5d6b78";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
 
@@ -689,7 +719,7 @@ function drawGridAndAxes(
   for (let tick = 0; tick <= yTicks; tick += 1) {
     const value = view.yMin + ((view.yMax - view.yMin) * tick) / yTicks;
     const y = PADDING.top + geometry.plotHeight - (geometry.plotHeight * tick) / yTicks;
-    ctx.strokeStyle = tick === 0 ? "#2b3138" : "rgb(255 255 255 / 6%)";
+    ctx.strokeStyle = tick === 0 ? "#d7e0e8" : "#e8eef3";
     ctx.beginPath();
     ctx.moveTo(PADDING.left, y);
     ctx.lineTo(geometry.width - PADDING.right, y);
@@ -703,12 +733,12 @@ function drawGridAndAxes(
   for (let tick = 0; tick <= xTicks; tick += 1) {
     const x = PADDING.left + (geometry.plotWidth * tick) / xTicks;
     const time = Math.min(duration, visibleStartTime + (visibleDuration * tick) / xTicks);
-    ctx.strokeStyle = "rgb(255 255 255 / 6%)";
+    ctx.strokeStyle = "#e8eef3";
     ctx.beginPath();
     ctx.moveTo(x, PADDING.top);
     ctx.lineTo(x, geometry.annotationBottom);
     ctx.stroke();
-    ctx.fillStyle = "#7b8794";
+    ctx.fillStyle = "#5d6b78";
     ctx.fillText(`${time.toFixed(1)}s`, x, geometry.axisY + 8);
   }
 }
@@ -748,7 +778,7 @@ function drawDragSelection(
   const currentX = Math.max(PADDING.left, Math.min(geometry.width - PADDING.right, drag.currentX ?? startX));
   const left = Math.min(startX, currentX);
   const right = Math.max(startX, currentX);
-  ctx.fillStyle = "#7dd3fc33";
+  ctx.fillStyle = "rgb(14 116 144 / 18%)";
   ctx.fillRect(left, PADDING.top, right - left, geometry.annotationBottom - PADDING.top);
 }
 
@@ -758,7 +788,7 @@ function drawEmptyAxes(
   windowAnnotationRows: TimeseriesWindowAnnotationRow[],
   windowSizeSeconds: number,
 ) {
-  ctx.strokeStyle = "#2b3138";
+  ctx.strokeStyle = "#d7e0e8";
   ctx.beginPath();
   ctx.moveTo(PADDING.left, PADDING.top);
   ctx.lineTo(PADDING.left, geometry.annotationBottom);

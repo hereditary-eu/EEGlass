@@ -5,7 +5,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #181b20;
+  background: #fbfcfd;
 }
 
 .eeg-timeseries-canvas {
@@ -25,8 +25,8 @@
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgb(24 27 32 / 74%);
-  color: #aeb8c5;
+  background: rgb(251 252 253 / 78%);
+  color: #5d6b78;
   font-size: 0.95rem;
   text-align: center;
   padding: 1rem;
@@ -34,5 +34,5 @@
 }
 
 .eeg-timeseries-overlay--error {
-  color: #fca5a5;
+  color: #dc2626;
 }

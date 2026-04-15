@@ -6,7 +6,7 @@
 .neurodegenvis-caption {
   margin: 0;
   align-self: flex-start;
-  color: #c4c8cf;
+  color: #5d6b78;
   font-size: 0.95rem;
 }
 
@@ -25,21 +25,22 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  color: #dfe4ea;
+  color: #334155;
   font-size: 0.85rem;
 }
 
 .neurodegenvis-button {
-  border: 1px solid #5f6874;
-  background: #2c3138;
-  color: #f5f7fa;
+  border: 1px solid #c8d4de;
+  background: #ffffff;
+  color: #17212b;
   border-radius: 8px;
   padding: 0.5rem 0.9rem;
   cursor: pointer;
 }
 
 .neurodegenvis-button:hover {
-  background: #353b44;
+  border-color: #9fb0be;
+  background: #f8fbfd;
 }
 
 #root {
@@ -122,9 +123,9 @@
 
 .kmeans-container input {
   width: 72px;
-  border: 1px solid #5f6874;
-  background: #23272d;
-  color: #f5f7fa;
+  border: 1px solid #c8d4de;
+  background: #ffffff;
+  color: #17212b;
   border-radius: 8px;
   padding: 0.45rem 0.6rem;
 }
@@ -135,14 +136,14 @@
   display: inline-block;
   cursor: pointer;
   background-color: transparent;
-  border: 2px solid #777;
+  border: 1px solid #c8d4de;
   border-radius: 2px;
   padding: 0 5px 0 3px;
-  color: #fff;
+  color: #17212b;
 }
 
 .dropdown-arrow {
-  border: solid white;
+  border: solid #5d6b78;
   border-width: 0 1px 1px 0;
   display: inline-block;
   padding: 2px;
@@ -157,7 +158,7 @@
   justify-content: space-between;
   align-items: center;
   font-size: 12.5px;
-  color: #fff;
+  color: #17212b;
   border: none;
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -169,11 +170,10 @@
   width: 100%;
   max-height: 200px;
   overflow-y: auto;
-  background-color: #222;
-  border-width: 5px;
-  border-color: #777;
+  background-color: #ffffff;
+  border: 1px solid #c8d4de;
   border-radius: 4px;
-  box-shadow: 0 4px 8px rgb(0 0 0 / 50%);
+  box-shadow: 0 12px 26px rgb(15 23 42 / 16%);
   z-index: 1000;
 }
 
@@ -183,12 +183,16 @@
   align-items: center;
 }
 
+.dropdown-option:hover {
+  background: rgb(14 116 144 / 8%);
+}
+
 .dropdown-option label {
   display: flex;
   align-items: center;
   font-weight: normal;
   cursor: pointer;
-  color: #fff;
+  color: #17212b;
   font-size: 12.5px;
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -199,13 +203,13 @@
   height: 15px;
   border-radius: 3px;
   appearance: none;
-  background-color: #333;
-  border: 2px solid #777;
+  background-color: #ffffff;
+  border: 2px solid #9fb0be;
 }
 
 .dropdown-option input[type="checkbox"]:checked {
-  background-color: #007acc;
-  border-color: #007acc;
+  background-color: #0e7490;
+  border-color: #0e7490;
 }
 
 .dropdown-option input[type="checkbox"]:checked::after {
@@ -217,11 +221,28 @@
 }
 
 .single-select-dropdown {
-  border-width: 2px;
-  border-color: #777;
-  border-radius: 2px;
+  border: 1px solid #c8d4de;
+  border-radius: 4px;
   font-size: 12.5px;
-  background-color: #222222;
-  color: #fff;
+  background-color: #ffffff;
+  color: #17212b;
+  color-scheme: light;
   min-width: 140px;
+  padding: 0.25rem 0.45rem;
+}
+
+.single-select-dropdown:hover {
+  border-color: #9fb0be;
+  background-color: #f8fbfd;
+}
+
+.single-select-dropdown:focus-visible {
+  outline: 2px solid rgb(14 116 144 / 26%);
+  outline-offset: 1px;
+  border-color: #0e7490;
+}
+
+.single-select-dropdown option {
+  background: #ffffff;
+  color: #17212b;
 }

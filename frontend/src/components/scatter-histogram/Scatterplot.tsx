@@ -112,7 +112,7 @@ export function NeuroScatterplot({
         Plot.line(overallLine, {
           x: "x",
           y: "y",
-          stroke: "white",
+          stroke: "#334155",
           strokeWidth: 1.8,
         }),
         ...(categorySelected && (showCategoryRegression || showCategoryAverage)
@@ -161,7 +161,7 @@ export function NeuroScatterplot({
             }
           : {}),
       },
-      style: `--plot-background: black; font-size: ${NEURO_FONT_SIZE}`,
+      style: `--plot-background: #fbfcfd; font-size: ${NEURO_FONT_SIZE}`,
     });
 
     if (scatterplotRef.current) {
