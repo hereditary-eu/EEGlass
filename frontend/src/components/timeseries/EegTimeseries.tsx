@@ -99,6 +99,7 @@ export function EegTimeseries({
 }: EegTimeseriesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previousResetViewSignalRef = useRef(resetViewSignal);
+  const viewSnapshotRef = useRef<{ duration: number; plotWidth: number } | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [view, setView] = useState<TimeseriesView>(() => createInitialView(samples, channels));
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -129,8 +130,25 @@ export function EegTimeseries({
   }
 
   useEffect(() => {
-    setSyncedView(createInitialView(samples, channels));
-  }, [channels, samples]);
+    const sampleCount = getMaxSampleCount(samples, channels);
+    const nextDuration = samplingFrequency > 0 ? sampleCount / samplingFrequency : 0;
+    const plotWidth = Math.max(1, canvasSize.width - PADDING.left - PADDING.right);
+
+    if (nextDuration <= 0 || !Number.isFinite(nextDuration)) {
+      return;
+    }
+
+    const nextView = mergeViewPreserveVisibleWindow(
+      viewRef.current,
+      viewSnapshotRef.current,
+      samples,
+      channels,
+      nextDuration,
+      plotWidth,
+    );
+    setSyncedView(nextView);
+    viewSnapshotRef.current = { duration: nextDuration, plotWidth };
+  }, [canvasSize.height, canvasSize.width, channels, samples, samplingFrequency]);
 
   useEffect(() => {
     if (previousResetViewSignalRef.current === resetViewSignal) {
@@ -138,9 +156,16 @@ export function EegTimeseries({
     }
 
     previousResetViewSignalRef.current = resetViewSignal;
-    setSyncedView(createInitialView(samples, channels));
+    const nextView = createInitialView(samples, channels);
+    setSyncedView(nextView);
+    const sampleCount = getMaxSampleCount(samples, channels);
+    const duration = samplingFrequency > 0 ? sampleCount / samplingFrequency : 0;
+    const plotWidth = Math.max(1, canvasSize.width - PADDING.left - PADDING.right);
+    if (duration > 0) {
+      viewSnapshotRef.current = { duration, plotWidth };
+    }
     onResetView?.();
-  }, [channels, onResetView, resetViewSignal, samples]);
+  }, [canvasSize.height, canvasSize.width, channels, onResetView, resetViewSignal, samples, samplingFrequency]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -349,7 +374,7 @@ export function EegTimeseries({
 
       {isLoading ? <div className="eeg-timeseries-overlay">Loading signal...</div> : null}
       {error ? <div className="eeg-timeseries-overlay eeg-timeseries-overlay--error">{error}</div> : null}
-      {!isLoading && !error && sampleCount === 0 ? (
+      {!isLoading && !error && sampleCount === 0 && channels.length > 0 ? (
         <div className="eeg-timeseries-overlay">No signal selected</div>
       ) : null}
     </div>
@@ -860,6 +885,52 @@ function xToTime(x: number, geometry: PlotGeometry, view: TimeseriesView, durati
 function clampOffset(offset: number, scale: number, plotWidth: number): number {
   const minOffset = -plotWidth * (scale - 1);
   return Math.max(minOffset, Math.min(0, offset));
+}
+
+function mergeViewPreserveVisibleWindow(
+  currentView: TimeseriesView,
+  previousSnapshot: { duration: number; plotWidth: number } | null,
+  samples: Record<ChannelId, number[]>,
+  channels: ChannelId[],
+  nextDuration: number,
+  plotWidth: number,
+): TimeseriesView {
+  const yView = createInitialView(samples, channels);
+  const safePlotWidth = Math.max(1, plotWidth);
+
+  if (nextDuration <= 0 || !Number.isFinite(nextDuration)) {
+    return currentView;
+  }
+
+  if (!previousSnapshot || previousSnapshot.duration <= 0) {
+    return yView;
+  }
+
+  const { duration: prevDuration, plotWidth: prevPlotWidth } = previousSnapshot;
+  const decodeWidth = Math.max(1, prevPlotWidth);
+
+  const maxScale = Math.max(1, nextDuration / 0.5);
+  const xScale = Math.min(currentView.xScale, maxScale);
+  const visibleDurationSec = nextDuration / xScale;
+  if (visibleDurationSec <= 0 || !Number.isFinite(visibleDurationSec)) {
+    return { ...yView, xScale: 1, xOffset: 0 };
+  }
+
+  const startTimeSec = getVisibleStartTime(currentView, decodeWidth, prevDuration);
+  const maxStart = Math.max(0, nextDuration - visibleDurationSec);
+  const clampedStart = Math.min(Math.max(0, startTimeSec), maxStart);
+  const newOffset = clampOffset(
+    -(clampedStart / visibleDurationSec) * safePlotWidth,
+    xScale,
+    safePlotWidth,
+  );
+
+  return {
+    xScale,
+    xOffset: newOffset,
+    yMin: yView.yMin,
+    yMax: yView.yMax,
+  };
 }
 
 function getCanvasPoint(

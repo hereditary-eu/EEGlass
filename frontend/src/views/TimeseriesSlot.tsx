@@ -142,7 +142,6 @@ function ChannelMultiSelect({ channels, selectedChannels, disabled, onChannelTog
               <input
                 type="checkbox"
                 checked={isSelected}
-                disabled={isSelected && selectedChannels.length === 1}
                 onChange={() => onChannelToggle(channel)}
               />
               <span>{channel}</span>

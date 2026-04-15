@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { TimeseriesService } from "../services/TimeseriesService";
 import { useAppStore } from "../stores/useAppStore";
@@ -36,6 +36,7 @@ export function useTimeseriesData() {
   const [error, setError] = useState<string | null>(null);
   const [resetViewSignal, setResetViewSignal] = useState(0);
   const [hoveredChannel, setHoveredChannel] = useState<ChannelId | null>(null);
+  const channelsClearedByUserRef = useRef(false);
 
   const selectedSubject = useMemo(
     () => subjects.find((subject) => subject.id === subjectId),
@@ -125,6 +126,7 @@ export function useTimeseriesData() {
         setSubjects(nextSubjects);
         const nextSubjectId = resolveSubjectId(subjectId, nextSubjects);
         if (!nextSubjectId) {
+          channelsClearedByUserRef.current = false;
           setSubjectId("");
           setSelectedChannels([]);
           setHoveredChannel(null);
@@ -133,8 +135,8 @@ export function useTimeseriesData() {
         }
 
         if (nextSubjectId !== subjectId) {
+          channelsClearedByUserRef.current = false;
           setSubjectId(nextSubjectId);
-          setSelectedChannels([]);
           setHoveredChannel(null);
         }
 
@@ -185,10 +187,23 @@ export function useTimeseriesData() {
 
         setMetadata(nextMetadata);
         const nextAvailableChannels = nextMetadata.channels.map((channel) => channel.name);
-        const nextChannels = resolveSelectedChannels(selectedChannels, nextAvailableChannels);
+
+        if (nextAvailableChannels.length === 0) {
+          setError("No EEG channels are available for this subject.");
+          return;
+        }
+
+        const nextChannels = resolveChannelsForLoad(
+          selectedChannels,
+          nextAvailableChannels,
+          channelsClearedByUserRef.current,
+        );
 
         if (nextChannels.length === 0) {
-          setError("No EEG channels are available for this subject.");
+          setError(null);
+          setSignal(null);
+          setIsLoading(false);
+          setIsRefreshingFullSignal(false);
           return;
         }
 
@@ -243,6 +258,7 @@ export function useTimeseriesData() {
   }, [datasetId, selectedChannels, setSelectedChannels, source, subjectId]);
 
   const handleDatasetChange = (nextDatasetId: string) => {
+    channelsClearedByUserRef.current = false;
     setDatasetId(nextDatasetId);
     setSubjectId("");
     setSubjects([]);
@@ -259,7 +275,6 @@ export function useTimeseriesData() {
     setSubjectId(nextSubjectId);
     setMetadata(null);
     setSignal(null);
-    setSelectedChannels([]);
     setSelectedTimeRange(null);
     setHoveredChannel(null);
     setSource(resolveSource(source, nextSubject?.sources ?? []));
@@ -270,9 +285,7 @@ export function useTimeseriesData() {
       ? selectedChannels.filter((selectedChannel) => selectedChannel !== channel)
       : [...selectedChannels, channel];
 
-    if (nextChannels.length === 0) {
-      return;
-    }
+    channelsClearedByUserRef.current = nextChannels.length === 0;
 
     setSelectedChannels(nextChannels);
     setSelectedTimeRange(null);
@@ -327,8 +340,24 @@ function resolveSelectedChannels(selectedChannels: ChannelId[], availableChannel
     return validSelectedChannels;
   }
 
-  const preferredChannel = availableChannels.find((channel) => channel.toLowerCase() === "fp1");
-  return preferredChannel ? [preferredChannel] : availableChannels.slice(0, 1);
+  return availableChannels.slice(0, 1);
+}
+
+function resolveChannelsForLoad(
+  selectedChannels: ChannelId[],
+  availableChannels: ChannelId[],
+  clearedByUser: boolean,
+): ChannelId[] {
+  const validSelectedChannels = selectedChannels.filter((channel) => availableChannels.includes(channel));
+  if (validSelectedChannels.length > 0) {
+    return validSelectedChannels;
+  }
+
+  if (clearedByUser) {
+    return [];
+  }
+
+  return resolveSelectedChannels(selectedChannels, availableChannels);
 }
 
 function areSameChannels(left: ChannelId[], right: ChannelId[]): boolean {
