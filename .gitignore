@@ -1,3 +1,5 @@
+*localtest*
+
 # Python-generated files
 __pycache__/
 *.py[oc]
@@ -27,3 +29,7 @@ coverage
 .env.test.local
 .env.production.local
 .env.local
+
+
+# data
+data/
