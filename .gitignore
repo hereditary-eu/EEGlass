@@ -30,6 +30,8 @@ coverage
 .env.production.local
 .env.local
 
-
 # data
 data/
+
+stuff/
+
