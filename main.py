@@ -2,7 +2,6 @@ import os
 import argparse
 import logging
 
-from pathlib import Path
 from backend.models.data_utils.load_data import load_metadata
 from backend.models.data_utils.perpare_data import split_participants_min_per_class
 from backend.models.train import train_save_model, load_model_weights
