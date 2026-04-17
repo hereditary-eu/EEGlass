@@ -6,15 +6,17 @@ from tqdm import tqdm
 
 from sklearn.model_selection import StratifiedGroupKFold
 
+
 def split_data(df, test_split=0.2, val_split=0.2):
     n_samples = df.shape[0]
     n_test_samples = int(n_samples * test_split)
-    
+
     df_test = df.iloc[-n_test_samples:]
-    df_val = df.iloc[-n_test_samples-int(n_samples*val_split):-n_test_samples]
-    df_train = df.iloc[:-n_test_samples-int(n_samples*val_split)]
-    
+    df_val = df.iloc[-n_test_samples - int(n_samples * val_split) : -n_test_samples]
+    df_train = df.iloc[: -n_test_samples - int(n_samples * val_split)]
+
     return df_train, df_val, df_test
+
 
 def split_train_test_val(df, test_split=0.2, val_split=0.2):
     """
@@ -28,7 +30,7 @@ def split_train_test_val(df, test_split=0.2, val_split=0.2):
     df_val = pd.DataFrame()
     df_test = pd.DataFrame()
 
-    df_grouped = df.groupby('participant_id')
+    df_grouped = df.groupby("participant_id")
     for participant_id, group in df_grouped:
         print(f"participantpantpaparticipantpant{participant_id}, Number of samples: {len(group)}")
         df_train_participant, df_val_participant, df_test_participant = split_data(group, test_split, val_split)
@@ -40,12 +42,8 @@ def split_train_test_val(df, test_split=0.2, val_split=0.2):
 
 
 def split_participants_min_per_class(
-    df_metadata,
-    label_col="group_encoded",
-    id_col=None,
-    ratios=(0.7, 0.15, 0.15),
-    random_state=42
-    ):
+    df_metadata, label_col="group_encoded", id_col=None, ratios=(0.7, 0.15, 0.15), random_state=42
+):
     """
     Splits participants into train, validation and test sets while ensuring that each class is represented in each set. The split is done at the participant level, meaning that all samples from a participant will be in the same set (train, test or validation).
         - label_col: name of the column in df_metadata that contains the class labels
@@ -54,7 +52,7 @@ def split_participants_min_per_class(
         - ratios: tuple of three floats representing the proportions for train, validation and test sets
         - random_state: seed for the random number generator
     """
-    
+
     rng = np.random.default_rng(random_state)
 
     if id_col is None:
@@ -73,7 +71,6 @@ def split_participants_min_per_class(
         ratios = ratios / ratios.sum()
 
     for label, group in df_metadata.groupby(label_col):
-
         participants = group["__id__"].tolist()
         rng.shuffle(participants)
 
@@ -102,31 +99,36 @@ def split_participants_min_per_class(
             # print(splits[idx])
 
         while sum(splits) < n:
-            print(f"Underflow in splits for label {label} with n={n}. Current splits: {splits}. Increasing largest split.")
+            print(
+                f"Underflow in splits for label {label} with n={n}. Current splits: {splits}. Increasing largest split."
+            )
             idx = np.argmax(splits)  # increase largest
             splits[idx] += 1
 
         n_train, n_val, n_test = splits
 
         train += participants[:n_train]
-        val   += participants[n_train:n_train+n_val]
-        test  += participants[n_train+n_val:n_train+n_val+n_test]
+        val += participants[n_train : n_train + n_val]
+        test += participants[n_train + n_val : n_train + n_val + n_test]
 
-    df_metadata.loc[df_metadata['__id__'].isin(train), 'datasplit'] = 'train'
-    df_metadata.loc[df_metadata['__id__'].isin(val), 'datasplit'] = 'val'
-    df_metadata.loc[df_metadata['__id__'].isin(test), 'datasplit'] = 'test'
+    df_metadata.loc[df_metadata["__id__"].isin(train), "datasplit"] = "train"
+    df_metadata.loc[df_metadata["__id__"].isin(val), "datasplit"] = "val"
+    df_metadata.loc[df_metadata["__id__"].isin(test), "datasplit"] = "test"
 
     df_metadata.drop(columns=["__id__"], inplace=True)
 
-    print(f"# Patients in train: {len(train)}, val: {len(val)}, test: {len(test)}" + 
-          f" with {df_metadata[label_col].nunique()} classes and {len(df_metadata)} total samples.")
+    print(
+        f"# Patients in train: {len(train)}, val: {len(val)}, test: {len(test)}"
+        + f" with {df_metadata[label_col].nunique()} classes and {len(df_metadata)} total samples."
+    )
 
     return train, val, test
+
 
 def reshape_eeg(df_eeg, Chans, sample_length):
     n_samples = df_eeg.shape[0]
     n_windows = n_samples // sample_length
-    eeg_array = df_eeg.iloc[:n_windows*sample_length, 1:Chans+1].values
+    eeg_array = df_eeg.iloc[: n_windows * sample_length, 1 : Chans + 1].values
     eeg_array = eeg_array.reshape(n_windows, sample_length, Chans)
     eeg_array = np.transpose(eeg_array, (0, 2, 1))  # Reshape to (n_windows, Chans, sample_length)
     eeg_array = torch.tensor(eeg_array, dtype=torch.float32)
@@ -138,7 +140,7 @@ def reshape_eeg(df_eeg, Chans, sample_length):
 def reshape_y(y, sample_length):
     n_samples = len(y)
     n_windows = n_samples // sample_length
-    y_array = y.iloc[:n_windows*sample_length].values
+    y_array = y.iloc[: n_windows * sample_length].values
     y_array = y_array.reshape(n_windows, sample_length)
     y_array = y_array[:, 0]  # Take the first label in each window (assuming all labels in the window are the same)
     y_array = torch.tensor(y_array, dtype=torch.long)
@@ -154,11 +156,11 @@ def reshape_eeg_multipl(df_eeg, y_column, x_columns, Chans, sample_length):
     - Chans: Number of EEG channels
     - sample_length: Length of each sample (number of time points)
     """
-    participant_ids = df_eeg['participant_id'].unique()
+    participant_ids = df_eeg["participant_id"].unique()
     eeg_arrays = []
     eeg_y = []
     for participant_id in tqdm(participant_ids):
-        df_participant = df_eeg[df_eeg['participant_id'] == participant_id]
+        df_participant = df_eeg[df_eeg["participant_id"] == participant_id]
         eeg_array_participant = reshape_eeg(df_participant[x_columns], Chans, sample_length)
         y_participant = reshape_y(df_participant[y_column], sample_length)
 
@@ -169,13 +171,15 @@ def reshape_eeg_multipl(df_eeg, y_column, x_columns, Chans, sample_length):
     return eeg_array, eeg_y
 
 
-def get_data_loader(df, Chans, sample_length, batchsize, workers, x_columns, y_column='diagnosis'):
+def get_data_loader(df, Chans, sample_length, batchsize, workers, x_columns, y_column="diagnosis"):
     x, y = reshape_eeg_multipl(df, x_columns=x_columns, y_column=y_column, Chans=Chans, sample_length=sample_length)
     dataloader = DataLoader(list(zip(x, y)), batch_size=batchsize, shuffle=True, num_workers=workers)
     return dataloader
 
 
-def get_data_loaders(df_eeg, df_metadata, x_columns, Chans, sample_length, batchsize, workers, ratios=(0.7, 0.15, 0.15)):
+def get_data_loaders(
+    df_eeg, df_metadata, x_columns, Chans, sample_length, batchsize, workers, ratios=(0.7, 0.15, 0.15)
+):
     """
     Gets data loaders for training, validation and testing, which have the correct format for xEEGNet and shallownetk.
     - df_eeg: DataFrame containing the EEG data and participant IDs
@@ -187,20 +191,17 @@ def get_data_loaders(df_eeg, df_metadata, x_columns, Chans, sample_length, batch
     - workers: Number of workers for the data loaders
     - ratios: Tuple containing the ratios for splitting the data into train, validation and test sets
     """
-    df_metadata_filtered = df_metadata.set_index('participant_id').loc[df_eeg['participant_id'].unique(), :]
+    df_metadata_filtered = df_metadata.set_index("participant_id").loc[df_eeg["participant_id"].unique(), :]
 
     splits = split_participants_min_per_class(df_metadata_filtered, ratios=ratios)
     train_ids, val_ids, test_ids = splits
 
-    df_train = df_eeg[df_eeg['participant_id'].isin(train_ids)]
-    df_val = df_eeg[df_eeg['participant_id'].isin(val_ids)]
-    df_test = df_eeg[df_eeg['participant_id'].isin(test_ids)]
-    
+    df_train = df_eeg[df_eeg["participant_id"].isin(train_ids)]
+    df_val = df_eeg[df_eeg["participant_id"].isin(val_ids)]
+    df_test = df_eeg[df_eeg["participant_id"].isin(test_ids)]
+
     trainloader = get_data_loader(df_train, Chans, sample_length, batchsize, workers, x_columns)
     valloader = get_data_loader(df_val, Chans, sample_length, batchsize, workers, x_columns)
     testloader = get_data_loader(df_test, Chans, sample_length, batchsize, workers, x_columns)
 
     return trainloader, valloader, testloader
-
-
-

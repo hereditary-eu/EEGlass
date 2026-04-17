@@ -9,14 +9,21 @@ import pandas as pd
 # dir_base = curr_directory
 
 
-def load_eeg_data(participant: int, channel_name: str, dir_data: str, data_type: str='derivatives', n_points: int=None, ):
-    """"
+def load_eeg_data(
+    participant: int,
+    channel_name: str,
+    dir_data: str,
+    data_type: str = "derivatives",
+    n_points: int = None,
+):
+    """ "
     Function to load single channel of single patietnt's EEG data. Used for testing and visualization purposes.
     """
     print("load_eeg_data called with:", participant, channel_name, data_type, n_points)
-    if data_type == 'derivatives':
-        data_path = os.path.join(dir_data, 'derivatives', 
-                                    f'sub-{participant:03d}', 'eeg', f'sub-{participant:03d}_task-eyesclosed_eeg.set')
+    if data_type == "derivatives":
+        data_path = os.path.join(
+            dir_data, "derivatives", f"sub-{participant:03d}", "eeg", f"sub-{participant:03d}_task-eyesclosed_eeg.set"
+        )
         print("Loading data from:", data_path)
         eeg_set = mne.io.read_raw_eeglab(data_path, preload=True)
         if channel_name in eeg_set.ch_names:
@@ -25,5 +32,4 @@ def load_eeg_data(participant: int, channel_name: str, dir_data: str, data_type:
             # return EEGDataResponse(channel_data[:n_points], time_vector[:n_points])
             return channel_data[:n_points], time_vector[:n_points]
         else:
-            
             raise ValueError(f"Channel {channel_name} not found in EEG data. available channels: {eeg_set.ch_names}")
