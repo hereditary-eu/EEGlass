@@ -1,76 +1,35 @@
-import selfeeg
+import pathlib
+from selfeeg.ssl import EarlyStopping
 import sys
+import os
 
 # print sys paths
 from pathlib import Path
+import torch
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-print(f"Root directory: {ROOT}")
+# print(f"Root directory: {ROOT}")
 sys.path.append(str(ROOT))
 
-from backend.models.data_utils.load_data import *
-from backend.models.data_utils.perpare_data import *
+from backend.models.data_utils.load_data import (
+    load_metadata,
+    load_multiple_eegfiles,
+    gen_filename,
+    gen_participant_id_long,
+)
+from backend.models.data_utils.perpare_data import get_data_loader
 from backend.experiments_xeegnet.shallownetXAI_main.AllFnc.training import (
     lossBinary,
     lossMulti,
     train_model,
 )
-
-parameters_default = {
-    "nb_classes": 3,
-    "x_columns": [
-        "time",
-        "Fp1",
-        "Fp2",
-        "F3",
-        "F4",
-        "C3",
-        "C4",
-        "P3",
-        "P4",
-        "O1",
-        "O2",
-        "F7",
-        "F8",
-        "T3",
-        "T4",
-        "T5",
-        "T6",
-        "Fz",
-        "Cz",
-        "Pz",
-    ],
-    "Chans": 19,
-    "sample_length": 500,
-    "srate": 125,
-    "batchsize": 64,
-    "workers": 0,
-    "window": 4,  # in seconds
-}
-
-training_parameters_default = {
-    # 'epochs': 5,
-    "epochs": 100,
-    "lr": 5 * 10 ** (-5),
-    "gamma": 0.995,
-    "seed": 42,
-    # 'lossVal': None,
-}
-
-xeeg_model = selfeeg.models.xEEGNet(
-    nb_classes=parameters_default["nb_classes"],
-    Chans=parameters_default["Chans"],
-    Samples=parameters_default["sample_length"],
-    Fs=parameters_default["srate"],
-    global_pooling=True,
+from backend.models.model_vars import (
+    XEEG_MODEL_DEFAULT,
+    PARAMETERS_DEFAULT,
+    TRAINING_PARAMETERS_DEFAULT,
+    PRETRAINED_MODEL_DIR,
 )
-
-participants_ids_all = list(np.arange(1, 89))
-participants_ids_small = [1, 2, 3, 4, 5, 6, 40, 41, 42, 43, 44, 45, 80, 81, 82, 83, 84, 85]
-
-participants_ids_train_debug = [1, 2, 40, 41, 80, 81]
-participants_ids_val_debug = [3, 42, 82]
-# participants_ids_val = []
 
 
 def save_model(model, model_path, df_metadata=None):
@@ -88,11 +47,11 @@ def save_model(model, model_path, df_metadata=None):
 def train_save_model(
     model_path: str,
     dir_data: str,
-    participant_ids_train: list = participants_ids_train_debug,
-    participant_ids_val: list = participants_ids_val_debug,
-    model=xeeg_model,
-    parameters: dict = parameters_default,
-    training_parameters: dict = training_parameters_default,
+    participant_ids_train: list,
+    participant_ids_val: list,
+    model=XEEG_MODEL_DEFAULT,
+    parameters: dict = PARAMETERS_DEFAULT,
+    training_parameters: dict = TRAINING_PARAMETERS_DEFAULT,
     verbose=False,
     device="cpu",
     df_metadata=None,
@@ -105,9 +64,9 @@ def train_save_model(
     - dir_data: Path to the data directory containing the EEG data and metadata.
     - participant_ids_train: List of participant IDs to use for training.
     - participant_ids_val: List of participant IDs to use for validation.
-    - model: The model to train (default is xeeg_model).
-    - parameters: Dictionary of parameters for data preparation and model training (default is parameters_default).
-    - training_parameters: Dictionary of parameters for training (default is training_parameters_default).
+    - model: The model to train (default is XEEG_MODEL_DEFAULT).
+    - parameters: Dictionary of parameters for data preparation and model training (default is PARAMETERS_DEFAULT).
+    - training_parameters: Dictionary of parameters for training (default is TRAINING_PARAMETERS_DEFAULT).
     - verbose: Whether to print verbose output during training (default is False).
     - device: Device to use for training (default is 'cpu').
     - df_metadata: Metadata dataframe (optional). If not provided, it will be loaded from the data directory.
@@ -165,7 +124,7 @@ def train_save_model(
     else:
         lossFnc = lossBinary
 
-    earlystop = selfeeg.ssl.EarlyStopping(patience=15, min_delta=1e-04, record_best_weights=True)
+    earlystop = EarlyStopping(patience=15, min_delta=1e-04, record_best_weights=True)
     lossVal = None
     validation_loss_args = []
 
@@ -173,7 +132,7 @@ def train_save_model(
     print(f"Training parameters: {training_parameters}")
     print(f"xtrain shape: {len(trainloader.dataset)}, xval shape: {len(valloader.dataset)}")
 
-    train_model(
+    _ = train_model(
         model=model,
         # model                 = xeegnet,
         train_dataloader=trainloader,
@@ -195,11 +154,11 @@ def train_save_model(
     return model, df_metadata
 
 
-def load_model_weights(model_path: str, model=xeeg_model, device="cpu"):
+def load_model_weights(model_path: str, model=XEEG_MODEL_DEFAULT, device="cpu"):
     """
     Loads a trained model from the specified path. The model has already to be defined, only loads the weights.
     - model_path: Path to the saved model.
-    - model: The model architecture to load the weights into (default is xeeg_model).
+    - model: The model architecture to load the weights into (default is XEEG_MODEL_DEFAULT).
     - device: Device to load the model onto (default is 'cpu').
     """
     print(f"Loading model from {model_path}")
@@ -209,8 +168,17 @@ def load_model_weights(model_path: str, model=xeeg_model, device="cpu"):
     return model
 
 
-# model = train_save_model(
-#     model_path=os.path.join('backend', 'models', 'pretrained_models', 'xeegnet_model_test.pt'),
-#     dir_data=os.path.join('data', 'datasets', 'ds004504'),
-#     n_max=1000,
-# )
+## testing the train function
+participants_ids_all = list(np.arange(1, 89))
+participants_ids_small = [1, 2, 3, 4, 5, 6, 40, 41, 42, 43, 44, 45, 80, 81, 82, 83, 84, 85]
+
+participants_ids_train_debug = [1, 2, 40, 41, 80, 81]
+participants_ids_val_debug = [3, 42, 82]
+
+model = train_save_model(
+    model_path=os.path.join(PRETRAINED_MODEL_DIR, "xeegnet_model_test.pt"),
+    dir_data=os.path.join("data", "datasets", "ds004504"),
+    participant_ids_train=participants_ids_train_debug,
+    participant_ids_val=participants_ids_val_debug,
+    n_max=1000,
+)
