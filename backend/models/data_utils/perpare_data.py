@@ -4,8 +4,6 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from sklearn.model_selection import StratifiedGroupKFold
-
 
 def split_data(df, test_split=0.2, val_split=0.2):
     n_samples = df.shape[0]
@@ -81,12 +79,12 @@ def split_participants_min_per_class(
         if ratios[1] > 0:
             n_val = max(1, int(round(n * ratios[1])))
         else:
-            print(f"Validation split is set to 0")
+            print("Validation split is set to 0")
             n_val = 0
         if ratios[2] > 0:
             n_test = max(1, int(round(n * ratios[2])))
         else:
-            print(f"Test split is set to 0")
+            print("Test split is set to 0")
             n_test = 0
 
         # fix overflow

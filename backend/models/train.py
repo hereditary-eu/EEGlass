@@ -1,6 +1,4 @@
 import selfeeg
-import os
-import pandas as pd
 import sys
 
 # print sys paths
@@ -175,7 +173,7 @@ def train_save_model(
     print(f"Training parameters: {training_parameters}")
     print(f"xtrain shape: {len(trainloader.dataset)}, xval shape: {len(valloader.dataset)}")
 
-    loss_summary = train_model(
+    train_model(
         model=model,
         # model                 = xeegnet,
         train_dataloader=trainloader,

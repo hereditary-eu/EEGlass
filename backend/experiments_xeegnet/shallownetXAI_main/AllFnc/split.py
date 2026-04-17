@@ -76,7 +76,8 @@ def create_nested_kfold_subject_split(
         )
 
     # to calculate list diffs by preserving order we will use this lambda function
-    list_diff = lambda l1, l2: [x for x in l1 if x not in l2]
+    def list_diff(l1, l2):
+        return [x for x in l1 if x not in l2]
 
     # preallocate list of split. Each split is represented by three list:
     # the first for train, the second for validation, the third for test
@@ -85,7 +86,7 @@ def create_nested_kfold_subject_split(
     # shuffle list according to given seed
     random.seed(seed)
     random.shuffle(subj_list)
-    subj_list_set = set(subj_list)
+    set(subj_list)
 
     # initialize test counter to provide a simple way
     # to create splits with a similar size

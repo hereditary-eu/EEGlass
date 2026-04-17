@@ -1,5 +1,4 @@
 from __future__ import annotations
-from collections import OrderedDict
 from collections.abc import Iterable, Callable
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,11 +7,9 @@ import pickle
 import os
 from scipy.stats import zscore
 import seaborn as sns
-import selfeeg.losses as Loss
 from selfeeg.ssl import evaluate_loss
 from sklearn.metrics import (
     accuracy_score,
-    auc,
     balanced_accuracy_score,
     classification_report,
     cohen_kappa_score,
@@ -26,9 +23,8 @@ import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset
 import tqdm
-from typing import Optional, Union
+from typing import Optional
 from .utilities import GetLrDict
 
 __all__ = [
@@ -302,7 +298,7 @@ def subject_invariant_cross_entropy(Yhat, Ytrue, subjhat=None, subjtrue=None, La
         ytrue, subjtrue = Ytrue[0], Ytrue[1]
     else:
         ytrue = Ytrue
-    N = len(subjhat)
+    len(subjhat)
     loss1 = F.cross_entropy(yhat, ytrue, reduction="mean")
     subjhat = torch.nn.functional.softmax(subjhat, 1)
     loss2 = F.cross_entropy(subjhat, subjtrue[torch.randperm(subjtrue.shape[0])], reduction="mean")
@@ -377,7 +373,7 @@ def subject_invariant_binary_cross_entropy(
         ytrue, subjtrue = Ytrue[0], Ytrue[1]
     else:
         ytrue = Ytrue
-    N = len(subjhat)
+    len(subjhat)
     loss1 = F.binary_cross_entropy_with_logits(yhat, ytrue)
     subjhat = torch.nn.functional.softmax(subjhat, 1)
     loss2 = F.cross_entropy(subjhat, subjtrue[torch.randperm(subjtrue.shape[0])], reduction="mean")
@@ -575,7 +571,7 @@ def train_model(
             # # Print final result for balanced accuracy at the end of the epoch
             # print(f"Epoch {epoch}: Balanced Accuracy = {epoch_balanced_accuracy*100:.2f}%")
 
-            if lr_scheduler != None:
+            if lr_scheduler is not None:
                 # lr_scheduler.step(val_loss) #CHANGED HERE
                 lr_scheduler.step()
 
@@ -625,7 +621,7 @@ def train_model(
                     val_loss_tot /= batch_idx + 1
 
         # Deal with earlystopper if given
-        if EarlyStopper != None:
+        if EarlyStopper is not None:
             updated_mdl = False
             if EarlyStopper.monitored == "validation":
                 curr_monitored = val_loss_tot

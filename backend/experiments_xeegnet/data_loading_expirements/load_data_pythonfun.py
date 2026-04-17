@@ -1,6 +1,5 @@
 import os
 import mne
-import pandas as pd
 
 # curr_file_path = os.path.abspath(__file__)
 # print("curr_file_path:", curr_file_path)

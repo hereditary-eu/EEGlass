@@ -1,18 +1,9 @@
-import copy
-from itertools import chain, combinations, product
+from itertools import chain, combinations
 import math
 import matplotlib.pyplot as plt
 import numpy as np
 import random
 from scipy.signal import firwin, freqz
-import selfeeg
-from selfeeg.models import (
-    ConstrainedConv2d,
-    ConstrainedConv1d,
-    ConstrainedDense,
-    DepthwiseConv2d,
-    SeparableConv2d,
-)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

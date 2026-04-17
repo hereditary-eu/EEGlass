@@ -7,7 +7,6 @@ import seaborn as sns
 from scipy.stats import gaussian_kde, linregress, pearsonr, norm
 from scipy.signal import welch, freqz
 from statsmodels.stats import multitest
-import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from matplotlib.lines import Line2D
@@ -985,7 +984,6 @@ def BP_plot(ax, i, h, angles, f_hz, spec_dict, string, maxminv, ind):
     """
 
     # Define label based on training state (because a plot without a story is just a chart!)
-    label = "After Train " if ind == 0 else "Before Train "
     unit = get_PSDunit(spec_dict["lognorm"], unit="[]", power=False)
 
     # Define frequency band tick positions and vertical markers
@@ -1896,7 +1894,7 @@ def flattenCorrelationPSD(input_window, Mdl, layer, spec_dict):
             # Get the frequency index for the current frequency band
             findex = get_freq_index(f, spec_dict["bands"][band_keys[j]])
             # Calculate the frequency range for normalization
-            frange = spec_dict["bands"][band_keys[j]][1] - spec_dict["bands"][band_keys[j]][0]
+            spec_dict["bands"][band_keys[j]][1] - spec_dict["bands"][band_keys[j]][0]
             # Compute the log10 of the average power in the current band using trapezoidal integration
             # bandc = spec_dict['norm']*np.log10(np.mean(np.trapz(Pxx[findex[0]:findex[1], :].T, dx=(f[1] - f[0])) / frange))
             bandc = data_transform(
@@ -2165,7 +2163,7 @@ def embedding_split2D(embedding, labels, spec_dict, ax=None):
     }
 
     # Cumulative indices for slicing the embedding data
-    cumulative_sizes = np.cumsum([0] + sample_sizes)
+    np.cumsum([0] + sample_sizes)
 
     # Plot the scatter points for each sample set (TEST, VAL, TRAIN)
     legend_elements = []
@@ -2263,9 +2261,9 @@ def embedding_split3D(embedding, labels, spec_dict):
     # Extract label subsets
     labels_test, labels_val, labels_train = labels[0], labels[1], labels[2]
     # Determine the number of samples in each subset
-    test_samples = len(labels_test)
-    val_samples = len(labels_val)
-    train_samples = len(labels_train)
+    len(labels_test)
+    len(labels_val)
+    len(labels_train)
 
     # Index ranges for each subset (TEST, VAL, TRAIN)
     idxs = {
@@ -2284,7 +2282,6 @@ def embedding_split3D(embedding, labels, spec_dict):
     probability_thresholds = [(norm.cdf(sigma) - norm.cdf(-sigma)) for sigma in list(spec_dict["sigmalevels"])]
 
     # Store KDE density values for each dataset
-    density_values = []
 
     # Plot data for the first selected set (e.g., TEST or VAL)
     xmin, xmax = np.inf, -np.inf
@@ -2444,7 +2441,7 @@ def embedding_labels2D(embedding, labels, spec_dict, ax=None):
         df["Label"] = np.array(labels_tot)[mask1]
 
         # Generate the KDE plot for class density estimation
-        kde_plot = sns.kdeplot(
+        sns.kdeplot(
             data=df,
             x=df.columns[0],
             y=df.columns[1],
@@ -2734,12 +2731,12 @@ def embedding_class2D(embedding, inout_labels, spec_dict, subj_test=None, nw_tes
                 X, Y, Z, threshold_value = compute_2D_KDE(
                     embedding, [index, (index + samples)], spec_dict["level"], spec_dict["gridsize"]
                 )
-                contour = ax.contour(
+                ax.contour(
                     X, Y, Z, levels=[threshold_value], colors=[colors_test[index]], linewidths=spec_dict["linew"]
                 )
 
                 # Create a label for the legend with subject information
-                max_subj_length = max(len(str(s)) for s in subj_test)
+                max(len(str(s)) for s in subj_test)
                 leg_label = f"S{subj_test[i]:0>{int(np.log10(spec_dict['nsub'])) + 1}} ({samples:<{int(np.log10(samples)) + 1}}) | {sum(current_mask) / samples:>2.0%}"
                 legend_elements.append(
                     Line2D(
@@ -2788,7 +2785,7 @@ def embedding_class2D(embedding, inout_labels, spec_dict, subj_test=None, nw_tes
         X, Y, Z, threshold_value = compute_2D_KDE(
             embedding_test[mask, :], [0, -1], spec_dict["level"], spec_dict["gridsize"]
         )
-        contour = ax.contour(X, Y, Z, levels=[threshold_value], colors=["g"], linewidths=spec_dict["linew"])
+        ax.contour(X, Y, Z, levels=[threshold_value], colors=["g"], linewidths=spec_dict["linew"])
 
         # Plot the misclassified points in red (pluses)
         ax.scatter(
@@ -2804,7 +2801,7 @@ def embedding_class2D(embedding, inout_labels, spec_dict, subj_test=None, nw_tes
         X, Y, Z, threshold_value = compute_2D_KDE(
             embedding_test[~mask, :], [0, -1], spec_dict["level"], spec_dict["gridsize"]
         )
-        contour = ax.contour(X, Y, Z, levels=[threshold_value], colors=["r"], linewidths=spec_dict["linew"])
+        ax.contour(X, Y, Z, levels=[threshold_value], colors=["r"], linewidths=spec_dict["linew"])
 
         # Create the legend for correct vs misclassified points in red and green colors
         legend1_elements.append(
