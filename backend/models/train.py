@@ -1,4 +1,3 @@
-import pathlib
 from selfeeg.ssl import EarlyStopping
 import sys
 import os
