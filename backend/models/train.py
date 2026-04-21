@@ -154,31 +154,19 @@ def train_save_model(
     return model, df_metadata
 
 
-def load_model_weights(model_path: str, model=XEEG_MODEL_DEFAULT, device="cpu"):
-    """
-    Loads a trained model from the specified path. The model has already to be defined, only loads the weights.
-    - model_path: Path to the saved model.
-    - model: The model architecture to load the weights into (default is XEEG_MODEL_DEFAULT).
-    - device: Device to load the model onto (default is 'cpu').
-    """
-    print(f"Loading model from {model_path}")
-    model.load_state_dict(torch.load(model_path, map_location=device))
-    model.to(device)
-    model.eval()
-    return model
+"""
+Example usage:
+"""
+# participants_ids_all = list(np.arange(1, 89))
+# participants_ids_small = [1, 2, 3, 4, 5, 6, 40, 41, 42, 43, 44, 45, 80, 81, 82, 83, 84, 85]
 
+# participants_ids_train_debug = [1, 2, 40, 41, 80, 81]
+# participants_ids_val_debug = [3, 42, 82]
 
-## testing the train function
-participants_ids_all = list(np.arange(1, 89))
-participants_ids_small = [1, 2, 3, 4, 5, 6, 40, 41, 42, 43, 44, 45, 80, 81, 82, 83, 84, 85]
-
-participants_ids_train_debug = [1, 2, 40, 41, 80, 81]
-participants_ids_val_debug = [3, 42, 82]
-
-model = train_save_model(
-    model_path=os.path.join(PRETRAINED_MODEL_DIR, "xeegnet_model_test.pt"),
-    dir_data=os.path.join("data", "datasets", "ds004504"),
-    participant_ids_train=participants_ids_train_debug,
-    participant_ids_val=participants_ids_val_debug,
-    n_max=1000,
-)
+# model = train_save_model(
+#     model_path=os.path.join(PRETRAINED_MODEL_DIR, "xeegnet_model_test.pt"),
+#     dir_data=os.path.join("data", "datasets", "ds004504"),
+#     participant_ids_train=participants_ids_train_debug,
+#     participant_ids_val=participants_ids_val_debug,
+#     n_max=1000,
+# )
