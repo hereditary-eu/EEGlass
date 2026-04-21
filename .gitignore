@@ -1,3 +1,6 @@
+*localtest*
+# .vscode/
+
 # Python-generated files
 __pycache__/
 *.py[oc]
@@ -34,3 +37,8 @@ data/datasets/
 
 # ruff
 .ruff_cache/
+# data
+data/
+
+stuff/
+

@@ -1,0 +1,14 @@
+imgs/
+*.log
+AlzCAClassification/
+AlzAllClassification/
+AlzBLClassification/
+*.tsv
+
+
+*Identifier
+new_images/
+new_results/
+newmodels/
+
+

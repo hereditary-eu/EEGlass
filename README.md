@@ -9,6 +9,12 @@ uv install
 bun install
 ```
 
+If uv version is newer, use:
+
+```
+uv sync
+```
+
 To start a development server:
 
 ```bash
