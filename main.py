@@ -4,9 +4,9 @@ import logging
 
 from backend.models.data_utils.load_data import load_metadata
 from backend.models.data_utils.perpare_data import split_participants_min_per_class
-from backend.models.train import train_save_model, load_model_weights
-from backend.models.model_vars import PRETRAINED_MODEL_DIR
+from backend.models.train import train_save_model
 from backend.models.model_utils import load_model_weights
+from backend.models.model_vars import PRETRAINED_MODEL_DIR
 
 
 def main():
