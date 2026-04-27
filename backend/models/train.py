@@ -1,11 +1,9 @@
 from selfeeg.ssl import EarlyStopping
 import sys
-import os
 
 # print sys paths
 from pathlib import Path
 import torch
-import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 # print(f"Root directory: {ROOT}")
@@ -27,7 +25,6 @@ from backend.models.model_vars import (
     XEEG_MODEL_DEFAULT,
     PARAMETERS_DEFAULT,
     TRAINING_PARAMETERS_DEFAULT,
-    PRETRAINED_MODEL_DIR,
 )
 
 
