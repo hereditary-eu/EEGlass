@@ -1,6 +1,3 @@
-*localtest*
-# .vscode/
-
 # Python-generated files
 __pycache__/
 *.py[oc]
@@ -31,8 +28,9 @@ coverage
 .env.production.local
 .env.local
 
+
 # data
-data/
+data/datasets/
 
-stuff/
-
+# ruff
+.ruff_cache/

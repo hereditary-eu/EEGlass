@@ -1,34 +1,39 @@
-from typing import Union
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
-
-origins = [
-    "http://localhost",
-    "http://localhost:3000",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+from backend.config import CONFIG
+from backend.routers import (
+    debug_router,
+    dataset_router,
+    clustering_router,
+    shapley_router,
+    chat_router,
+    timeseries_router,
 )
 
 
-@app.get("/")
-async def read_root():
-    return {"Hello": "World", "From": "The Python Backend!"}
+def create_app():
+    app = FastAPI(
+        title=CONFIG.TITLE,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=CONFIG.ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    app.include_router(debug_router)
+    app.include_router(dataset_router)
+    app.include_router(clustering_router)
+    app.include_router(shapley_router)
+    app.include_router(chat_router)
+    app.include_router(timeseries_router)
+
+    return app
 
 
-@app.get("/items/{item_id}")
-async def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
-
-
-@app.get("/stream")
-async def stream():
-    return "hi"
+app = create_app()
