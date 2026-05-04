@@ -10,7 +10,9 @@ from typing import Any
 import numpy as np
 
 from backend.config import CONFIG
-from backend.models.timeseries import (
+from backend.ml.model_vars import MODEL_BANDS
+from backend.pydantic_models.timeseries import (
+    TimeseriesBandFilter,
     TimeseriesChannelMetadata,
     TimeseriesDatasetInfo,
     TimeseriesSignalResponse,
@@ -18,6 +20,11 @@ from backend.models.timeseries import (
     TimeseriesSubjectInfo,
     TimeseriesSubjectMetadata,
 )
+
+_BAND_FILTER_LIMITS: dict[TimeseriesBandFilter, tuple[float, float]] = {
+    band_name: (start_hz, end_hz)
+    for band_name, start_hz, end_hz in MODEL_BANDS
+}
 
 
 class TimeseriesServiceError(Exception):
@@ -120,6 +127,7 @@ class TimeseriesService:
         source: TimeseriesSource = "derivatives",
         start_time: float | None = None,
         end_time: float | None = None,
+        band_filter: TimeseriesBandFilter | None = None,
         preview: bool = False,
         max_points: int = 5000,
     ) -> TimeseriesSignalResponse:
@@ -145,6 +153,9 @@ class TimeseriesService:
         )
 
         data = raw.get_data(picks=channels, start=start_sample, stop=end_sample)
+        if band_filter is not None:
+            data = cls._apply_band_filter(data, sampling_frequency, band_filter)
+
         selected_sample_count = int(data.shape[1])
         decimation = 1
 
@@ -162,6 +173,7 @@ class TimeseriesService:
             dataset_id=dataset_id,
             subject_id=subject_id,
             source=source,
+            band_filter=band_filter,
             preview=preview,
             channels=channels,
             sampling_frequency=sampling_frequency,
@@ -174,6 +186,48 @@ class TimeseriesService:
             decimation=decimation,
             samples=samples,
         )
+
+    @staticmethod
+    def _apply_band_filter(
+        data: np.ndarray,
+        sampling_frequency: float,
+        band_filter: TimeseriesBandFilter,
+    ) -> np.ndarray:
+        band_limits = _BAND_FILTER_LIMITS.get(band_filter)
+        if band_limits is None:
+            raise TimeseriesValidationError(f"Unsupported band_filter '{band_filter}'.")
+
+        low_hz, high_hz = band_limits
+        nyquist_hz = sampling_frequency / 2
+        if low_hz >= nyquist_hz:
+            raise TimeseriesValidationError(
+                f"Cannot apply {band_filter} filter because its lower cutoff ({low_hz:g}Hz) is above Nyquist "
+                f"({nyquist_hz:g}Hz)."
+            )
+
+        safe_high_hz = min(high_hz, nyquist_hz - 1e-6)
+        if safe_high_hz <= low_hz:
+            raise TimeseriesValidationError(
+                f"Cannot apply {band_filter} filter at sampling frequency {sampling_frequency:g}Hz."
+            )
+
+        try:
+            import mne
+        except ImportError as exc:
+            raise TimeseriesReaderUnavailableError(
+                "MNE is required to bandpass-filter EEG signal data but is not available in the active Python environment."
+            ) from exc
+
+        try:
+            return mne.filter.filter_data(
+                data,
+                sfreq=sampling_frequency,
+                l_freq=low_hz,
+                h_freq=safe_high_hz,
+                verbose="ERROR",
+            )
+        except Exception as exc:
+            raise TimeseriesServiceError(f"Could not apply {band_filter} bandpass filter: {exc}") from exc
 
     @classmethod
     def _storage_root(cls) -> Path:

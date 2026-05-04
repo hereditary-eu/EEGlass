@@ -12,3 +12,7 @@ export { DataTable, DataTableMock } from "./data-table";
 export type { DataTableMockProps, DataTableProps } from "./data-table";
 export { EegTimeseries } from "./timeseries";
 export type { EegTimeseriesProps, TimeseriesWindowAnnotationRow, TimeseriesWindowAnnotationValue } from "./timeseries";
+export { TopologyAttributionPanel, TotalBandPowerChart } from "./topology";
+export type { TopologyAttributionPanelProps, TotalBandPowerChartProps } from "./topology";
+export { ClassificationEvidencePanel } from "./classification";
+export type { ClassificationEvidencePanelProps } from "./classification";

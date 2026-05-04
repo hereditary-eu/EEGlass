@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from backend.database.db_service import create_dataset, get_dataset_data, get_shapley_values, save_shapley_values
 from backend.database.models import get_db
-from backend.models.shapley import ShapValuesRequest
+from backend.pydantic_models.shapley import ShapValuesRequest
 from backend.services.shapley_service import ShapleyService
 from backend.utils.logger import get_logger
 from backend.utils.data_utils import sanitize_and_parse_dataset

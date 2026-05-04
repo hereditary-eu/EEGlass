@@ -10,6 +10,7 @@ from backend.routers import (
     shapley_router,
     chat_router,
     timeseries_router,
+    model_router,
 )
 
 
@@ -32,6 +33,7 @@ def create_app():
     app.include_router(shapley_router)
     app.include_router(chat_router)
     app.include_router(timeseries_router)
+    app.include_router(model_router)
 
     return app
 

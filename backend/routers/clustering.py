@@ -13,7 +13,7 @@ from backend.database.db_service import (
     save_clusters,
 )
 from backend.database.models import get_db
-from backend.models.clustering import (
+from backend.pydantic_models.clustering import (
     ClusteringRequest,
     ClusteringResult,
     ClusterSimilarity,

@@ -4,6 +4,9 @@ import { TimeseriesService } from "../services/TimeseriesService";
 import { useAppStore } from "../stores/useAppStore";
 import type {
   ChannelId,
+  ModelAttributionResponse,
+  ModelBandPowerResponse,
+  ModelInferenceResponse,
   TimeseriesDatasetInfo,
   TimeseriesSignalResponse,
   TimeseriesSource,
@@ -18,6 +21,7 @@ const DEFAULT_PREVIEW_MAX_POINTS = 5000;
 
 export function useTimeseriesData() {
   const selectedChannels = useAppStore((state) => state.selectedChannels);
+  const selectedTimeseriesBandFilter = useAppStore((state) => state.selectedTimeseriesBandFilter);
   const selectedTimeRange = useAppStore((state) => state.selectedTimeRange);
   const setSelectedChannels = useAppStore((state) => state.setSelectedChannels);
   const setSelectedTimeRange = useAppStore((state) => state.setSelectedTimeRange);
@@ -34,9 +38,22 @@ export function useTimeseriesData() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingFullSignal, setIsRefreshingFullSignal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inferenceResult, setInferenceResult] = useState<ModelInferenceResponse | null>(null);
+  const [isComputingInference, setIsComputingInference] = useState(false);
+  const [inferenceError, setInferenceError] = useState<string | null>(null);
+  const [hoveredPredictionWindowIndex, setHoveredPredictionWindowIndex] = useState<number | null>(null);
+  const [lockedPredictionWindowIndex, setLockedPredictionWindowIndex] = useState<number | null>(null);
+  const [topologyAttribution, setTopologyAttribution] = useState<ModelAttributionResponse | null>(null);
+  const [isLoadingTopologyAttribution, setIsLoadingTopologyAttribution] = useState(false);
+  const [topologyAttributionError, setTopologyAttributionError] = useState<string | null>(null);
+  const [bandPower, setBandPower] = useState<ModelBandPowerResponse | null>(null);
+  const [isLoadingBandPower, setIsLoadingBandPower] = useState(false);
+  const [bandPowerError, setBandPowerError] = useState<string | null>(null);
   const [resetViewSignal, setResetViewSignal] = useState(0);
   const [hoveredChannel, setHoveredChannel] = useState<ChannelId | null>(null);
   const channelsClearedByUserRef = useRef(false);
+  const attributionCacheRef = useRef(new Map<string, ModelAttributionResponse>());
+  const bandPowerCacheRef = useRef(new Map<string, ModelBandPowerResponse>());
 
   const selectedSubject = useMemo(
     () => subjects.find((subject) => subject.id === subjectId),
@@ -49,6 +66,14 @@ export function useTimeseriesData() {
   const activeChannels = useMemo(
     () => selectedChannels.filter((channel) => availableChannels.includes(channel)),
     [availableChannels, selectedChannels],
+  );
+  const selectedPredictionWindowIndex = hoveredPredictionWindowIndex ?? lockedPredictionWindowIndex;
+  const selectedPredictionWindow = useMemo(
+    () =>
+      selectedPredictionWindowIndex === null
+        ? null
+        : (inferenceResult?.predictions[selectedPredictionWindowIndex] ?? null),
+    [inferenceResult, selectedPredictionWindowIndex],
   );
   const samplingFrequency = signal
     ? signal.sampling_frequency / Math.max(1, signal.decimation)
@@ -116,6 +141,10 @@ export function useTimeseriesData() {
       setSignal(null);
       setHoveredChannel(null);
       setError(null);
+      setInferenceResult(null);
+      setInferenceError(null);
+      clearTopologySelectionAndData();
+      clearBandPowerData();
 
       try {
         const nextSubjects = await TimeseriesService.getSubjects(datasetId);
@@ -130,6 +159,10 @@ export function useTimeseriesData() {
           setSubjectId("");
           setSelectedChannels([]);
           setHoveredChannel(null);
+          setInferenceResult(null);
+          setInferenceError(null);
+          clearTopologySelectionAndData();
+          clearBandPowerData();
           setError(`No subjects with EEG .set files were found for ${datasetId}.`);
           return;
         }
@@ -216,6 +249,7 @@ export function useTimeseriesData() {
           channels: nextChannels,
           source,
           maxPoints: DEFAULT_PREVIEW_MAX_POINTS,
+          bandFilter: selectedTimeseriesBandFilter,
         });
         if (!isCurrent) {
           return;
@@ -229,6 +263,7 @@ export function useTimeseriesData() {
           const fullSignal = await TimeseriesService.getSignal(datasetId, subjectId, {
             channels: nextChannels,
             source,
+            bandFilter: selectedTimeseriesBandFilter,
           });
           if (isCurrent) {
             setSignal(fullSignal);
@@ -255,7 +290,7 @@ export function useTimeseriesData() {
     return () => {
       isCurrent = false;
     };
-  }, [datasetId, selectedChannels, setSelectedChannels, source, subjectId]);
+  }, [datasetId, selectedChannels, selectedTimeseriesBandFilter, setSelectedChannels, source, subjectId]);
 
   const handleDatasetChange = (nextDatasetId: string) => {
     channelsClearedByUserRef.current = false;
@@ -267,6 +302,10 @@ export function useTimeseriesData() {
     setSelectedChannels([]);
     setSelectedTimeRange(null);
     setHoveredChannel(null);
+    setInferenceResult(null);
+    setInferenceError(null);
+    clearTopologySelectionAndData();
+    clearBandPowerData();
   };
 
   const handleSubjectChange = (nextSubjectId: string) => {
@@ -277,6 +316,10 @@ export function useTimeseriesData() {
     setSignal(null);
     setSelectedTimeRange(null);
     setHoveredChannel(null);
+    setInferenceResult(null);
+    setInferenceError(null);
+    clearTopologySelectionAndData();
+    clearBandPowerData();
     setSource(resolveSource(source, nextSubject?.sources ?? []));
   };
 
@@ -297,11 +340,100 @@ export function useTimeseriesData() {
   const handleSourceChange = (nextSource: TimeseriesSource) => {
     setSource(nextSource);
     setSelectedTimeRange(null);
+    setInferenceResult(null);
+    setInferenceError(null);
+    clearTopologySelectionAndData();
   };
 
   const handleResetView = () => {
     setResetViewSignal((current) => current + 1);
   };
+
+  const handleComputeInference = async () => {
+    if (!datasetId || !subjectId || !signal || activeChannels.length === 0) {
+      return;
+    }
+
+    setIsComputingInference(true);
+    setInferenceError(null);
+    clearTopologySelectionAndData();
+
+    try {
+      const response = await TimeseriesService.computeInference(datasetId, subjectId, source);
+      setInferenceResult(response);
+    } catch (computeError) {
+      setInferenceResult(null);
+      setInferenceError(getInferenceErrorMessage(computeError));
+    } finally {
+      setIsComputingInference(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!datasetId || !subjectId) {
+      setIsLoadingBandPower(false);
+      setBandPower(null);
+      setBandPowerError(null);
+      return;
+    }
+
+    const requestSource = source;
+    const cacheKey = `${datasetId}::${subjectId}`;
+    const cachedBandPower = bandPowerCacheRef.current.get(cacheKey);
+    if (cachedBandPower) {
+      setBandPower(cachedBandPower);
+      setBandPowerError(null);
+      setIsLoadingBandPower(false);
+      return;
+    }
+
+    let isCurrent = true;
+    setIsLoadingBandPower(true);
+    setBandPowerError(null);
+
+    TimeseriesService.computeBandPower(datasetId, subjectId, requestSource)
+      .then((response) => {
+        if (!isCurrent) {
+          return;
+        }
+
+        bandPowerCacheRef.current.set(cacheKey, response);
+        setBandPower(response);
+      })
+      .catch((loadError) => {
+        if (!isCurrent) {
+          return;
+        }
+
+        setBandPower(null);
+        setBandPowerError(getBandPowerErrorMessage(loadError));
+      })
+      .finally(() => {
+        if (isCurrent) {
+          setIsLoadingBandPower(false);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [datasetId, subjectId]);
+
+  function clearTopologySelectionAndData() {
+    attributionCacheRef.current.clear();
+    setHoveredPredictionWindowIndex(null);
+    setLockedPredictionWindowIndex(null);
+    setTopologyAttribution(null);
+    setIsLoadingTopologyAttribution(false);
+    setTopologyAttributionError(null);
+  }
+
+  function clearBandPowerData() {
+    bandPowerCacheRef.current.clear();
+    setBandPower(null);
+    setIsLoadingBandPower(false);
+    setBandPowerError(null);
+  }
 
   return {
     datasets,
@@ -316,10 +448,26 @@ export function useTimeseriesData() {
     isLoading,
     isRefreshingFullSignal,
     error,
+    inferenceResult,
+    isComputingInference,
+    inferenceError,
+    hoveredPredictionWindowIndex,
+    lockedPredictionWindowIndex,
+    selectedPredictionWindowIndex,
+    selectedPredictionWindow,
+    topologyAttribution,
+    isLoadingTopologyAttribution,
+    topologyAttributionError,
+    bandPower,
+    isLoadingBandPower,
+    bandPowerError,
     resetViewSignal,
     hoveredChannel,
     setHoveredChannel,
+    setHoveredPredictionWindowIndex,
+    setLockedPredictionWindowIndex,
     selectedChannels,
+    selectedTimeseriesBandFilter,
     selectedTimeRange,
     setSelectedTimeRange,
     availableChannels,
@@ -331,6 +479,7 @@ export function useTimeseriesData() {
     handleChannelToggle,
     handleSourceChange,
     handleResetView,
+    handleComputeInference,
   };
 }
 
@@ -400,3 +549,38 @@ function getErrorMessage(error: unknown): string {
 
   return "Unable to load EEG timeseries.";
 }
+
+function getInferenceErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return `Unable to compute inference: ${error.message}`;
+  }
+
+  return "Unable to compute inference.";
+}
+
+function getAttributionErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return `Unable to compute topology attribution: ${error.message}`;
+  }
+
+  return "Unable to compute topology attribution.";
+}
+
+function getBandPowerErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return `Unable to compute total band power: ${error.message}`;
+  }
+
+  return "Unable to compute total band power.";
+}
+
+function createAttributionCacheKey(
+  datasetId: string,
+  subjectId: string,
+  source: TimeseriesSource,
+  windowIndex: number,
+): string {
+  return `${datasetId}::${subjectId}::${source}::${windowIndex}`;
+}
+
+export type TimeseriesDataController = ReturnType<typeof useTimeseriesData>;

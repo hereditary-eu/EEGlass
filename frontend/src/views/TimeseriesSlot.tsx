@@ -2,20 +2,24 @@ import { useMemo } from "react";
 
 import { EegTimeseries } from "../components";
 import type { TimeseriesWindowAnnotationRow } from "../components";
-import { useTimeseriesData } from "../hooks/useTimeseriesData";
-import type { ChannelId, TimeseriesSource } from "../types";
+import type { TimeseriesDataController } from "../hooks/useTimeseriesData";
+import type { ChannelId, ModelInferenceResponse, TimeseriesSource } from "../types";
 import "./TimeseriesSlot.css";
 
-const WINDOW_SIZE_SECONDS = 2;
+const DEFAULT_WINDOW_SIZE_SECONDS = 4;
 
-export function TimeseriesSlot() {
-  const ts = useTimeseriesData();
+interface TimeseriesSlotProps {
+  ts: TimeseriesDataController;
+}
+
+export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
+  const windowSizeSeconds = ts.inferenceResult?.window_size_seconds ?? DEFAULT_WINDOW_SIZE_SECONDS;
 
   const annotationChannel =
     ts.hoveredChannel && ts.activeChannels.includes(ts.hoveredChannel) ? ts.hoveredChannel : ts.activeChannels[0];
   const windowAnnotationRows = useMemo(
-    () => createWindowAnnotationRows(annotationChannel, ts.signal?.duration ?? ts.metadata?.duration ?? 0),
-    [annotationChannel, ts.metadata?.duration, ts.signal?.duration],
+    () => createWindowAnnotationRows(ts.inferenceResult),
+    [ts.inferenceResult],
   );
 
   return (
@@ -74,13 +78,34 @@ export function TimeseriesSlot() {
           {ts.isLoadingDatasets ? <span className="timeseries-slot-status">Loading datasets</span> : null}
           {ts.isLoadingSubjects ? <span className="timeseries-slot-status">Loading subjects</span> : null}
           {ts.isRefreshingFullSignal ? <span className="timeseries-slot-status">Loading full signal</span> : null}
+          {ts.isComputingInference ? <span className="timeseries-slot-status">Computing inference</span> : null}
           {ts.signal && ts.error ? (
             <span className="timeseries-slot-status timeseries-slot-status--error">{ts.error}</span>
+          ) : null}
+          {ts.inferenceError ? (
+            <span className="timeseries-slot-status timeseries-slot-status--error">{ts.inferenceError}</span>
           ) : null}
           <span className="timeseries-slot-status">
             {ts.signal ? (ts.signal.preview ? "Preview" : "Full") : "Idle"}
           </span>
+          {ts.selectedTimeseriesBandFilter ? (
+            <span className="timeseries-slot-status">Filter: {ts.selectedTimeseriesBandFilter}</span>
+          ) : null}
           {annotationChannel ? <span className="timeseries-slot-status">Annotations: {annotationChannel}</span> : null}
+          {ts.selectedPredictionWindow ? (
+            <span className="timeseries-slot-status">
+              Window {ts.selectedPredictionWindow.window_index + 1}: {ts.selectedPredictionWindow.start_time.toFixed(1)}s-
+              {ts.selectedPredictionWindow.end_time.toFixed(1)}s
+            </span>
+          ) : null}
+          <button
+            type="button"
+            className="timeseries-slot-button"
+            onClick={ts.handleComputeInference}
+            disabled={!ts.subjectId || !ts.signal || ts.activeChannels.length === 0 || ts.isComputingInference}
+          >
+            Compute
+          </button>
           <button type="button" className="timeseries-slot-button" onClick={ts.handleResetView}>
             Reset view
           </button>
@@ -102,7 +127,12 @@ export function TimeseriesSlot() {
           resetViewSignal={ts.resetViewSignal}
           hoveredChannel={ts.hoveredChannel}
           onHoveredChannelChange={ts.setHoveredChannel}
-          windowSizeSeconds={WINDOW_SIZE_SECONDS}
+          hoveredPredictionWindowIndex={ts.hoveredPredictionWindowIndex}
+          onHoveredPredictionWindowIndexChange={ts.setHoveredPredictionWindowIndex}
+          lockedPredictionWindowIndex={ts.lockedPredictionWindowIndex}
+          onLockedPredictionWindowIndexChange={ts.setLockedPredictionWindowIndex}
+          predictionWindowCount={ts.inferenceResult?.predictions.length ?? 0}
+          windowSizeSeconds={windowSizeSeconds}
           windowAnnotationRows={windowAnnotationRows}
           isPreview={ts.signal?.preview ?? true}
           isLoading={ts.isLoading}
@@ -165,48 +195,45 @@ function getChannelPickerLabel(selectedChannels: ChannelId[]): string {
   return `${selectedChannels[0]} +${selectedChannels.length - 1}`;
 }
 
-function createWindowAnnotationRows(channel: ChannelId | undefined, duration: number): TimeseriesWindowAnnotationRow[] {
-  const rows = [
-    { id: "class", label: "Class", values: [] as string[], colors: [] as string[] },
-    { id: "score", label: "Score", values: [] as string[], colors: [] as string[] },
-    { id: "cluster", label: "Cluster", values: [] as string[], colors: [] as string[] },
+function createWindowAnnotationRows(inferenceResult: ModelInferenceResponse | null): TimeseriesWindowAnnotationRow[] {
+  const rows: TimeseriesWindowAnnotationRow[] = [
+    { id: "class", label: "Class", values: [], colors: [], defaultColor: "rgb(226 232 240 / 65%)" },
+    { id: "confidence", label: "Confidence", values: [], colors: [], defaultColor: "rgb(226 232 240 / 65%)" },
+    { id: "reserved", defaultColor: "rgb(226 232 240 / 65%)" },
   ];
 
-  if (!channel || duration <= 0) {
+  if (!inferenceResult) {
     return rows;
   }
 
-  const seed = hashChannel(channel);
-  const windowCount = Math.ceil(duration / WINDOW_SIZE_SECONDS);
-
-  for (let windowIndex = 0; windowIndex < windowCount; windowIndex += 1) {
-    const valueSeed = seed + windowIndex * 17;
-    const confidence = 50 + (valueSeed % 49);
-    const cluster = (valueSeed % 4) + 1;
-    const classIndex = valueSeed % 3;
-
-    rows[0]?.values.push(["A", "B", "C"][classIndex] ?? "A");
-    rows[0]?.colors.push(
-      ["rgb(14 116 144 / 18%)", "rgb(21 128 61 / 18%)", "rgb(190 24 93 / 16%)"][classIndex] ??
-        "rgb(23 33 43 / 8%)",
-    );
-
-    rows[1]?.values.push(String(confidence));
-    rows[1]?.colors.push(
-      confidence > 82 ? "rgb(21 128 61 / 18%)" : confidence > 66 ? "rgb(217 119 6 / 18%)" : "rgb(220 38 38 / 16%)",
-    );
-
-    rows[2]?.values.push(`C${cluster}`);
-    rows[2]?.colors.push(
-      ["rgb(109 40 217 / 16%)", "rgb(14 116 144 / 16%)", "rgb(13 148 136 / 16%)", "rgb(217 119 6 / 16%)"][
-        cluster - 1
-      ] ?? "rgb(23 33 43 / 8%)",
-    );
-  }
+  inferenceResult.predictions.forEach((prediction) => {
+    rows[0].values?.push(prediction.predicted_label);
+    rows[0].colors?.push(getClassColor(prediction.predicted_label));
+    rows[1].values?.push(`${Math.round(prediction.confidence * 100)}%`);
+    rows[1].colors?.push(getConfidenceColor(prediction.confidence));
+  });
 
   return rows;
 }
 
-function hashChannel(channel: ChannelId): number {
-  return channel.split("").reduce((hash, character) => hash + character.charCodeAt(0), 0);
+function getClassColor(predictedLabel: string): string {
+  switch (predictedLabel) {
+    case "Healthy":
+      return "rgb(21 128 61 / 22%)";
+    case "Alzheimer":
+      return "rgb(225 29 72 / 28%)";
+    case "Frontotemporal Dementia":
+      return "rgb(2 132 199 / 28%)";
+    default:
+      return "rgb(23 33 43 / 8%)";
+  }
+}
+
+function getConfidenceColor(confidence: number): string {
+  const clampedConfidence = Math.max(0, Math.min(1, confidence));
+  const red = Math.round(248 + (96 - 248) * clampedConfidence);
+  const green = Math.round(251 + (165 - 251) * clampedConfidence);
+  const blue = Math.round(253 + (250 - 253) * clampedConfidence);
+
+  return `rgb(${red} ${green} ${blue})`;
 }

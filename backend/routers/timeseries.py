@@ -2,7 +2,8 @@ from typing import cast
 
 from fastapi import APIRouter, HTTPException, Query
 
-from backend.models.timeseries import (
+from backend.pydantic_models.timeseries import (
+    TimeseriesBandFilter,
     TimeseriesDatasetListResponse,
     TimeseriesSignalResponse,
     TimeseriesSource,
@@ -61,6 +62,7 @@ async def get_timeseries_preview(
     channels: str = Query(..., description="Comma-separated channel names, for example Fp1,Fp2"),
     max_points: int = Query(5000, ge=2, le=100_000),
     source: str = Query("derivatives"),
+    band_filter: str | None = Query(None, description="Optional display bandpass filter."),
     start_time: float | None = Query(None, ge=0),
     end_time: float | None = Query(None, gt=0),
 ) -> TimeseriesSignalResponse:
@@ -72,6 +74,7 @@ async def get_timeseries_preview(
             source=_parse_source(source),
             start_time=start_time,
             end_time=end_time,
+            band_filter=_parse_band_filter(band_filter),
             preview=True,
             max_points=max_points,
         )
@@ -85,6 +88,7 @@ async def get_timeseries_signal(
     subject_id: str,
     channels: str = Query(..., description="Comma-separated channel names, for example Fp1,Fp2"),
     source: str = Query("derivatives"),
+    band_filter: str | None = Query(None, description="Optional display bandpass filter."),
     start_time: float | None = Query(None, ge=0),
     end_time: float | None = Query(None, gt=0),
 ) -> TimeseriesSignalResponse:
@@ -96,6 +100,7 @@ async def get_timeseries_signal(
             source=_parse_source(source),
             start_time=start_time,
             end_time=end_time,
+            band_filter=_parse_band_filter(band_filter),
             preview=False,
         )
     except TimeseriesServiceError as exc:
@@ -113,6 +118,17 @@ def _parse_source(source: str) -> TimeseriesSource:
     if source not in ("raw", "derivatives"):
         raise HTTPException(status_code=400, detail="source must be either 'raw' or 'derivatives'.")
     return cast(TimeseriesSource, source)
+
+
+def _parse_band_filter(band_filter: str | None) -> TimeseriesBandFilter | None:
+    if band_filter is None:
+        return None
+    if band_filter not in ("delta", "theta", "alpha", "beta1", "beta2", "beta3", "gamma"):
+        raise HTTPException(
+            status_code=400,
+            detail="band_filter must be one of: delta, theta, alpha, beta1, beta2, beta3, gamma.",
+        )
+    return cast(TimeseriesBandFilter, band_filter)
 
 
 def _http_error(exc: TimeseriesServiceError) -> HTTPException:

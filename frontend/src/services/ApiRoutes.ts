@@ -52,6 +52,14 @@ export const API_ROUTES = {
     getValues: buildApiUrl("/shapley/get_shapley_values"),
   },
 
+  model: {
+    infer: buildApiUrl("/model/infer"),
+    attribution: buildApiUrl("/model/attribution"),
+    classEvidence: buildApiUrl("/model/class-evidence"),
+    bandPower: buildApiUrl("/model/band-power"),
+    scalpTopologies: buildApiUrl("/model/scalp-topologies"),
+  },
+
   timeseries: {
     datasets: buildApiUrl("/timeseries/datasets"),
     subjects: (datasetId: string) => buildApiUrl(`/timeseries/datasets/${encodeURIComponent(datasetId)}/subjects`),
