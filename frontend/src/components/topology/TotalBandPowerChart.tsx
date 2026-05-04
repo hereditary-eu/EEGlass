@@ -97,7 +97,8 @@ export function TotalBandPowerChart({ bandPower, isLoading, error }: TotalBandPo
         interpolate: "monotone",
         point: {
           filled: true,
-          fill: "#ffffff",
+          fill: "#0e7490",
+          stroke: "#064e56",
           size: 74,
           strokeWidth: 2,
         },
