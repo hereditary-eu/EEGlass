@@ -165,6 +165,7 @@ def load_model_weights(model_path: str, model=None, device="cpu"):
     model.eval()
     return model
 
+
 # participants_ids_train_debug = [1, 2, 40, 41, 80, 81]
 # participants_ids_val_debug = [3, 42, 82]
 

@@ -22,8 +22,7 @@ from backend.pydantic_models.timeseries import (
 )
 
 _BAND_FILTER_LIMITS: dict[TimeseriesBandFilter, tuple[float, float]] = {
-    band_name: (start_hz, end_hz)
-    for band_name, start_hz, end_hz in MODEL_BANDS
+    band_name: (start_hz, end_hz) for band_name, start_hz, end_hz in MODEL_BANDS
 }
 
 
@@ -98,8 +97,7 @@ class TimeseriesService:
         sample_count = int(raw.n_times)
         duration = float(sidecar.get("RecordingDuration") or (sample_count / sampling_frequency))
         channels = [
-            cls._channel_metadata(channel_name, channels_by_name.get(channel_name))
-            for channel_name in raw.ch_names
+            cls._channel_metadata(channel_name, channels_by_name.get(channel_name)) for channel_name in raw.ch_names
         ]
         sources = cls._available_subject_sources(cls._dataset_dir(dataset_id), subject_id)
 
@@ -301,7 +299,9 @@ class TimeseriesService:
         raise TimeseriesNotFoundError(f"No {source} EEG .set file found for subject '{subject_id}'.")
 
     @classmethod
-    def _find_json_sidecar(cls, eeg_file: Path, dataset_id: str, subject_id: str, source: TimeseriesSource) -> Path | None:
+    def _find_json_sidecar(
+        cls, eeg_file: Path, dataset_id: str, subject_id: str, source: TimeseriesSource
+    ) -> Path | None:
         candidates = [eeg_file.with_suffix(".json")]
         if source == "derivatives":
             try:
@@ -313,7 +313,9 @@ class TimeseriesService:
         return next((candidate for candidate in candidates if candidate.is_file()), None)
 
     @classmethod
-    def _find_channels_sidecar(cls, eeg_file: Path, dataset_id: str, subject_id: str, source: TimeseriesSource) -> Path | None:
+    def _find_channels_sidecar(
+        cls, eeg_file: Path, dataset_id: str, subject_id: str, source: TimeseriesSource
+    ) -> Path | None:
         channels_name = eeg_file.name.replace("_eeg.set", "_channels.tsv")
         candidates = [eeg_file.parent / channels_name]
         if source == "derivatives":
@@ -379,7 +381,9 @@ class TimeseriesService:
         if resolved_end_time <= resolved_start_time:
             raise TimeseriesValidationError("end_time must be greater than start_time.")
         if resolved_end_time > duration:
-            raise TimeseriesValidationError(f"end_time must be less than or equal to recording duration ({duration:.3f}s).")
+            raise TimeseriesValidationError(
+                f"end_time must be less than or equal to recording duration ({duration:.3f}s)."
+            )
 
         start_sample = max(0, int(math.floor(resolved_start_time * sampling_frequency)))
         end_sample = min(sample_count, int(math.ceil(resolved_end_time * sampling_frequency)))

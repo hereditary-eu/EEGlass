@@ -39,7 +39,9 @@ async def list_timeseries_subjects(dataset_id: str) -> TimeseriesSubjectListResp
         raise _http_error(exc) from exc
 
 
-@timeseries_router.get("/datasets/{dataset_id}/subjects/{subject_id}/metadata", response_model=TimeseriesSubjectMetadata)
+@timeseries_router.get(
+    "/datasets/{dataset_id}/subjects/{subject_id}/metadata", response_model=TimeseriesSubjectMetadata
+)
 async def get_timeseries_subject_metadata(
     dataset_id: str,
     subject_id: str,

@@ -31,7 +31,6 @@ class CONFIG:
     # LOGGING
     LOG_LEVEL = "DEBUG"
 
-
     # chatbot — only construct client when OPENAI_API_KEY is set (avoids import-time crash)
     _api_key = os.getenv("OPENAI_API_KEY")
     if os.getenv("SERVER") == "true":
@@ -39,22 +38,15 @@ class CONFIG:
         if _api_key:
             client = OpenAI(
                 api_key=_api_key,
-                base_url=os.getenv(
-                    "OPENAI_BASE_URL", "https://hereditary.cgv.tugraz.at/lm/api/v1"
-                ),
+                base_url=os.getenv("OPENAI_BASE_URL", "https://hereditary.cgv.tugraz.at/lm/api/v1"),
             )
         else:
             client = None
-            logger.warning(
-                "OPENAI_API_KEY is not set; chatbot routes will return 503 until it is configured."
-            )
+            logger.warning("OPENAI_API_KEY is not set; chatbot routes will return 503 until it is configured.")
     else:
         MODEL = "gpt-4o-mini"
         if _api_key:
             client = OpenAI(api_key=_api_key)
         else:
             client = None
-            logger.warning(
-                "OPENAI_API_KEY is not set; chatbot routes will return 503 until it is configured."
-            )
-
+            logger.warning("OPENAI_API_KEY is not set; chatbot routes will return 503 until it is configured.")

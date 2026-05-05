@@ -236,14 +236,8 @@ class ModelService:
             predicted_class_id=predicted_class_id,
             predicted_label=MODEL_CLASS_LABELS[predicted_class_id],
             confidence=float(probabilities[predicted_class_id]),
-            probabilities={
-                label: float(probabilities[class_id])
-                for class_id, label in MODEL_CLASS_LABELS.items()
-            },
-            logits={
-                label: float(logits[class_id])
-                for class_id, label in MODEL_CLASS_LABELS.items()
-            },
+            probabilities={label: float(probabilities[class_id]) for class_id, label in MODEL_CLASS_LABELS.items()},
+            logits={label: float(logits[class_id]) for class_id, label in MODEL_CLASS_LABELS.items()},
             unit_label="logit contribution",
             global_max_abs_contribution=max_abs_contribution,
             bands=[
@@ -473,10 +467,7 @@ class ModelService:
             predicted_class_id = int(np.argmax(row))
             predicted_label = MODEL_CLASS_LABELS[predicted_class_id]
             confidence = float(row[predicted_class_id])
-            probabilities_by_label = {
-                label: float(row[class_id])
-                for class_id, label in MODEL_CLASS_LABELS.items()
-            }
+            probabilities_by_label = {label: float(row[class_id]) for class_id, label in MODEL_CLASS_LABELS.items()}
             predictions.append(
                 WindowPrediction(
                     window_index=window_index,
