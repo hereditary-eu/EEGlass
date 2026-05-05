@@ -109,9 +109,7 @@ export function NeuroHeatmapPlot({
         const index = rects.nodes().indexOf(this);
         const correlation = index >= 0 ? correlations[index] : undefined;
         const isSelected =
-          correlation !== undefined &&
-          correlation.a === selectedFeatures[0] &&
-          correlation.b === selectedFeatures[1];
+          correlation !== undefined && correlation.a === selectedFeatures[0] && correlation.b === selectedFeatures[1];
         rect.style("stroke", isSelected ? "black" : "none").style("stroke-width", isSelected ? 2.5 : 0);
       });
 

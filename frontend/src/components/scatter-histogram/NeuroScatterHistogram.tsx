@@ -82,7 +82,11 @@ export function ScatterHistogram({
         <div className="neurodegenvis-controls-grid">
           <label className="neurodegenvis-select-group">
             <span>X</span>
-            <select className="single-select-dropdown" value={xFeature} onChange={(event) => setXFeature(event.target.value)}>
+            <select
+              className="single-select-dropdown"
+              value={xFeature}
+              onChange={(event) => setXFeature(event.target.value)}
+            >
               {plottableFeatures.map((feature) => (
                 <option key={feature} value={feature}>
                   {feature}
@@ -92,7 +96,11 @@ export function ScatterHistogram({
           </label>
           <label className="neurodegenvis-select-group">
             <span>Y</span>
-            <select className="single-select-dropdown" value={yFeature} onChange={(event) => setYFeature(event.target.value)}>
+            <select
+              className="single-select-dropdown"
+              value={yFeature}
+              onChange={(event) => setYFeature(event.target.value)}
+            >
               {plottableFeatures.map((feature) => (
                 <option key={feature} value={feature}>
                   {feature}

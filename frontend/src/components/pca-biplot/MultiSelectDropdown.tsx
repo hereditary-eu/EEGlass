@@ -6,11 +6,7 @@ interface MultiSelectDropdownProps {
   onSelectedOptionsChange: (options: string[]) => void;
 }
 
-export function MultiSelectDropdown({
-  options,
-  selectedOptions,
-  onSelectedOptionsChange,
-}: MultiSelectDropdownProps) {
+export function MultiSelectDropdown({ options, selectedOptions, onSelectedOptionsChange }: MultiSelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const maxLength = 23;
 

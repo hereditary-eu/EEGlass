@@ -227,7 +227,10 @@ export function SimilarityMatrixViewer({
               <tbody>
                 {filteredSimilarities.length > 0 ? (
                   filteredSimilarities.map((similarity, index) => (
-                    <tr key={`${similarity.feature1}-${similarity.feature2}`} className={index % 2 === 0 ? "is-odd" : "is-even"}>
+                    <tr
+                      key={`${similarity.feature1}-${similarity.feature2}`}
+                      className={index % 2 === 0 ? "is-odd" : "is-even"}
+                    >
                       <td>{similarity.feature1}</td>
                       <td>{similarity.feature2}</td>
                       <td>{similarity.cluster_id + 1}</td>

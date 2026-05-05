@@ -1,13 +1,5 @@
 import React, { memo, useId, useMemo, useState } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts/es6";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts/es6";
 import "./Histogram.css";
 
 interface HistogramProps {
@@ -125,9 +117,7 @@ const Histogram: React.FC<HistogramProps> = ({
   };
 
   const chartMargin =
-    variant === "big"
-      ? { top: 20, right: 30, bottom: 20, left: 20 }
-      : { top: 0, right: 0, bottom: 0, left: 0 };
+    variant === "big" ? { top: 20, right: 30, bottom: 20, left: 20 } : { top: 0, right: 0, bottom: 0, left: 0 };
 
   const chart = (
     <BarChart width={width} height={height} data={histogramData} margin={chartMargin}>

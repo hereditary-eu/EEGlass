@@ -175,9 +175,7 @@ function reorderFeatures(
   const sortedIndexes =
     reorderMethod === "average"
       ? averageScores.sort((left, right) => right.score - left.score || Number(right.selected) - Number(left.selected))
-      : averageScores.sort(
-          (left, right) => Number(right.selected) - Number(left.selected) || right.score - left.score,
-        );
+      : averageScores.sort((left, right) => Number(right.selected) - Number(left.selected) || right.score - left.score);
 
   const order = sortedIndexes.map((entry) => entry.index);
   const orderedFeatures = order.map((index) => features[index]);
@@ -221,7 +219,10 @@ function createMockFeaturePairSimilarityMatrix(
       const clusterShift = selectedCluster * 0.035;
       const trigNoise = (Math.sin((rowIndex + 1) * (colIndex + 2) + selectedCluster) + 1) * 0.06;
 
-      const baseValue = Math.max(0.08, 0.92 - cyclicDistance * 0.48 - lexicalDistance + pairBoost + clusterShift + trigNoise);
+      const baseValue = Math.max(
+        0.08,
+        0.92 - cyclicDistance * 0.48 - lexicalDistance + pairBoost + clusterShift + trigNoise,
+      );
       return Number(aggregateSimilarity(baseValue, aggregationMethod).toFixed(4));
     }),
   );
@@ -344,11 +345,11 @@ export function ClusterSimilarityMatrix({
       <div className={styles.header}>
         <div>
           Feature Pair Matrix for Cluster {selectedCluster + 1} ({resolvedSelectedFeaturePair[0]},{" "}
-          {resolvedSelectedFeaturePair[1]}):{" "}
-          {featurePairMatrixData.features.length} features,
+          {resolvedSelectedFeaturePair[1]}): {featurePairMatrixData.features.length} features,
           <span className={styles.aggregationIndicator}> Aggregation: {resolvedAggregationMethod.toUpperCase()}, </span>
           <span className={styles.colorRangeIndicator}>
-            {" "}Color Range: {resolvedColorRangeMode === "full" ? "0-100%" : "Min-Max"}
+            {" "}
+            Color Range: {resolvedColorRangeMode === "full" ? "0-100%" : "Min-Max"}
           </span>
         </div>
         <div className={styles.controls}>

@@ -80,9 +80,7 @@ export function kMeans(data: Point[], k: number, maxIterations = 50) {
   for (let iteration = 0; iteration < maxIterations; iteration += 1) {
     const nextAssignments = assignClusters(data, centroids);
     const nextCentroids = updateCentroids(data, nextAssignments, k);
-    const converged = centroids.every(
-      (centroid, index) => euclideanDistance(centroid, nextCentroids[index]) < 1e-6,
-    );
+    const converged = centroids.every((centroid, index) => euclideanDistance(centroid, nextCentroids[index]) < 1e-6);
 
     assignments = nextAssignments;
     centroids = nextCentroids;

@@ -52,7 +52,7 @@ export class ClusteringService {
       };
 
       onProgress(60); // Processing data
-      
+
       await ApiClient.post(API_ROUTES.clustering.compute, requestData);
 
       onProgress(100); // Complete
@@ -172,7 +172,7 @@ export class ClusteringService {
       };
 
       onProgress(60); // Processing data
-      
+
       await ApiClient.post(API_ROUTES.shapley.compute, requestData);
 
       onProgress(100); // Complete

@@ -90,9 +90,7 @@ export function ClassificationEvidencePanel({
       <div className="classification-evidence-header">
         <div>
           <h3 className="classification-evidence-title">Classification evidence</h3>
-          <p className="classification-evidence-subtitle">
-            Band feature x class weight for the selected 4s window
-          </p>
+          <p className="classification-evidence-subtitle">Band feature x class weight for the selected 4s window</p>
         </div>
         {evidence ? (
           <div className="classification-evidence-prediction">
@@ -139,7 +137,9 @@ export function ClassificationEvidencePanel({
           <div className="classification-evidence-empty">Click a 4s prediction window to inspect class evidence.</div>
         ) : null}
         {isLoading ? <div className="classification-evidence-empty">Loading class evidence...</div> : null}
-        {error ? <div className="classification-evidence-empty classification-evidence-empty--error">{error}</div> : null}
+        {error ? (
+          <div className="classification-evidence-empty classification-evidence-empty--error">{error}</div>
+        ) : null}
       </div>
     </div>
   );

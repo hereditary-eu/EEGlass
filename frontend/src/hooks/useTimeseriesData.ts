@@ -55,14 +55,8 @@ export function useTimeseriesData() {
   const attributionCacheRef = useRef(new Map<string, ModelAttributionResponse>());
   const bandPowerCacheRef = useRef(new Map<string, ModelBandPowerResponse>());
 
-  const selectedSubject = useMemo(
-    () => subjects.find((subject) => subject.id === subjectId),
-    [subjectId, subjects],
-  );
-  const availableChannels = useMemo(
-    () => metadata?.channels.map((channel) => channel.name) ?? [],
-    [metadata],
-  );
+  const selectedSubject = useMemo(() => subjects.find((subject) => subject.id === subjectId), [subjectId, subjects]);
+  const availableChannels = useMemo(() => metadata?.channels.map((channel) => channel.name) ?? [], [metadata]);
   const activeChannels = useMemo(
     () => selectedChannels.filter((channel) => availableChannels.includes(channel)),
     [availableChannels, selectedChannels],

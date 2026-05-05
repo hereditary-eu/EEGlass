@@ -32,7 +32,6 @@ export class FileService {
           }
 
           try {
-
             const rawData = result.data as Record<string, unknown>[];
             const headers = Object.keys(rawData[0]);
 
@@ -40,7 +39,6 @@ export class FileService {
               reject(new Error("No valid headers found in the file"));
               return;
             }
-
 
             // Determine column types
             const columnTypes: Record<string, "number" | "string"> = {};
@@ -93,7 +91,6 @@ export class FileService {
               reject(new Error("No valid data rows found after processing"));
               return;
             }
-
 
             // Check one row as sample for logging
             if (formattedData.length > 0) {
@@ -156,7 +153,6 @@ export class FileService {
         return sanitizedRow;
       });
 
-
       const response = await ApiClient.post<{ message: string; dataset_id: string }>(API_ROUTES.dataset.upload, {
         data: sanitizedData,
         filename: filename,
@@ -192,7 +188,6 @@ export class FileService {
         message: response.message || "Dataset deleted successfully",
       };
     } catch (error) {
-
       // Return structured error
       return {
         success: false,

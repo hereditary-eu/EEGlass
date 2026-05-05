@@ -172,7 +172,9 @@ export function TotalBandPowerChart({ bandPower, isLoading, error }: TotalBandPo
             {activeChannel ? `Channel ${activeChannel.channel}` : "Select a subject to view channel band power"}
           </p>
         </div>
-        {bandPower ? <span className="topology-bandpower-meta">{bandPower.sampling_frequency.toFixed(0)} Hz</span> : null}
+        {bandPower ? (
+          <span className="topology-bandpower-meta">{bandPower.sampling_frequency.toFixed(0)} Hz</span>
+        ) : null}
       </div>
 
       <div className="topology-bandpower-body">

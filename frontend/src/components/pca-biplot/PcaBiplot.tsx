@@ -62,7 +62,9 @@ export function NeuroPcaBiplot({
     });
 
     const loadingScaleFactor = 2.2;
-    const selectedFeatureIndexes = biplotFeatures.map((feature) => numericFeatures.indexOf(feature)).filter((index) => index >= 0);
+    const selectedFeatureIndexes = biplotFeatures
+      .map((feature) => numericFeatures.indexOf(feature))
+      .filter((index) => index >= 0);
     const loadingMarks = selectedFeatureIndexes.flatMap((featureIndex) => {
       const marks = getLoadingMarks(featureIndex, loadings, loadingScaleFactor, numericFeatures);
       return [marks.line, marks.text];

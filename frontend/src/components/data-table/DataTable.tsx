@@ -119,9 +119,12 @@ const DataTable: React.FC<DataTableProps> = ({
     }));
   };
 
-  const handleHideColumn = useCallback((columnId: string) => {
-    onColumnHide(columnId);
-  }, [onColumnHide]);
+  const handleHideColumn = useCallback(
+    (columnId: string) => {
+      onColumnHide(columnId);
+    },
+    [onColumnHide],
+  );
 
   const columnMetadata = useMemo(() => {
     const metadata: Record<
@@ -176,32 +179,35 @@ const DataTable: React.FC<DataTableProps> = ({
     return metadata;
   }, [columns, data]);
 
-  const sortData = useCallback((a: DataRow, b: DataRow, columnId: string): number => {
-    const columnType = columnMetadata[columnId]?.type ?? "mixed";
-    const aValue = a[columnId];
-    const bValue = b[columnId];
+  const sortData = useCallback(
+    (a: DataRow, b: DataRow, columnId: string): number => {
+      const columnType = columnMetadata[columnId]?.type ?? "mixed";
+      const aValue = a[columnId];
+      const bValue = b[columnId];
 
-    if (aValue == null && bValue == null) return 0;
-    if (aValue == null) return 1;
-    if (bValue == null) return -1;
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return 1;
+      if (bValue == null) return -1;
 
-    switch (columnType) {
-      case "number":
-        return Number(aValue) - Number(bValue);
-      case "string":
-        return String(aValue).localeCompare(String(bValue));
-      case "mixed": {
-        const aNum = Number(aValue);
-        const bNum = Number(bValue);
-        if (!isNaN(aNum) && !isNaN(bNum)) {
-          return aNum - bNum;
+      switch (columnType) {
+        case "number":
+          return Number(aValue) - Number(bValue);
+        case "string":
+          return String(aValue).localeCompare(String(bValue));
+        case "mixed": {
+          const aNum = Number(aValue);
+          const bNum = Number(bValue);
+          if (!isNaN(aNum) && !isNaN(bNum)) {
+            return aNum - bNum;
+          }
+          return String(aValue).localeCompare(String(bValue));
         }
-        return String(aValue).localeCompare(String(bValue));
+        default:
+          return 0;
       }
-      default:
-        return 0;
-    }
-  }, [columnMetadata]);
+    },
+    [columnMetadata],
+  );
 
   const sortedData = useMemo(() => {
     if (!sortConfig) return data;
@@ -471,11 +477,7 @@ const DataTable: React.FC<DataTableProps> = ({
                         onClick={() => toggleColumnSelection(col)}
                       >
                         {col}
-                        {hiddenColumns.includes(col) && (
-                          <span title="Hidden in expanded view">
-                            (hidden)
-                          </span>
-                        )}
+                        {hiddenColumns.includes(col) && <span title="Hidden in expanded view">(hidden)</span>}
                       </td>
                       {shapleyValues && shapleyValues.length > 0 && (
                         <td className={styles.importanceCell}>
@@ -499,10 +501,17 @@ const DataTable: React.FC<DataTableProps> = ({
                         <button
                           className={styles.tinyHistogramButton}
                           disabled={!columnMetadata[col]?.isStrictNumeric}
-                          title={columnMetadata[col]?.isStrictNumeric ? "Distribution preview" : "Not a numerical column"}
+                          title={
+                            columnMetadata[col]?.isStrictNumeric ? "Distribution preview" : "Not a numerical column"
+                          }
                         >
                           {columnMetadata[col]?.isStrictNumeric ? (
-                            <Histogram data={columnMetadata[col].numericValues} variant="tiny" width={100} height={30} />
+                            <Histogram
+                              data={columnMetadata[col].numericValues}
+                              variant="tiny"
+                              width={100}
+                              height={30}
+                            />
                           ) : (
                             <span className={styles.nonNumericalIndicator}>{"\u2014"}</span>
                           )}
@@ -520,14 +529,7 @@ const DataTable: React.FC<DataTableProps> = ({
   );
 };
 
-const mockColumns = [
-  "Subject",
-  "Age",
-  "MMSE",
-  "Hippocampus",
-  "TemporalPower",
-  "Diagnosis",
-];
+const mockColumns = ["Subject", "Age", "MMSE", "Hippocampus", "TemporalPower", "Diagnosis"];
 
 const baseMockData: DataRow[] = [
   {
@@ -602,10 +604,11 @@ const mockData: DataRow[] = Array.from({ length: 3 }, (_, batchIndex) =>
     Subject: `P-${String(batchIndex * baseMockData.length + rowIndex + 1).padStart(3, "0")}`,
     Age: typeof row.Age === "number" ? row.Age + batchIndex : row.Age,
     MMSE: typeof row.MMSE === "number" ? Math.max(12, row.MMSE - batchIndex) : row.MMSE,
-    Hippocampus: typeof row.Hippocampus === "number" ? Number((row.Hippocampus - batchIndex * 0.15).toFixed(1)) : row.Hippocampus,
+    Hippocampus:
+      typeof row.Hippocampus === "number" ? Number((row.Hippocampus - batchIndex * 0.15).toFixed(1)) : row.Hippocampus,
     TemporalPower:
       typeof row.TemporalPower === "number"
-        ? Number((Math.max(0.25, row.TemporalPower - batchIndex * 0.05)).toFixed(2))
+        ? Number(Math.max(0.25, row.TemporalPower - batchIndex * 0.05).toFixed(2))
         : row.TemporalPower,
   })),
 ).flat();

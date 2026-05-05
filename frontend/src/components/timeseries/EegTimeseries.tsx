@@ -435,7 +435,11 @@ export function EegTimeseries({
       const anchorTime = currentStart + (relativeX / geometry.plotWidth) * currentVisibleDuration;
       const nextVisibleDuration = duration / nextScale;
       const nextStart = anchorTime - (relativeX / geometry.plotWidth) * nextVisibleDuration;
-      const nextOffset = clampOffset((-nextStart / nextVisibleDuration) * geometry.plotWidth, nextScale, geometry.plotWidth);
+      const nextOffset = clampOffset(
+        (-nextStart / nextVisibleDuration) * geometry.plotWidth,
+        nextScale,
+        geometry.plotWidth,
+      );
 
       const nextView = {
         ...current,
@@ -530,14 +534,7 @@ function renderTimeseries({
   const endIndex = Math.min(sampleCount, Math.ceil(visibleEndTime * samplingFrequency));
 
   drawSelection(ctx, geometry, view, duration, selectedTimeRange, "rgb(14 116 144 / 18%)");
-  drawLockedPredictionWindowHighlight(
-    ctx,
-    geometry,
-    view,
-    duration,
-    lockedPredictionWindowIndex,
-    windowSizeSeconds,
-  );
+  drawLockedPredictionWindowHighlight(ctx, geometry, view, duration, lockedPredictionWindowIndex, windowSizeSeconds);
   if (drag?.mode === "select" && drag.startTime !== undefined && drag.currentX !== undefined) {
     drawDragSelection(ctx, geometry, view, duration, drag);
   }
@@ -572,8 +569,7 @@ function renderTimeseries({
 function createPlotGeometry(width: number, height: number, annotationRowCount: number): PlotGeometry {
   const plotWidth = Math.max(1, width - PADDING.left - PADDING.right);
   const annotationHeight =
-    annotationRowCount * WINDOW_ANNOTATION_ROW_HEIGHT +
-    Math.max(0, annotationRowCount - 1) * WINDOW_ANNOTATION_ROW_GAP;
+    annotationRowCount * WINDOW_ANNOTATION_ROW_HEIGHT + Math.max(0, annotationRowCount - 1) * WINDOW_ANNOTATION_ROW_GAP;
   const reservedBottom = X_AXIS_HEIGHT + WINDOW_ANNOTATION_TOP_GAP + annotationHeight + PADDING.bottom;
   const plotHeight = Math.max(48, height - PADDING.top - reservedBottom);
   const axisY = PADDING.top + plotHeight;
@@ -594,7 +590,9 @@ function getAnnotationRowCount(_windowAnnotationRows: TimeseriesWindowAnnotation
   return WINDOW_ANNOTATION_ROW_COUNT;
 }
 
-function normalizeAnnotationRows(windowAnnotationRows: TimeseriesWindowAnnotationRow[]): TimeseriesWindowAnnotationRow[] {
+function normalizeAnnotationRows(
+  windowAnnotationRows: TimeseriesWindowAnnotationRow[],
+): TimeseriesWindowAnnotationRow[] {
   const rows = windowAnnotationRows.slice(0, WINDOW_ANNOTATION_ROW_COUNT);
 
   while (rows.length < WINDOW_ANNOTATION_ROW_COUNT) {
@@ -630,7 +628,12 @@ function drawWindowAnnotationRows(
   ctx.save();
   ctx.font = WINDOW_ANNOTATION_FONT;
   ctx.beginPath();
-  ctx.rect(PADDING.left, geometry.annotationTop, geometry.plotWidth, geometry.annotationBottom - geometry.annotationTop);
+  ctx.rect(
+    PADDING.left,
+    geometry.annotationTop,
+    geometry.plotWidth,
+    geometry.annotationBottom - geometry.annotationTop,
+  );
   ctx.clip();
 
   normalizedRows.forEach((row, rowIndex) => {
@@ -661,7 +664,8 @@ function drawWindowAnnotationRows(
       }
 
       const value = row.values?.[windowIndex] ?? null;
-      const fillStyle = row.colors?.[windowIndex] ?? row.defaultColor ?? getDefaultAnnotationColor(rowIndex, windowIndex);
+      const fillStyle =
+        row.colors?.[windowIndex] ?? row.defaultColor ?? getDefaultAnnotationColor(rowIndex, windowIndex);
       ctx.fillStyle = fillStyle;
       ctx.fillRect(left + 0.5, rowTop, Math.max(1, right - left - 1), rowHeight);
 
@@ -1091,11 +1095,7 @@ function mergeViewPreserveVisibleWindow(
   const startTimeSec = getVisibleStartTime(currentView, decodeWidth, prevDuration);
   const maxStart = Math.max(0, nextDuration - visibleDurationSec);
   const clampedStart = Math.min(Math.max(0, startTimeSec), maxStart);
-  const newOffset = clampOffset(
-    -(clampedStart / visibleDurationSec) * safePlotWidth,
-    xScale,
-    safePlotWidth,
-  );
+  const newOffset = clampOffset(-(clampedStart / visibleDurationSec) * safePlotWidth, xScale, safePlotWidth);
 
   return {
     xScale,

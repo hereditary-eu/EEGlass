@@ -36,9 +36,7 @@ export function NeuroHistogram({
         categorySelected = false;
       } else {
         usingClusterColor = true;
-        colors = Object.fromEntries(
-          Object.entries(NEURO_CLUSTER_COLORS).map(([key, value]) => [String(key), value]),
-        );
+        colors = Object.fromEntries(Object.entries(NEURO_CLUSTER_COLORS).map(([key, value]) => [String(key), value]));
       }
     }
 

@@ -17,10 +17,7 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
 
   const annotationChannel =
     ts.hoveredChannel && ts.activeChannels.includes(ts.hoveredChannel) ? ts.hoveredChannel : ts.activeChannels[0];
-  const windowAnnotationRows = useMemo(
-    () => createWindowAnnotationRows(ts.inferenceResult),
-    [ts.inferenceResult],
-  );
+  const windowAnnotationRows = useMemo(() => createWindowAnnotationRows(ts.inferenceResult), [ts.inferenceResult]);
 
   return (
     <div className="timeseries-slot">
@@ -94,7 +91,8 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
           {annotationChannel ? <span className="timeseries-slot-status">Annotations: {annotationChannel}</span> : null}
           {ts.selectedPredictionWindow ? (
             <span className="timeseries-slot-status">
-              Window {ts.selectedPredictionWindow.window_index + 1}: {ts.selectedPredictionWindow.start_time.toFixed(1)}s-
+              Window {ts.selectedPredictionWindow.window_index + 1}: {ts.selectedPredictionWindow.start_time.toFixed(1)}
+              s-
               {ts.selectedPredictionWindow.end_time.toFixed(1)}s
             </span>
           ) : null}
@@ -169,11 +167,7 @@ function ChannelMultiSelect({ channels, selectedChannels, disabled, onChannelTog
           const isSelected = selectedChannels.includes(channel);
           return (
             <label key={channel} className="timeseries-channel-option">
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={() => onChannelToggle(channel)}
-              />
+              <input type="checkbox" checked={isSelected} onChange={() => onChannelToggle(channel)} />
               <span>{channel}</span>
             </label>
           );

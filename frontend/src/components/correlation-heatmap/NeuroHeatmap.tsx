@@ -37,7 +37,8 @@ export function CorrelationHeatmap({
 }: CorrelationHeatmapProps) {
   const [resolvedSelectedCovariateFeatures, setSelectedCovariateFeatures] = useControllableState({
     value: selectedCovariateFeatures,
-    defaultValue: defaultSelectedCovariateFeatures ?? initialSelectedCovariateFeatures ?? NEURO_INITIAL_COVARIATE_FEATURES,
+    defaultValue:
+      defaultSelectedCovariateFeatures ?? initialSelectedCovariateFeatures ?? NEURO_INITIAL_COVARIATE_FEATURES,
     onChange: onSelectedCovariateFeaturesChange,
   });
   const [resolvedSelectedFeaturePair, setSelectedFeaturePair] = useControllableState({
@@ -76,7 +77,8 @@ export function CorrelationHeatmap({
       </div>
 
       <p className="neurodegenvis-caption">
-        Selected pair: <strong>{resolvedSelectedFeaturePair[0]}</strong> vs <strong>{resolvedSelectedFeaturePair[1]}</strong>
+        Selected pair: <strong>{resolvedSelectedFeaturePair[0]}</strong> vs{" "}
+        <strong>{resolvedSelectedFeaturePair[1]}</strong>
       </p>
 
       <NeuroHeatmapPlot

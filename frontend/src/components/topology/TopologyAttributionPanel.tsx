@@ -5,7 +5,15 @@ import { useAppStore } from "../../stores/useAppStore";
 import type { ModelScalpTopologyBand, ModelScalpTopologyResponse, TimeseriesBandFilter } from "../../types";
 import "./TopologyAttributionPanel.css";
 
-const BAND_OPTIONS = ["delta", "theta", "alpha", "beta1", "beta2", "beta3", "gamma"] as const satisfies readonly TimeseriesBandFilter[];
+const BAND_OPTIONS = [
+  "delta",
+  "theta",
+  "alpha",
+  "beta1",
+  "beta2",
+  "beta3",
+  "gamma",
+] as const satisfies readonly TimeseriesBandFilter[];
 const TOPOLOGY_VIEWBOX = {
   minX: -1.18,
   minY: -1.16,
@@ -361,11 +369,7 @@ function getTopologyColor(value: number, zeroPosition: number) {
   const clampedZero = clamp(zeroPosition, 0.001, 0.999);
 
   if (clampedValue <= clampedZero) {
-    return mixColor(
-      { r: 8, g: 106, b: 136, a: 0.9 },
-      ZERO_WEIGHT_COLOR,
-      clampedValue / clampedZero,
-    );
+    return mixColor({ r: 8, g: 106, b: 136, a: 0.9 }, ZERO_WEIGHT_COLOR, clampedValue / clampedZero);
   }
 
   return mixColor(
