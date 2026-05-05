@@ -1,0 +1,89 @@
+participant_id,Gender,Age,Group,MMSE,group_long,group_encoded,participant_id_int,datasplit
+sub-001,F,57,A,16,Alzheimer Disease Group,1,1,val
+sub-002,F,78,A,22,Alzheimer Disease Group,1,2,train
+sub-003,M,70,A,14,Alzheimer Disease Group,1,3,train
+sub-004,F,67,A,20,Alzheimer Disease Group,1,4,test
+sub-005,M,70,A,22,Alzheimer Disease Group,1,5,val
+sub-006,F,61,A,14,Alzheimer Disease Group,1,6,train
+sub-007,F,79,A,20,Alzheimer Disease Group,1,7,train
+sub-008,M,62,A,16,Alzheimer Disease Group,1,8,train
+sub-009,F,77,A,23,Alzheimer Disease Group,1,9,train
+sub-010,M,69,A,20,Alzheimer Disease Group,1,10,test
+sub-011,M,71,A,22,Alzheimer Disease Group,1,11,train
+sub-012,M,63,A,18,Alzheimer Disease Group,1,12,train
+sub-013,F,64,A,20,Alzheimer Disease Group,1,13,train
+sub-014,M,77,A,14,Alzheimer Disease Group,1,14,val
+sub-015,M,61,A,18,Alzheimer Disease Group,1,15,train
+sub-016,F,68,A,14,Alzheimer Disease Group,1,16,val
+sub-017,F,61,A,6,Alzheimer Disease Group,1,17,test
+sub-018,F,73,A,23,Alzheimer Disease Group,1,18,train
+sub-019,F,62,A,14,Alzheimer Disease Group,1,19,train
+sub-020,M,71,A,4,Alzheimer Disease Group,1,20,train
+sub-021,M,79,A,22,Alzheimer Disease Group,1,21,train
+sub-022,F,68,A,20,Alzheimer Disease Group,1,22,train
+sub-023,M,60,A,16,Alzheimer Disease Group,1,23,train
+sub-024,F,69,A,20,Alzheimer Disease Group,1,24,val
+sub-025,F,79,A,20,Alzheimer Disease Group,1,25,train
+sub-026,F,61,A,18,Alzheimer Disease Group,1,26,train
+sub-027,F,67,A,16,Alzheimer Disease Group,1,27,val
+sub-028,M,49,A,20,Alzheimer Disease Group,1,28,train
+sub-029,F,53,A,16,Alzheimer Disease Group,1,29,train
+sub-030,F,56,A,20,Alzheimer Disease Group,1,30,train
+sub-031,F,67,A,22,Alzheimer Disease Group,1,31,test
+sub-032,F,59,A,20,Alzheimer Disease Group,1,32,test
+sub-033,F,72,A,20,Alzheimer Disease Group,1,33,train
+sub-034,F,75,A,18,Alzheimer Disease Group,1,34,val
+sub-035,F,57,A,22,Alzheimer Disease Group,1,35,test
+sub-036,F,58,A,9,Alzheimer Disease Group,1,36,test
+sub-037,M,57,C,30,Healthy Group,0,37,train
+sub-038,M,62,C,30,Healthy Group,0,38,test
+sub-039,M,70,C,30,Healthy Group,0,39,test
+sub-040,M,61,C,30,Healthy Group,0,40,train
+sub-041,F,77,C,30,Healthy Group,0,41,test
+sub-042,M,74,C,30,Healthy Group,0,42,train
+sub-043,M,72,C,30,Healthy Group,0,43,train
+sub-044,F,64,C,30,Healthy Group,0,44,train
+sub-045,F,70,C,30,Healthy Group,0,45,test
+sub-046,M,63,C,30,Healthy Group,0,46,train
+sub-047,F,70,C,30,Healthy Group,0,47,train
+sub-048,M,65,C,30,Healthy Group,0,48,val
+sub-049,F,62,C,30,Healthy Group,0,49,val
+sub-050,M,68,C,30,Healthy Group,0,50,test
+sub-051,F,75,C,30,Healthy Group,0,51,val
+sub-052,F,73,C,30,Healthy Group,0,52,train
+sub-053,M,70,C,30,Healthy Group,0,53,train
+sub-054,M,78,C,30,Healthy Group,0,54,val
+sub-055,M,67,C,30,Healthy Group,0,55,train
+sub-056,F,64,C,30,Healthy Group,0,56,train
+sub-057,M,64,C,30,Healthy Group,0,57,train
+sub-058,M,62,C,30,Healthy Group,0,58,train
+sub-059,M,77,C,30,Healthy Group,0,59,val
+sub-060,F,71,C,30,Healthy Group,0,60,train
+sub-061,F,63,C,30,Healthy Group,0,61,train
+sub-062,M,67,C,30,Healthy Group,0,62,train
+sub-063,M,66,C,30,Healthy Group,0,63,test
+sub-064,M,66,C,30,Healthy Group,0,64,val
+sub-065,F,71,C,30,Healthy Group,0,65,train
+sub-066,M,73,F,20,Frontotemporal Dementia Group,2,66,val
+sub-067,M,66,F,24,Frontotemporal Dementia Group,2,67,test
+sub-068,M,78,F,25,Frontotemporal Dementia Group,2,68,train
+sub-069,M,70,F,22,Frontotemporal Dementia Group,2,69,val
+sub-070,F,67,F,22,Frontotemporal Dementia Group,2,70,train
+sub-071,M,62,F,20,Frontotemporal Dementia Group,2,71,val
+sub-072,M,65,F,18,Frontotemporal Dementia Group,2,72,train
+sub-073,F,57,F,22,Frontotemporal Dementia Group,2,73,val
+sub-074,F,53,F,20,Frontotemporal Dementia Group,2,74,train
+sub-075,F,71,F,22,Frontotemporal Dementia Group,2,75,train
+sub-076,M,44,F,24,Frontotemporal Dementia Group,2,76,test
+sub-077,M,61,F,22,Frontotemporal Dementia Group,2,77,train
+sub-078,M,62,F,22,Frontotemporal Dementia Group,2,78,train
+sub-079,F,60,F,18,Frontotemporal Dementia Group,2,79,train
+sub-080,F,71,F,20,Frontotemporal Dementia Group,2,80,train
+sub-081,F,61,F,18,Frontotemporal Dementia Group,2,81,val
+sub-082,M,63,F,27,Frontotemporal Dementia Group,2,82,train
+sub-083,F,68,F,20,Frontotemporal Dementia Group,2,83,train
+sub-084,F,71,F,24,Frontotemporal Dementia Group,2,84,train
+sub-085,M,64,F,26,Frontotemporal Dementia Group,2,85,test
+sub-086,M,49,F,26,Frontotemporal Dementia Group,2,86,test
+sub-087,M,73,F,24,Frontotemporal Dementia Group,2,87,train
+sub-088,M,55,F,24,Frontotemporal Dementia Group,2,88,test

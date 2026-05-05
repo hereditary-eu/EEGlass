@@ -8,7 +8,7 @@ from scipy.spatial.distance import squareform
 from sklearn.cluster import DBSCAN, KMeans
 from sklearn.metrics import adjusted_rand_score, silhouette_score
 
-from backend.models.clustering import DBScanParams, KMeansParams
+from backend.pydantic_models.clustering import DBScanParams, KMeansParams
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)

@@ -11,7 +11,7 @@ from backend.database.db_service import (
     reset_datasets,
 )
 from backend.database.models import get_db
-from backend.models.dataset import CSVDataRequest, DatasetListResponse
+from backend.pydantic_models.dataset import CSVDataRequest, DatasetListResponse
 from backend.utils.logger import get_logger
 from backend.utils.data_utils import dataframe_to_dict_list, sanitize_and_parse_dataset
 

@@ -1,24 +1,37 @@
+import { ClassificationEvidencePanel, TopologyAttributionPanel, TotalBandPowerChart } from "../components";
+import { useTimeseriesData } from "../hooks/useTimeseriesData";
 import { TimeseriesSlot } from "./TimeseriesSlot";
 
 export function MainPanel() {
+  const ts = useTimeseriesData();
+
   return (
     <section className="tool-panel" aria-label="Main tool workspace">
       <div className="tool-panel-top">
-
         <article className="tool-slot">
-          <div className="tool-slot-placeholder"> Panel 2 - Bandfilter - Slot</div>
+          <TotalBandPowerChart
+            bandPower={ts.bandPower}
+            isLoading={ts.isLoadingBandPower}
+            error={ts.bandPowerError}
+          />
         </article>
 
         <article className="tool-slot">
-          <div className="tool-slot-placeholder"> Panel 3 - Räumliche Aggregation der Bandfilter über Channels - Slot</div>
+          <TopologyAttributionPanel />
         </article>
 
         <article className="tool-slot">
-          <div className="tool-slot-placeholder"> Panel 4 - Klassifizierung - Slot</div>
+          <ClassificationEvidencePanel
+            datasetId={ts.datasetId}
+            subjectId={ts.subjectId}
+            source={ts.source}
+            windowIndex={ts.lockedPredictionWindowIndex}
+          />
         </article>
       </div>
+
       <article className="tool-slot tool-slot--timeseries">
-        <TimeseriesSlot />
+        <TimeseriesSlot ts={ts} />
       </article>
     </section>
   );

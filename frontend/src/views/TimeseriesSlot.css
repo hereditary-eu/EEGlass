@@ -209,6 +209,13 @@
   border-color: #0e7490;
 }
 
+.timeseries-slot-button:disabled {
+  border-color: #d7e0e8;
+  background-color: #eef3f6;
+  color: #748391;
+  cursor: default;
+}
+
 .timeseries-slot-canvas {
   min-width: 0;
   min-height: 0;

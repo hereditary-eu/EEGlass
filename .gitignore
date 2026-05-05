@@ -34,3 +34,8 @@ data/datasets/
 
 # ruff
 .ruff_cache/
+# data
+data/
+
+stuff/
+

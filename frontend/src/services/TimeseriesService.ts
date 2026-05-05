@@ -2,7 +2,16 @@ import { ApiClient } from "./ApiClient";
 import { API_ROUTES } from "./ApiRoutes";
 import type {
   ChannelId,
+  ModelAttributionRequest,
+  ModelAttributionResponse,
+  ModelBandPowerRequest,
+  ModelBandPowerResponse,
+  ModelClassEvidenceRequest,
+  ModelClassEvidenceResponse,
+  ModelInferenceResponse,
+  ModelScalpTopologyResponse,
   TimeseriesDatasetInfo,
+  TimeseriesBandFilter,
   TimeseriesSignalResponse,
   TimeseriesSource,
   TimeseriesSubjectInfo,
@@ -24,6 +33,13 @@ export interface TimeseriesSignalRequest {
   startTime?: number;
   endTime?: number;
   maxPoints?: number;
+  bandFilter?: TimeseriesBandFilter | null;
+}
+
+interface ModelInferenceRequest {
+  dataset_id: string;
+  subject_id: string;
+  source: TimeseriesSource;
 }
 
 export class TimeseriesService {
@@ -67,6 +83,66 @@ export class TimeseriesService {
     );
   }
 
+  static async computeInference(
+    datasetId: string,
+    subjectId: string,
+    source: TimeseriesSource = "derivatives",
+  ): Promise<ModelInferenceResponse> {
+    const request: ModelInferenceRequest = {
+      dataset_id: datasetId,
+      subject_id: subjectId,
+      source,
+    };
+    return ApiClient.post<ModelInferenceResponse>(API_ROUTES.model.infer, request);
+  }
+
+  static async computeAttribution(
+    datasetId: string,
+    subjectId: string,
+    windowIndex: number,
+    source: TimeseriesSource = "derivatives",
+  ): Promise<ModelAttributionResponse> {
+    const request: ModelAttributionRequest = {
+      dataset_id: datasetId,
+      subject_id: subjectId,
+      source,
+      window_index: windowIndex,
+    };
+    return ApiClient.post<ModelAttributionResponse>(API_ROUTES.model.attribution, request);
+  }
+
+  static async computeBandPower(
+    datasetId: string,
+    subjectId: string,
+    source: TimeseriesSource = "derivatives",
+  ): Promise<ModelBandPowerResponse> {
+    const request: ModelBandPowerRequest = {
+      dataset_id: datasetId,
+      subject_id: subjectId,
+      source,
+    };
+    return ApiClient.post<ModelBandPowerResponse>(API_ROUTES.model.bandPower, request);
+  }
+
+  static async computeClassEvidence(
+    datasetId: string,
+    subjectId: string,
+    windowIndex: number,
+    source: TimeseriesSource = "derivatives",
+  ): Promise<ModelClassEvidenceResponse> {
+    const request: ModelClassEvidenceRequest = {
+      dataset_id: datasetId,
+      subject_id: subjectId,
+      source,
+      window_index: windowIndex,
+    };
+    return ApiClient.post<ModelClassEvidenceResponse>(API_ROUTES.model.classEvidence, request);
+  }
+
+  static async getScalpTopologies(): Promise<ModelScalpTopologyResponse> {
+    return ApiClient.get<ModelScalpTopologyResponse>(API_ROUTES.model.scalpTopologies);
+  }
+
   private static toSignalQueryString(request: TimeseriesSignalRequest): string {
     return this.toQueryString({
       channels: request.channels.join(","),
@@ -74,6 +150,7 @@ export class TimeseriesService {
       start_time: request.startTime,
       end_time: request.endTime,
       max_points: request.maxPoints,
+      band_filter: request.bandFilter ?? undefined,
     });
   }
 

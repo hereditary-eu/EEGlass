@@ -13,12 +13,13 @@ interface TimeseriesView {
 }
 
 interface DragState {
-  mode: "pan" | "select";
+  mode: "pan" | "select" | "annotation";
   startX: number;
   startY: number;
   startOffset: number;
   startTime?: number;
   currentX?: number;
+  startWindowIndex?: number | null;
 }
 
 interface PlotGeometry {
@@ -53,6 +54,11 @@ export interface EegTimeseriesProps {
   hoveredChannel?: ChannelId | null;
   defaultHoveredChannel?: ChannelId | null;
   onHoveredChannelChange?: (channel: ChannelId | null) => void;
+  hoveredPredictionWindowIndex?: number | null;
+  onHoveredPredictionWindowIndexChange?: (windowIndex: number | null) => void;
+  lockedPredictionWindowIndex?: number | null;
+  onLockedPredictionWindowIndexChange?: (windowIndex: number | null) => void;
+  predictionWindowCount?: number;
   resetViewSignal?: number;
   isPreview?: boolean;
   isLoading?: boolean;
@@ -72,7 +78,10 @@ const WINDOW_ANNOTATION_ROW_COUNT = 3;
 const WINDOW_ANNOTATION_ROW_HEIGHT = 14;
 const WINDOW_ANNOTATION_ROW_GAP = 3;
 const WINDOW_ANNOTATION_TOP_GAP = 8;
-const DEFAULT_WINDOW_SIZE_SECONDS = 2;
+const DEFAULT_WINDOW_SIZE_SECONDS = 4;
+const WINDOW_ANNOTATION_FONT = "10px Inter, Segoe UI, sans-serif";
+const WINDOW_ANNOTATION_TEXT_PADDING = 14;
+const WINDOW_ANNOTATION_MIN_LABEL_WIDTH = 42;
 const CHANNEL_COLORS = ["#0f6ea8", "#be185d", "#15803d", "#b45309", "#6d28d9"];
 const DEFAULT_WINDOW_ANNOTATION_ROWS: TimeseriesWindowAnnotationRow[] = [
   { id: "annotation-row-1" },
@@ -92,6 +101,11 @@ export function EegTimeseries({
   hoveredChannel,
   defaultHoveredChannel = null,
   onHoveredChannelChange,
+  hoveredPredictionWindowIndex = null,
+  onHoveredPredictionWindowIndexChange,
+  lockedPredictionWindowIndex = null,
+  onLockedPredictionWindowIndexChange,
+  predictionWindowCount = 0,
   resetViewSignal = 0,
   isLoading = false,
   error,
@@ -207,11 +221,15 @@ export function EegTimeseries({
       drag,
       windowSizeSeconds,
       windowAnnotationRows,
+      hoveredPredictionWindowIndex,
+      lockedPredictionWindowIndex,
     });
   }, [
     canvasSize,
     channels,
     drag,
+    hoveredPredictionWindowIndex,
+    lockedPredictionWindowIndex,
     resolvedHoveredChannel,
     resolvedSelectedTimeRange,
     samples,
@@ -240,6 +258,14 @@ export function EegTimeseries({
     canvas.setPointerCapture(event.pointerId);
     const point = getCanvasPoint(event, canvas);
     const currentView = viewRef.current;
+    const annotationWindowIndex = getPredictionWindowIndexAtPoint(
+      point,
+      geometry,
+      currentView,
+      duration,
+      windowSizeSeconds,
+      predictionWindowCount,
+    );
 
     if (event.button === 2) {
       setSyncedDrag({
@@ -249,6 +275,18 @@ export function EegTimeseries({
         startOffset: currentView.xOffset,
         startTime: xToTime(point.x, geometry, currentView, duration),
         currentX: point.x,
+      });
+      return;
+    }
+
+    if (event.button === 0 && annotationWindowIndex !== null) {
+      onHoveredPredictionWindowIndexChange?.(annotationWindowIndex);
+      setSyncedDrag({
+        mode: "annotation",
+        startX: point.x,
+        startY: point.y,
+        startOffset: currentView.xOffset,
+        startWindowIndex: annotationWindowIndex,
       });
       return;
     }
@@ -271,6 +309,22 @@ export function EegTimeseries({
     const point = getCanvasPoint(event, canvas);
     const activeDrag = dragRef.current;
     if (!activeDrag) {
+      const nextHoveredWindowIndex = getPredictionWindowIndexAtPoint(
+        point,
+        geometry,
+        viewRef.current,
+        duration,
+        windowSizeSeconds,
+        predictionWindowCount,
+      );
+      onHoveredPredictionWindowIndexChange?.(nextHoveredWindowIndex);
+      if (nextHoveredWindowIndex !== null) {
+        if (resolvedHoveredChannel !== null) {
+          setHoveredChannel(null);
+        }
+        return;
+      }
+
       const nextHoveredChannel = getChannelAtPoint(point, geometry, channels);
       if (nextHoveredChannel !== resolvedHoveredChannel) {
         setHoveredChannel(nextHoveredChannel);
@@ -289,12 +343,28 @@ export function EegTimeseries({
       return;
     }
 
+    if (activeDrag.mode === "annotation") {
+      const nextHoveredWindowIndex = getPredictionWindowIndexAtPoint(
+        point,
+        geometry,
+        viewRef.current,
+        duration,
+        windowSizeSeconds,
+        predictionWindowCount,
+      );
+      onHoveredPredictionWindowIndexChange?.(nextHoveredWindowIndex);
+      return;
+    }
+
     setSyncedDrag({ ...activeDrag, currentX: point.x });
   };
 
   const handlePointerLeave = () => {
     if (!dragRef.current && resolvedHoveredChannel !== null) {
       setHoveredChannel(null);
+    }
+    if (!dragRef.current && hoveredPredictionWindowIndex !== null) {
+      onHoveredPredictionWindowIndexChange?.(null);
     }
   };
 
@@ -318,6 +388,25 @@ export function EegTimeseries({
           end: Math.min(duration, Math.max(activeDrag.startTime, endTime)),
         });
       }
+    }
+
+    if (activeDrag.mode === "annotation") {
+      const point = canvas ? getCanvasPoint(event, canvas) : { x: activeDrag.startX, y: activeDrag.startY };
+      const nextWindowIndex = getPredictionWindowIndexAtPoint(
+        point,
+        geometry,
+        viewRef.current,
+        duration,
+        windowSizeSeconds,
+        predictionWindowCount,
+      );
+      const movement = Math.hypot(point.x - activeDrag.startX, point.y - activeDrag.startY);
+      if (movement <= 6 && nextWindowIndex !== null) {
+        onLockedPredictionWindowIndexChange?.(nextWindowIndex);
+      }
+      onHoveredPredictionWindowIndexChange?.(null);
+      setSyncedDrag(null);
+      return;
     }
 
     setSyncedDrag(null);
@@ -392,6 +481,8 @@ function renderTimeseries({
   drag,
   windowSizeSeconds,
   windowAnnotationRows,
+  hoveredPredictionWindowIndex,
+  lockedPredictionWindowIndex,
 }: {
   canvas: HTMLCanvasElement;
   samples: Record<ChannelId, number[]>;
@@ -403,6 +494,8 @@ function renderTimeseries({
   drag: DragState | null;
   windowSizeSeconds: number;
   windowAnnotationRows: TimeseriesWindowAnnotationRow[];
+  hoveredPredictionWindowIndex: number | null;
+  lockedPredictionWindowIndex: number | null;
 }) {
   const rect = canvas.getBoundingClientRect();
   const width = Math.floor(rect.width);
@@ -437,14 +530,24 @@ function renderTimeseries({
   const endIndex = Math.min(sampleCount, Math.ceil(visibleEndTime * samplingFrequency));
 
   drawSelection(ctx, geometry, view, duration, selectedTimeRange, "rgb(14 116 144 / 18%)");
+  drawLockedPredictionWindowHighlight(
+    ctx,
+    geometry,
+    view,
+    duration,
+    lockedPredictionWindowIndex,
+    windowSizeSeconds,
+  );
   if (drag?.mode === "select" && drag.startTime !== undefined && drag.currentX !== undefined) {
     drawDragSelection(ctx, geometry, view, duration, drag);
   }
 
-  drawGridAndAxes(ctx, geometry, view, duration, visibleStartTime, visibleDuration);
+  drawGridAndAxes(ctx, geometry, view, duration, visibleStartTime, visibleDuration, windowSizeSeconds);
   drawWindowAnnotationRows(ctx, geometry, view, duration, visibleStartTime, visibleDuration, {
     rows: windowAnnotationRows,
     windowSizeSeconds,
+    hoveredWindowIndex: hoveredPredictionWindowIndex,
+    lockedWindowIndex: lockedPredictionWindowIndex,
   });
   const hasHoveredChannel = hoveredChannel !== null && channels.includes(hoveredChannel);
   channels.forEach((channel, index) => {
@@ -511,9 +614,13 @@ function drawWindowAnnotationRows(
   {
     rows,
     windowSizeSeconds,
+    hoveredWindowIndex,
+    lockedWindowIndex,
   }: {
     rows: TimeseriesWindowAnnotationRow[];
     windowSizeSeconds: number;
+    hoveredWindowIndex: number | null;
+    lockedWindowIndex: number | null;
   },
 ) {
   const normalizedRows = normalizeAnnotationRows(rows);
@@ -521,6 +628,7 @@ function drawWindowAnnotationRows(
   const safeWindowSizeSeconds = Math.max(0.1, windowSizeSeconds);
 
   ctx.save();
+  ctx.font = WINDOW_ANNOTATION_FONT;
   ctx.beginPath();
   ctx.rect(PADDING.left, geometry.annotationTop, geometry.plotWidth, geometry.annotationBottom - geometry.annotationTop);
   ctx.clip();
@@ -557,12 +665,30 @@ function drawWindowAnnotationRows(
       ctx.fillStyle = fillStyle;
       ctx.fillRect(left + 0.5, rowTop, Math.max(1, right - left - 1), rowHeight);
 
-      if (value !== null && right - left > 30) {
+      if (lockedWindowIndex === windowIndex) {
+        ctx.strokeStyle = "rgb(15 23 42 / 58%)";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(left + 0.5, rowTop + 0.5, Math.max(1, right - left - 1), rowHeight - 1);
+      } else if (hoveredWindowIndex === windowIndex) {
+        ctx.strokeStyle = "rgb(14 116 144 / 60%)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(left + 0.5, rowTop + 0.5, Math.max(1, right - left - 1), rowHeight - 1);
+      }
+
+      if (value !== null) {
+        const valueText = String(value);
+        const requiredWidth = Math.max(
+          WINDOW_ANNOTATION_MIN_LABEL_WIDTH,
+          ctx.measureText(valueText).width + WINDOW_ANNOTATION_TEXT_PADDING,
+        );
+        if (right - left < requiredWidth) {
+          continue;
+        }
+
         ctx.fillStyle = "#17212b";
-        ctx.font = "10px Inter, Segoe UI, sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(String(value), left + (right - left) / 2, rowTop + rowHeight / 2);
+        ctx.fillText(valueText, left + (right - left) / 2, rowTop + rowHeight / 2);
       }
     }
   });
@@ -592,9 +718,9 @@ function drawWindowAnnotationRows(
 
 function getDefaultAnnotationColor(rowIndex: number, windowIndex: number): string {
   const palette = [
-    ["rgb(14 116 144 / 16%)", "rgb(14 116 144 / 10%)"],
-    ["rgb(21 128 61 / 16%)", "rgb(21 128 61 / 10%)"],
-    ["rgb(190 24 93 / 14%)", "rgb(190 24 93 / 9%)"],
+    ["rgb(226 232 240 / 70%)", "rgb(241 245 249 / 92%)"],
+    ["rgb(229 231 235 / 70%)", "rgb(243 244 246 / 92%)"],
+    ["rgb(226 232 240 / 65%)", "rgb(248 250 252 / 92%)"],
   ];
   const rowPalette = palette[rowIndex] ?? palette[0];
   return rowPalette[windowIndex % rowPalette.length] ?? "rgb(23 33 43 / 8%)";
@@ -725,6 +851,7 @@ function drawGridAndAxes(
   duration: number,
   visibleStartTime: number,
   visibleDuration: number,
+  windowSizeSeconds: number,
 ) {
   ctx.strokeStyle = "#d7e0e8";
   ctx.lineWidth = 1;
@@ -754,17 +881,29 @@ function drawGridAndAxes(
 
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  const xTicks = 6;
-  for (let tick = 0; tick <= xTicks; tick += 1) {
-    const x = PADDING.left + (geometry.plotWidth * tick) / xTicks;
-    const time = Math.min(duration, visibleStartTime + (visibleDuration * tick) / xTicks);
+  const gridSpacingSeconds = Math.max(0.1, windowSizeSeconds);
+  const pixelsPerSecond = geometry.plotWidth / Math.max(visibleDuration, 0.001);
+  const minimumLabelSpacingPx = 56;
+  const labelEvery = Math.max(1, Math.ceil(minimumLabelSpacingPx / Math.max(1, pixelsPerSecond * gridSpacingSeconds)));
+  const firstGridTime = Math.max(0, Math.floor(visibleStartTime / gridSpacingSeconds) * gridSpacingSeconds);
+  const visibleEndTime = Math.min(duration, visibleStartTime + visibleDuration);
+
+  let gridIndex = 0;
+  for (let time = firstGridTime; time <= visibleEndTime + 1e-6; time += gridSpacingSeconds) {
+    const clampedTime = Math.min(duration, time);
+    const x = timeToX(clampedTime, geometry, view, duration);
     ctx.strokeStyle = "#e8eef3";
     ctx.beginPath();
     ctx.moveTo(x, PADDING.top);
     ctx.lineTo(x, geometry.annotationBottom);
     ctx.stroke();
-    ctx.fillStyle = "#5d6b78";
-    ctx.fillText(`${time.toFixed(1)}s`, x, geometry.axisY + 8);
+
+    if (gridIndex % labelEvery === 0) {
+      ctx.fillStyle = "#5d6b78";
+      ctx.fillText(`${clampedTime.toFixed(1)}s`, x, geometry.axisY + 8);
+    }
+
+    gridIndex += 1;
   }
 }
 
@@ -789,6 +928,37 @@ function drawSelection(
   }
 
   ctx.fillStyle = fillStyle;
+  ctx.fillRect(left, PADDING.top, right - left, geometry.annotationBottom - PADDING.top);
+}
+
+function drawLockedPredictionWindowHighlight(
+  ctx: CanvasRenderingContext2D,
+  geometry: PlotGeometry,
+  view: TimeseriesView,
+  duration: number,
+  lockedWindowIndex: number | null,
+  windowSizeSeconds: number,
+) {
+  if (lockedWindowIndex === null || lockedWindowIndex < 0) {
+    return;
+  }
+
+  const safeWindowSizeSeconds = Math.max(0.1, windowSizeSeconds);
+  const startTime = lockedWindowIndex * safeWindowSizeSeconds;
+  const endTime = Math.min(duration, startTime + safeWindowSizeSeconds);
+  if (endTime <= 0 || startTime >= duration || endTime <= startTime) {
+    return;
+  }
+
+  const x1 = timeToX(startTime, geometry, view, duration);
+  const x2 = timeToX(endTime, geometry, view, duration);
+  const left = Math.max(PADDING.left, Math.min(x1, x2));
+  const right = Math.min(geometry.width - PADDING.right, Math.max(x1, x2));
+  if (right <= left) {
+    return;
+  }
+
+  ctx.fillStyle = "rgb(250 204 21 / 16%)";
   ctx.fillRect(left, PADDING.top, right - left, geometry.annotationBottom - PADDING.top);
 }
 
@@ -823,6 +993,8 @@ function drawEmptyAxes(
   drawWindowAnnotationRows(ctx, geometry, { xScale: 1, xOffset: 0, yMin: -1, yMax: 1 }, 0, 0, 0, {
     rows: windowAnnotationRows,
     windowSizeSeconds,
+    hoveredWindowIndex: null,
+    lockedWindowIndex: null,
   });
 }
 
@@ -962,4 +1134,32 @@ function getChannelAtPoint(
   const channelHeight = geometry.plotHeight / channels.length;
   const channelIndex = Math.floor((point.y - PADDING.top) / channelHeight);
   return channels[channelIndex] ?? null;
+}
+
+function getPredictionWindowIndexAtPoint(
+  point: { x: number; y: number },
+  geometry: PlotGeometry,
+  view: TimeseriesView,
+  duration: number,
+  windowSizeSeconds: number,
+  predictionWindowCount: number,
+): number | null {
+  if (
+    predictionWindowCount <= 0 ||
+    duration <= 0 ||
+    point.x < PADDING.left ||
+    point.x > geometry.width - PADDING.right ||
+    point.y < geometry.annotationTop ||
+    point.y > geometry.annotationBottom
+  ) {
+    return null;
+  }
+
+  const time = xToTime(point.x, geometry, view, duration);
+  const windowIndex = Math.floor(time / Math.max(0.1, windowSizeSeconds));
+  if (windowIndex < 0 || windowIndex >= predictionWindowCount) {
+    return null;
+  }
+
+  return windowIndex;
 }

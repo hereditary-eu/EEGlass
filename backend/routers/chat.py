@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from backend.models.chatbot import ChatRequest
+from backend.pydantic_models.chatbot import ChatRequest
 from backend.config import CONFIG
 
 
