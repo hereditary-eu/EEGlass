@@ -331,12 +331,20 @@ export function useTimeseriesData() {
     );
   };
 
+  const handleSingleChannelSelect = (channel: ChannelId) => {
+    channelsClearedByUserRef.current = false;
+    setSelectedChannels([channel]);
+    setSelectedTimeRange(null);
+    setHoveredChannel(channel);
+  };
+
   const handleSourceChange = (nextSource: TimeseriesSource) => {
     setSource(nextSource);
     setSelectedTimeRange(null);
     setInferenceResult(null);
     setInferenceError(null);
     clearTopologySelectionAndData();
+    clearBandPowerData();
   };
 
   const handleResetView = () => {
@@ -351,6 +359,7 @@ export function useTimeseriesData() {
     setIsComputingInference(true);
     setInferenceError(null);
     clearTopologySelectionAndData();
+    clearBandPowerData();
 
     try {
       const response = await TimeseriesService.computeInference(datasetId, subjectId, source);
@@ -364,7 +373,7 @@ export function useTimeseriesData() {
   };
 
   useEffect(() => {
-    if (!datasetId || !subjectId) {
+    if (!datasetId || !subjectId || lockedPredictionWindowIndex === null) {
       setIsLoadingBandPower(false);
       setBandPower(null);
       setBandPowerError(null);
@@ -372,7 +381,8 @@ export function useTimeseriesData() {
     }
 
     const requestSource = source;
-    const cacheKey = `${datasetId}::${subjectId}`;
+    const requestWindowIndex = lockedPredictionWindowIndex;
+    const cacheKey = `${datasetId}::${subjectId}::${requestSource}::${requestWindowIndex}`;
     const cachedBandPower = bandPowerCacheRef.current.get(cacheKey);
     if (cachedBandPower) {
       setBandPower(cachedBandPower);
@@ -385,7 +395,7 @@ export function useTimeseriesData() {
     setIsLoadingBandPower(true);
     setBandPowerError(null);
 
-    TimeseriesService.computeBandPower(datasetId, subjectId, requestSource)
+    TimeseriesService.computeBandPower(datasetId, subjectId, requestWindowIndex, requestSource)
       .then((response) => {
         if (!isCurrent) {
           return;
@@ -411,7 +421,7 @@ export function useTimeseriesData() {
     return () => {
       isCurrent = false;
     };
-  }, [datasetId, subjectId]);
+  }, [datasetId, lockedPredictionWindowIndex, source, subjectId]);
 
   function clearTopologySelectionAndData() {
     attributionCacheRef.current.clear();
@@ -471,6 +481,7 @@ export function useTimeseriesData() {
     handleDatasetChange,
     handleSubjectChange,
     handleChannelToggle,
+    handleSingleChannelSelect,
     handleSourceChange,
     handleResetView,
     handleComputeInference,

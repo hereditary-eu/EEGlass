@@ -9,7 +9,13 @@ export function MainPanel() {
     <section className="tool-panel" aria-label="Main tool workspace">
       <div className="tool-panel-top">
         <article className="tool-slot">
-          <TotalBandPowerChart bandPower={ts.bandPower} isLoading={ts.isLoadingBandPower} error={ts.bandPowerError} />
+          <TotalBandPowerChart
+            bandPower={ts.bandPower}
+            isLoading={ts.isLoadingBandPower}
+            error={ts.bandPowerError}
+            selectedChannels={ts.activeChannels}
+            onChannelSelect={ts.handleSingleChannelSelect}
+          />
         </article>
 
         <article className="tool-slot">

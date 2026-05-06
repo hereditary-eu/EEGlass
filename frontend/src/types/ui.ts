@@ -159,6 +159,7 @@ export interface ModelBandPowerRequest {
   dataset_id: string;
   subject_id: string;
   source: TimeseriesSource;
+  window_index: number;
 }
 
 export interface ModelBandPowerValue {
@@ -178,6 +179,9 @@ export interface ModelBandPowerResponse {
   dataset_id: string;
   subject_id: string;
   source: TimeseriesSource;
+  window_index: number;
+  start_time: number;
+  end_time: number;
   sampling_frequency: number;
   channels: ModelChannelBandPower[];
 }

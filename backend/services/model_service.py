@@ -95,7 +95,7 @@ class ModelService:
         tuple[str, str, TimeseriesSource, int, str],
         ModelClassEvidenceResponse,
     ] = OrderedDict()
-    _band_power_cache: OrderedDict[tuple[str, str, TimeseriesSource], ModelBandPowerResponse] = OrderedDict()
+    _band_power_cache: OrderedDict[tuple[str, str, TimeseriesSource, int], ModelBandPowerResponse] = OrderedDict()
     _scalp_topology_cache: OrderedDict[str, ModelScalpTopologyResponse] = OrderedDict()
 
     @classmethod
@@ -265,19 +265,20 @@ class ModelService:
         dataset_id: str,
         subject_id: str,
         source: TimeseriesSource = "derivatives",
+        window_index: int = 0,
     ) -> ModelBandPowerResponse:
-        cache_key = (dataset_id, subject_id, source)
+        cache_key = (dataset_id, subject_id, source, window_index)
         cached_response = cls._band_power_cache.get(cache_key)
         if cached_response is not None:
             cls._band_power_cache.move_to_end(cache_key)
             return cached_response
 
         subject_data = cls._get_prepared_subject_data(dataset_id, subject_id, source)
-        windows = np.transpose(subject_data.windows, (1, 0, 2)).reshape(len(MODEL_CHANNELS), -1)
-        windows = windows.astype(np.float64, copy=False)
-        windows -= np.mean(windows, axis=1, keepdims=True)
+        cls._validate_window_index(window_index, len(subject_data.prediction_ranges))
+        window_data = subject_data.windows[window_index].astype(np.float64, copy=False)
+        window_data -= np.mean(window_data, axis=1, keepdims=True)
 
-        sample_count = windows.shape[1]
+        sample_count = window_data.shape[1]
         if sample_count < 2:
             raise ModelValidationError("Recording is too short to compute band power.")
 
@@ -288,7 +289,7 @@ class ModelService:
 
         freqs = np.fft.rfftfreq(sample_count, d=1.0 / subject_data.sampling_frequency)
         channel_band_powers: list[ModelChannelBandPower] = []
-        for channel_name, channel_signal in zip(MODEL_CHANNELS, windows, strict=True):
+        for channel_name, channel_signal in zip(MODEL_CHANNELS, window_data, strict=True):
             spectrum = np.fft.rfft(channel_signal * window)
             channel_psd = (np.abs(spectrum) ** 2) / (subject_data.sampling_frequency * window_norm)
             total_mask = (freqs >= MODEL_BANDS[0][1]) & (freqs <= MODEL_BANDS[-1][2])
@@ -309,11 +310,15 @@ class ModelService:
                     ],
                 )
             )
+        start_time, end_time = subject_data.prediction_ranges[window_index]
 
         response = ModelBandPowerResponse(
             dataset_id=dataset_id,
             subject_id=subject_id,
             source=source,
+            window_index=window_index,
+            start_time=start_time,
+            end_time=end_time,
             sampling_frequency=subject_data.sampling_frequency,
             channels=channel_band_powers,
         )

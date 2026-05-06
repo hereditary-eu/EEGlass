@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
-import type { ModelBandPowerResponse } from "../../types";
+import type { ChannelId, ModelBandPowerResponse } from "../../types";
 
 interface TotalBandPowerChartProps {
   bandPower: ModelBandPowerResponse | null;
   isLoading: boolean;
   error: string | null;
+  selectedChannels: ChannelId[];
+  onChannelSelect: (channel: ChannelId) => void;
 }
 
 const BAND_LABELS: Record<string, string> = {
@@ -20,22 +22,19 @@ const BAND_LABELS: Record<string, string> = {
   gamma: "gamma",
 };
 
-export function TotalBandPowerChart({ bandPower, isLoading, error }: TotalBandPowerChartProps) {
+export function TotalBandPowerChart({
+  bandPower,
+  isLoading,
+  error,
+  selectedChannels,
+  onChannelSelect,
+}: TotalBandPowerChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [plotHeight, setPlotHeight] = useState(240);
 
   const channels = bandPower?.channels ?? [];
   const availableChannels = useMemo(() => channels.map((channel) => channel.channel), [channels]);
-
-  useEffect(() => {
-    if (!availableChannels.length) {
-      setSelectedChannel(null);
-      return;
-    }
-
-    setSelectedChannel((current) => (current && availableChannels.includes(current) ? current : availableChannels[0]));
-  }, [availableChannels]);
+  const selectedChannel = selectedChannels.find((channel) => availableChannels.includes(channel)) ?? availableChannels[0] ?? null;
 
   const activeChannel = useMemo(
     () => channels.find((channel) => channel.channel === selectedChannel) ?? channels[0] ?? null,
@@ -169,7 +168,9 @@ export function TotalBandPowerChart({ bandPower, isLoading, error }: TotalBandPo
         <div>
           <h4 className="topology-bandpower-title">Total band power</h4>
           <p className="topology-bandpower-subtitle">
-            {activeChannel ? `Channel ${activeChannel.channel}` : "Select a subject to view channel band power"}
+            {activeChannel && bandPower
+              ? `Window ${bandPower.window_index + 1}: ${bandPower.start_time.toFixed(1)}s-${bandPower.end_time.toFixed(1)}s · ${activeChannel.channel}`
+              : "Click a 4s prediction window to view channel band power"}
           </p>
         </div>
         {bandPower ? (
@@ -184,7 +185,7 @@ export function TotalBandPowerChart({ bandPower, isLoading, error }: TotalBandPo
               key={channel}
               type="button"
               className={`topology-bandpower-channel${activeChannel?.channel === channel ? " topology-bandpower-channel--active" : ""}`}
-              onClick={() => setSelectedChannel(channel)}
+              onClick={() => onChannelSelect(channel)}
             >
               {channel}
             </button>
@@ -199,7 +200,7 @@ export function TotalBandPowerChart({ bandPower, isLoading, error }: TotalBandPo
       {isLoading ? <div className="topology-bandpower-overlay">Loading band power...</div> : null}
       {error ? <div className="topology-bandpower-overlay topology-bandpower-overlay--error">{error}</div> : null}
       {!isLoading && !error && !channels.length ? (
-        <div className="topology-bandpower-overlay">Band power appears once a signal is available.</div>
+        <div className="topology-bandpower-overlay">Click a 4s prediction window to inspect band power.</div>
       ) : null}
     </div>
   );

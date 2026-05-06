@@ -114,12 +114,14 @@ export class TimeseriesService {
   static async computeBandPower(
     datasetId: string,
     subjectId: string,
+    windowIndex: number,
     source: TimeseriesSource = "derivatives",
   ): Promise<ModelBandPowerResponse> {
     const request: ModelBandPowerRequest = {
       dataset_id: datasetId,
       subject_id: subjectId,
       source,
+      window_index: windowIndex,
     };
     return ApiClient.post<ModelBandPowerResponse>(API_ROUTES.model.bandPower, request);
   }

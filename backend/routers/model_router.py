@@ -72,6 +72,7 @@ async def get_model_band_power(request: ModelBandPowerRequest) -> ModelBandPower
             dataset_id=request.dataset_id,
             subject_id=request.subject_id,
             source=request.source,
+            window_index=request.window_index,
         )
     except ModelServiceError as exc:
         raise _http_error(exc) from exc

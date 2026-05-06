@@ -99,6 +99,7 @@ class ModelBandPowerRequest(BaseModel):
     dataset_id: str
     subject_id: str
     source: TimeseriesSource = "derivatives"
+    window_index: int
 
 
 class ModelBandPowerValue(BaseModel):
@@ -118,6 +119,9 @@ class ModelBandPowerResponse(BaseModel):
     dataset_id: str
     subject_id: str
     source: TimeseriesSource
+    window_index: int
+    start_time: float
+    end_time: float
     sampling_frequency: float
     channels: List[ModelChannelBandPower]
 
