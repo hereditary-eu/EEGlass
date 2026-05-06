@@ -24,6 +24,11 @@ from backend.pydantic_models.timeseries import (
 _BAND_FILTER_LIMITS: dict[TimeseriesBandFilter, tuple[float, float]] = {
     band_name: (start_hz, end_hz) for band_name, start_hz, end_hz in MODEL_BANDS
 }
+_SUBJECT_GROUP_LABELS = {
+    "A": "Alzheimer",
+    "F": "Frontotemporal Dementia",
+    "C": "Healthy",
+}
 
 
 class TimeseriesServiceError(Exception):
@@ -82,6 +87,13 @@ class TimeseriesService:
         return subjects
 
     @classmethod
+    def get_subject_label(cls, dataset_id: str, subject_id: str) -> str | None:
+        dataset_dir = cls._dataset_dir(dataset_id)
+        participant_row = cls._read_participant_row(dataset_dir, subject_id)
+        subject_group = participant_row.get("Group") if participant_row else None
+        return cls._resolve_subject_label(subject_group)
+
+    @classmethod
     def get_subject_metadata(
         cls,
         dataset_id: str,
@@ -89,9 +101,12 @@ class TimeseriesService:
         source: TimeseriesSource = "derivatives",
     ) -> TimeseriesSubjectMetadata:
         raw = cls._open_raw(dataset_id, subject_id, source)
-        eeg_file = cls._find_eeg_file(cls._dataset_dir(dataset_id), subject_id, source)
+        dataset_dir = cls._dataset_dir(dataset_id)
+        eeg_file = cls._find_eeg_file(dataset_dir, subject_id, source)
         sidecar = cls._read_json(cls._find_json_sidecar(eeg_file, dataset_id, subject_id, source))
         channels_by_name = cls._read_channels(cls._find_channels_sidecar(eeg_file, dataset_id, subject_id, source))
+        participant_row = cls._read_participant_row(dataset_dir, subject_id)
+        subject_group = participant_row.get("Group") if participant_row else None
 
         sampling_frequency = float(sidecar.get("SamplingFrequency") or raw.info["sfreq"])
         sample_count = int(raw.n_times)
@@ -112,6 +127,8 @@ class TimeseriesService:
             channels=channels,
             raw_available="raw" in sources,
             derivatives_available="derivatives" in sources,
+            subject_group=subject_group,
+            subject_label=cls._resolve_subject_label(subject_group),
             task_name=sidecar.get("TaskName"),
             recording_type=sidecar.get("RecordingType"),
         )
@@ -341,6 +358,31 @@ class TimeseriesService:
             return {}
         with path.open("r", encoding="utf-8") as file:
             return {row["name"]: row for row in csv.DictReader(file, delimiter="\t") if row.get("name")}
+
+    @staticmethod
+    def _read_participant_row(dataset_dir: Path, subject_id: str) -> dict[str, str] | None:
+        participants_path = dataset_dir / "participants.tsv"
+        if not participants_path.is_file():
+            return None
+
+        try:
+            with participants_path.open("r", encoding="utf-8") as file:
+                return next(
+                    (
+                        row
+                        for row in csv.DictReader(file, delimiter="\t")
+                        if row.get("participant_id") == subject_id
+                    ),
+                    None,
+                )
+        except Exception:
+            return None
+
+    @staticmethod
+    def _resolve_subject_label(subject_group: str | None) -> str | None:
+        if not subject_group:
+            return None
+        return _SUBJECT_GROUP_LABELS.get(subject_group, subject_group)
 
     @staticmethod
     def _channel_metadata(channel_name: str, row: dict[str, str] | None) -> TimeseriesChannelMetadata:

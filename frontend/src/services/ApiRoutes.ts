@@ -1,3 +1,7 @@
+import { DEFAULT_MODEL_NAME } from "../constants/eegModel";
+
+export { DEFAULT_MODEL_NAME } from "../constants/eegModel";
+
 declare global {
   interface Window {
     __ALL_IN_ON_EEG_CONFIG__?: {
@@ -31,33 +35,31 @@ function buildApiUrl(path: string): string {
   return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+function buildWebSocketUrl(path: string): string {
+  const apiUrl = new URL(buildApiUrl(path));
+  apiUrl.protocol = apiUrl.protocol === "https:" ? "wss:" : "ws:";
+  return apiUrl.toString();
+}
+
 export const API_ROUTES = {
-  dataset: {
-    upload: buildApiUrl("/dataset/upload"),
-    getById: (id: string) => buildApiUrl(`/dataset/${id}`),
-    deleteById: (id: string) => buildApiUrl(`/dataset/${id}`),
-    getAll: buildApiUrl("/dataset/all"),
-  },
-
-  clustering: {
-    compute: buildApiUrl("/clustering/compute"),
-    similarities: buildApiUrl("/clustering/similarities"),
-    getByFeatures: buildApiUrl("/clustering/get_by_features"),
-    getAllFeaturePairs: buildApiUrl("/clustering/get_all_clustered_feature_pairs"),
-    featurePairMatrix: buildApiUrl("/clustering/feature_pair_matrix"),
-  },
-
-  shapley: {
-    compute: buildApiUrl("/shapley/compute_shap_values"),
-    getValues: buildApiUrl("/shapley/get_shapley_values"),
-  },
-
   model: {
-    infer: buildApiUrl("/model/infer"),
-    attribution: buildApiUrl("/model/attribution"),
-    classEvidence: buildApiUrl("/model/class-evidence"),
-    bandPower: buildApiUrl("/model/band-power"),
-    scalpTopologies: buildApiUrl("/model/scalp-topologies"),
+    infer: (modelName: string = DEFAULT_MODEL_NAME) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/infer`),
+    classEvidence: (modelName: string = DEFAULT_MODEL_NAME) =>
+      buildApiUrl(`/models/${encodeURIComponent(modelName)}/class-evidence`),
+    bandPower: (modelName: string = DEFAULT_MODEL_NAME) =>
+      buildApiUrl(`/models/${encodeURIComponent(modelName)}/band-power`),
+    scalpTopologies: (modelName: string = DEFAULT_MODEL_NAME) =>
+      buildApiUrl(`/models/${encodeURIComponent(modelName)}/scalp-topologies`),
+    startPredictionCacheJob: (datasetId: string, modelName: string = DEFAULT_MODEL_NAME) =>
+      buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache/jobs`),
+    predictionCacheStatus: (datasetId: string, modelName: string = DEFAULT_MODEL_NAME) =>
+      buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache`),
+    subjectPredictions: (datasetId: string, subjectId: string, modelName: string = DEFAULT_MODEL_NAME) =>
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/predictions`,
+      ),
+    predictionCacheProgressSocket: (jobId: string, modelName: string = DEFAULT_MODEL_NAME) =>
+      buildWebSocketUrl(`/models/${encodeURIComponent(modelName)}/prediction-cache/jobs/${encodeURIComponent(jobId)}/progress`),
   },
 
   timeseries: {

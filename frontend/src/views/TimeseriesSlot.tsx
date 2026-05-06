@@ -1,7 +1,9 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 
 import { EegTimeseries } from "../components";
 import type { TimeseriesWindowAnnotationRow } from "../components";
+import { getAnnotationClassColor } from "../constants/eegModel";
 import type { TimeseriesDataController } from "../hooks/useTimeseriesData";
 import type { ChannelId, ModelInferenceResponse, TimeseriesSource } from "../types";
 import "./TimeseriesSlot.css";
@@ -23,34 +25,9 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
     <div className="timeseries-slot">
       <div className="timeseries-slot-header" aria-label="Timeseries controls">
         <div className="timeseries-slot-controls">
-          <select
-            className="timeseries-slot-select timeseries-slot-select--dataset"
-            value={ts.datasetId}
-            onChange={(e) => ts.handleDatasetChange(e.currentTarget.value)}
-            disabled={ts.isLoadingDatasets || ts.datasets.length === 0}
-            aria-label="EEG dataset"
-          >
-            {ts.datasets.length === 0 ? <option value={ts.datasetId}>{ts.datasetId}</option> : null}
-            {ts.datasets.map((dataset) => (
-              <option key={dataset.id} value={dataset.id}>
-                {dataset.id}
-              </option>
-            ))}
-          </select>
-          <select
-            className="timeseries-slot-select timeseries-slot-select--subject"
-            value={ts.subjectId}
-            onChange={(e) => ts.handleSubjectChange(e.currentTarget.value)}
-            disabled={ts.isLoadingSubjects || ts.subjects.length === 0}
-            aria-label="EEG subject"
-          >
-            {ts.subjects.length === 0 ? <option value={ts.subjectId}>{ts.subjectId || "Subject"}</option> : null}
-            {ts.subjects.map((subject) => (
-              <option key={subject.id} value={subject.id}>
-                {subject.id}
-              </option>
-            ))}
-          </select>
+          <span className="timeseries-slot-id">
+            {ts.datasetId} / {ts.subjectId}
+          </span>
           <ChannelMultiSelect
             channels={ts.availableChannels}
             selectedChannels={ts.activeChannels}
@@ -75,9 +52,14 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
           {ts.isLoadingDatasets ? <span className="timeseries-slot-status">Loading datasets</span> : null}
           {ts.isLoadingSubjects ? <span className="timeseries-slot-status">Loading subjects</span> : null}
           {ts.isRefreshingFullSignal ? <span className="timeseries-slot-status">Loading full signal</span> : null}
-          {ts.isComputingInference ? <span className="timeseries-slot-status">Computing inference</span> : null}
+          {ts.isComputingInference ? <span className="timeseries-slot-status">Loading predictions</span> : null}
           {ts.signal && ts.error ? (
             <span className="timeseries-slot-status timeseries-slot-status--error">{ts.error}</span>
+          ) : null}
+          {!ts.signal && ts.error ? (
+            <span className="timeseries-slot-status timeseries-slot-status--error">
+              {ts.error} <Link to="/">Overview</Link>
+            </span>
           ) : null}
           {ts.inferenceError ? (
             <span className="timeseries-slot-status timeseries-slot-status--error">{ts.inferenceError}</span>
@@ -85,6 +67,9 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
           <span className="timeseries-slot-status">
             {ts.signal ? (ts.signal.preview ? "Preview" : "Full") : "Idle"}
           </span>
+          {ts.metadata?.subject_label ? (
+            <span className="timeseries-slot-status">Subject label: {ts.metadata.subject_label}</span>
+          ) : null}
           {ts.selectedTimeseriesBandFilter ? (
             <span className="timeseries-slot-status">Filter: {ts.selectedTimeseriesBandFilter}</span>
           ) : null}
@@ -192,7 +177,7 @@ function getChannelPickerLabel(selectedChannels: ChannelId[]): string {
 function createWindowAnnotationRows(inferenceResult: ModelInferenceResponse | null): TimeseriesWindowAnnotationRow[] {
   const rows: TimeseriesWindowAnnotationRow[] = [
     { id: "class", label: "Class", values: [], colors: [], defaultColor: "rgb(226 232 240 / 65%)" },
-    { id: "confidence", label: "Confidence", values: [], colors: [], defaultColor: "rgb(226 232 240 / 65%)" },
+    { id: "confidence", label: "Conf", values: [], colors: [], defaultColor: "rgb(226 232 240 / 65%)" },
     { id: "reserved", defaultColor: "rgb(226 232 240 / 65%)" },
   ];
 
@@ -202,25 +187,12 @@ function createWindowAnnotationRows(inferenceResult: ModelInferenceResponse | nu
 
   inferenceResult.predictions.forEach((prediction) => {
     rows[0].values?.push(prediction.predicted_label);
-    rows[0].colors?.push(getClassColor(prediction.predicted_label));
+    rows[0].colors?.push(getAnnotationClassColor(prediction.predicted_label));
     rows[1].values?.push(`${Math.round(prediction.confidence * 100)}%`);
     rows[1].colors?.push(getConfidenceColor(prediction.confidence));
   });
 
   return rows;
-}
-
-function getClassColor(predictedLabel: string): string {
-  switch (predictedLabel) {
-    case "Healthy":
-      return "rgb(21 128 61 / 22%)";
-    case "Alzheimer":
-      return "rgb(225 29 72 / 28%)";
-    case "Frontotemporal Dementia":
-      return "rgb(2 132 199 / 28%)";
-    default:
-      return "rgb(23 33 43 / 8%)";
-  }
 }
 
 function getConfidenceColor(confidence: number): string {

@@ -1,19 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { MODEL_BANDS } from "../../constants/eegModel";
 import { TimeseriesService } from "../../services/TimeseriesService";
 import { useAppStore } from "../../stores/useAppStore";
 import type { ModelScalpTopologyBand, ModelScalpTopologyResponse, TimeseriesBandFilter } from "../../types";
 import "./TopologyAttributionPanel.css";
 
-const BAND_OPTIONS = [
-  "delta",
-  "theta",
-  "alpha",
-  "beta1",
-  "beta2",
-  "beta3",
-  "gamma",
-] as const satisfies readonly TimeseriesBandFilter[];
+const BAND_OPTIONS = MODEL_BANDS;
 const TOPOLOGY_VIEWBOX = {
   minX: -1.18,
   minY: -1.16,
@@ -55,7 +48,7 @@ export function TopologyAttributionPanel() {
   const [scalpTopologies, setScalpTopologies] = useState<ModelScalpTopologyResponse | null>(scalpTopologyCache);
   const [isLoading, setIsLoading] = useState(!scalpTopologyCache);
   const [error, setError] = useState<string | null>(null);
-  const setSelectedChannels = useAppStore((state) => state.setSelectedChannels);
+  const selectSingleTimeseriesChannel = useAppStore((state) => state.selectSingleTimeseriesChannel);
   const selectedTimeseriesBandFilter = useAppStore((state) => state.selectedTimeseriesBandFilter);
   const setSelectedTimeseriesBandFilter = useAppStore((state) => state.setSelectedTimeseriesBandFilter);
   const selectedChannels = useAppStore((state) => state.selectedChannels);
@@ -305,7 +298,7 @@ export function TopologyAttributionPanel() {
                       dominantBaseline="middle"
                       className={`topology-panel-electrode-label${selectedChannels.includes(channel.name) ? " topology-panel-electrode-label--active" : ""}`}
                       onClick={() => {
-                        setSelectedChannels([channel.name]);
+                        selectSingleTimeseriesChannel(channel.name);
                         if (applyBandFilterOnClick) {
                           setSelectedTimeseriesBandFilter(selectedBand);
                         }
@@ -315,7 +308,7 @@ export function TopologyAttributionPanel() {
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
-                          setSelectedChannels([channel.name]);
+                          selectSingleTimeseriesChannel(channel.name);
                           if (applyBandFilterOnClick) {
                             setSelectedTimeseriesBandFilter(selectedBand);
                           }

@@ -49,6 +49,48 @@
   font-weight: 700;
 }
 
+.classification-evidence-header-side {
+  display: grid;
+  justify-items: end;
+  gap: 0.35rem;
+}
+
+.classification-evidence-mode-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 4.8rem;
+  overflow: hidden;
+  border: 1px solid #d7e0e8;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 88%);
+}
+
+.classification-evidence-mode-button {
+  min-height: 1.25rem;
+  border: 0;
+  border-right: 1px solid #d7e0e8;
+  background: transparent;
+  color: #5d6b78;
+  cursor: pointer;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.classification-evidence-mode-button:last-child {
+  border-right: 0;
+}
+
+.classification-evidence-mode-button:hover {
+  background: #f8fbfd;
+}
+
+.classification-evidence-mode-button--active {
+  background: rgb(14 116 144 / 10%);
+  color: #0f5f76;
+}
+
 .classification-evidence-body {
   position: relative;
   min-width: 0;

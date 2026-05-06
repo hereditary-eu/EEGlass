@@ -2,13 +2,13 @@ import { ApiClient } from "./ApiClient";
 import { API_ROUTES } from "./ApiRoutes";
 import type {
   ChannelId,
-  ModelAttributionRequest,
-  ModelAttributionResponse,
   ModelBandPowerRequest,
   ModelBandPowerResponse,
   ModelClassEvidenceRequest,
   ModelClassEvidenceResponse,
   ModelInferenceResponse,
+  ModelPredictionCacheJobResponse,
+  ModelPredictionCacheStatus,
   ModelScalpTopologyResponse,
   TimeseriesDatasetInfo,
   TimeseriesBandFilter,
@@ -93,22 +93,58 @@ export class TimeseriesService {
       subject_id: subjectId,
       source,
     };
-    return ApiClient.post<ModelInferenceResponse>(API_ROUTES.model.infer, request);
+    return ApiClient.post<ModelInferenceResponse>(API_ROUTES.model.infer(), request);
   }
 
-  static async computeAttribution(
+  static async startPredictionCacheJob(
+    datasetId: string,
+    source: TimeseriesSource = "derivatives",
+  ): Promise<ModelPredictionCacheJobResponse> {
+    return ApiClient.post<ModelPredictionCacheJobResponse>(API_ROUTES.model.startPredictionCacheJob(datasetId), {
+      source,
+    });
+  }
+
+  static async getPredictionCacheStatus(
+    datasetId: string,
+    source: TimeseriesSource = "derivatives",
+  ): Promise<ModelPredictionCacheStatus> {
+    return ApiClient.get<ModelPredictionCacheStatus>(
+      `${API_ROUTES.model.predictionCacheStatus(datasetId)}?${this.toQueryString({ source })}`,
+    );
+  }
+
+  static async deletePredictionCache(
+    datasetId: string,
+    source: TimeseriesSource = "derivatives",
+  ): Promise<ModelPredictionCacheStatus> {
+    return ApiClient.delete<ModelPredictionCacheStatus>(
+      `${API_ROUTES.model.predictionCacheStatus(datasetId)}?${this.toQueryString({ source })}`,
+    );
+  }
+
+  static async getCachedPredictions(
     datasetId: string,
     subjectId: string,
-    windowIndex: number,
     source: TimeseriesSource = "derivatives",
-  ): Promise<ModelAttributionResponse> {
-    const request: ModelAttributionRequest = {
-      dataset_id: datasetId,
-      subject_id: subjectId,
+  ): Promise<ModelInferenceResponse> {
+    return ApiClient.get<ModelInferenceResponse>(
+      `${API_ROUTES.model.subjectPredictions(datasetId, subjectId)}?${this.toQueryString({ source })}`,
+    );
+  }
+
+  static async computeAndCachePredictions(
+    datasetId: string,
+    subjectId: string,
+    source: TimeseriesSource = "derivatives",
+  ): Promise<ModelInferenceResponse> {
+    return ApiClient.post<ModelInferenceResponse>(API_ROUTES.model.subjectPredictions(datasetId, subjectId), {
       source,
-      window_index: windowIndex,
-    };
-    return ApiClient.post<ModelAttributionResponse>(API_ROUTES.model.attribution, request);
+    });
+  }
+
+  static createPredictionCacheProgressSocket(jobId: string): WebSocket {
+    return new WebSocket(API_ROUTES.model.predictionCacheProgressSocket(jobId));
   }
 
   static async computeBandPower(
@@ -123,7 +159,7 @@ export class TimeseriesService {
       source,
       window_index: windowIndex,
     };
-    return ApiClient.post<ModelBandPowerResponse>(API_ROUTES.model.bandPower, request);
+    return ApiClient.post<ModelBandPowerResponse>(API_ROUTES.model.bandPower(), request);
   }
 
   static async computeClassEvidence(
@@ -138,11 +174,11 @@ export class TimeseriesService {
       source,
       window_index: windowIndex,
     };
-    return ApiClient.post<ModelClassEvidenceResponse>(API_ROUTES.model.classEvidence, request);
+    return ApiClient.post<ModelClassEvidenceResponse>(API_ROUTES.model.classEvidence(), request);
   }
 
   static async getScalpTopologies(): Promise<ModelScalpTopologyResponse> {
-    return ApiClient.get<ModelScalpTopologyResponse>(API_ROUTES.model.scalpTopologies);
+    return ApiClient.get<ModelScalpTopologyResponse>(API_ROUTES.model.scalpTopologies());
   }
 
   private static toSignalQueryString(request: TimeseriesSignalRequest): string {

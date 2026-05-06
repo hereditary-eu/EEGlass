@@ -45,6 +45,8 @@ class TimeseriesSubjectMetadata(BaseModel):
     channels: List[TimeseriesChannelMetadata]
     raw_available: bool
     derivatives_available: bool
+    subject_group: Optional[str] = None
+    subject_label: Optional[str] = None
     task_name: Optional[str] = None
     recording_type: Optional[str] = None
 

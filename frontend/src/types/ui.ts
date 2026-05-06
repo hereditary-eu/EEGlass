@@ -51,6 +51,8 @@ export interface TimeseriesSubjectMetadata {
   channels: TimeseriesChannelMetadata[];
   raw_available: boolean;
   derivatives_available: boolean;
+  subject_group?: string | null;
+  subject_label?: string | null;
   task_name?: string | null;
   recording_type?: string | null;
 }
@@ -92,31 +94,56 @@ export interface ModelInferenceResponse {
   predictions: WindowPrediction[];
 }
 
-export interface ModelAttributionRequest {
+export interface ModelPredictionCacheJobResponse {
+  job_id: string;
   dataset_id: string;
-  subject_id: string;
+  model_name: string;
   source: TimeseriesSource;
-  window_index: number;
+  status: "queued" | "running" | "completed" | "failed";
 }
 
-export interface ModelAttributionChannel {
-  name: ChannelId;
-  signed_score: number;
-  magnitude: number;
+export interface ModelPredictionCacheProgress {
+  job_id: string;
+  dataset_id: string;
+  model_name: string;
+  source: TimeseriesSource;
+  status: "queued" | "running" | "completed" | "failed";
+  done: number;
+  total: number;
+  failed: number;
+  current_subject_id?: string | null;
+  message: string;
 }
 
-export interface ModelAttributionResponse {
-  dataset_id: string;
+export interface ModelPredictionClassWindowCount {
+  class_id: number;
+  class_label: string;
+  count: number;
+}
+
+export interface ModelPredictionSummary {
   subject_id: string;
+  true_label?: string | null;
+  predicted_label?: string | null;
+  mean_confidence?: number | null;
+  total_windows: number;
+  windows_per_class: ModelPredictionClassWindowCount[];
+}
+
+export interface ModelPredictionCacheStatus {
+  dataset_id: string;
+  model_name: string;
   source: TimeseriesSource;
-  window_index: number;
-  start_time: number;
-  end_time: number;
-  predicted_class_id: number;
-  predicted_label: string;
-  attribution_method: "gradient";
-  global_max_abs_score: number;
-  channels: ModelAttributionChannel[];
+  checkpoint_signature: string;
+  checkpoint_key: string;
+  preprocessing_version: string;
+  status: "missing" | "partial" | "complete";
+  total_subjects: number;
+  completed_subjects: number;
+  failed_subjects: number;
+  subject_summaries: ModelPredictionSummary[];
+  manifest_path: string;
+  updated_at?: string | null;
 }
 
 export interface ModelClassEvidenceRequest {

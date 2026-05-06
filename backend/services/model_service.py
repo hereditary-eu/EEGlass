@@ -7,19 +7,16 @@ from typing import Any
 import numpy as np
 from scipy.integrate import trapezoid
 
-from backend.ml.attribution import compute_gradient_channel_attribution
 from backend.ml.data_utils.load_data import preprocess_raw_for_xeegnet, preprocessed_raw_to_windows
 from backend.ml.model import build_xeegnet
+from backend.ml.model_registry import DEFAULT_MODEL_NAME, ModelSpec, get_model_spec
 from backend.ml.model_vars import (
     MODEL_BANDS,
     MODEL_CHANNELS,
     MODEL_CLASS_LABELS,
     PARAMETERS_DEFAULT,
-    PRETRAINED_MODEL_PATH,
 )
 from backend.pydantic_models.inference import (
-    ModelAttributionChannel,
-    ModelAttributionResponse,
     ModelChannelBandPower,
     ModelBandPowerResponse,
     ModelBandPowerValue,
@@ -71,9 +68,8 @@ class PreparedSubjectData:
 
 
 class ModelService:
-    _cached_model: Any = None
-    _cached_model_path = PRETRAINED_MODEL_PATH.resolve()
-    _cached_model_signature: str | None = None
+    _cached_models: dict[str, Any] = {}
+    _cached_model_signatures: dict[str, str] = {}
     _CHECKPOINT_READY_FOR_INFERENCE = True
     _CHECKPOINT_UNAVAILABLE_MESSAGE = (
         "Inference is temporarily unavailable. The current pretrained checkpoint is incompatible with the corrected "
@@ -81,22 +77,25 @@ class ModelService:
     )
     _SUBJECT_CACHE_LIMIT = 8
     _INFERENCE_CACHE_LIMIT = 16
-    _ATTRIBUTION_CACHE_LIMIT = 64
     _CLASS_EVIDENCE_CACHE_LIMIT = 64
     _BAND_POWER_CACHE_LIMIT = 16
     _SCALP_TOPOLOGY_CACHE_LIMIT = 4
-    _subject_data_cache: OrderedDict[tuple[str, str, TimeseriesSource], PreparedSubjectData] = OrderedDict()
-    _inference_cache: OrderedDict[tuple[str, str, TimeseriesSource, str], ModelInferenceResponse] = OrderedDict()
-    _attribution_cache: OrderedDict[
-        tuple[str, str, TimeseriesSource, int, str],
-        ModelAttributionResponse,
-    ] = OrderedDict()
+    _subject_data_cache: OrderedDict[tuple[str, str, str, TimeseriesSource], PreparedSubjectData] = OrderedDict()
+    _inference_cache: OrderedDict[tuple[str, str, str, TimeseriesSource, str], ModelInferenceResponse] = OrderedDict()
     _class_evidence_cache: OrderedDict[
-        tuple[str, str, TimeseriesSource, int, str],
+        tuple[str, str, str, TimeseriesSource, int, str],
         ModelClassEvidenceResponse,
     ] = OrderedDict()
-    _band_power_cache: OrderedDict[tuple[str, str, TimeseriesSource, int], ModelBandPowerResponse] = OrderedDict()
+    _band_power_cache: OrderedDict[tuple[str, str, str, TimeseriesSource, int], ModelBandPowerResponse] = OrderedDict()
     _scalp_topology_cache: OrderedDict[str, ModelScalpTopologyResponse] = OrderedDict()
+
+    @classmethod
+    def get_checkpoint_signature(cls, model_name: str = DEFAULT_MODEL_NAME) -> str:
+        return cls._get_checkpoint_signature(cls._get_model_spec(model_name))
+
+    @classmethod
+    def get_model_spec(cls, model_name: str = DEFAULT_MODEL_NAME) -> ModelSpec:
+        return cls._get_model_spec(model_name)
 
     @classmethod
     def infer_subject(
@@ -104,19 +103,21 @@ class ModelService:
         dataset_id: str,
         subject_id: str,
         source: TimeseriesSource = "derivatives",
+        model_name: str = DEFAULT_MODEL_NAME,
     ) -> ModelInferenceResponse:
         if not cls._CHECKPOINT_READY_FOR_INFERENCE:
             raise ModelInferenceUnavailableError(cls._CHECKPOINT_UNAVAILABLE_MESSAGE)
 
-        checkpoint_signature = cls._get_checkpoint_signature()
-        cache_key = (dataset_id, subject_id, source, checkpoint_signature)
+        model_spec = cls._get_model_spec(model_name)
+        checkpoint_signature = cls._get_checkpoint_signature(model_spec)
+        cache_key = (model_spec.name, dataset_id, subject_id, source, checkpoint_signature)
         cached_response = cls._inference_cache.get(cache_key)
         if cached_response is not None:
             cls._inference_cache.move_to_end(cache_key)
             return cached_response
 
-        subject_data = cls._get_prepared_subject_data(dataset_id, subject_id, source)
-        probabilities = cls._run_inference(subject_data.windows)
+        subject_data = cls._get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
+        probabilities = cls._run_inference(model_spec, subject_data.windows)
         response = cls._build_inference_response(
             dataset_id=dataset_id,
             subject_id=subject_id,
@@ -129,85 +130,30 @@ class ModelService:
         return response
 
     @classmethod
-    def attribute_window(
-        cls,
-        dataset_id: str,
-        subject_id: str,
-        source: TimeseriesSource = "derivatives",
-        window_index: int = 0,
-    ) -> ModelAttributionResponse:
-        if not cls._CHECKPOINT_READY_FOR_INFERENCE:
-            raise ModelInferenceUnavailableError(cls._CHECKPOINT_UNAVAILABLE_MESSAGE)
-
-        checkpoint_signature = cls._get_checkpoint_signature()
-        cache_key = (dataset_id, subject_id, source, window_index, checkpoint_signature)
-        cached_response = cls._attribution_cache.get(cache_key)
-        if cached_response is not None:
-            cls._attribution_cache.move_to_end(cache_key)
-            return cached_response
-
-        subject_data = cls._get_prepared_subject_data(dataset_id, subject_id, source)
-        cls._validate_window_index(window_index, len(subject_data.prediction_ranges))
-
-        inference_response = cls.infer_subject(dataset_id, subject_id, source)
-        prediction = inference_response.predictions[window_index]
-
-        torch_module = cls._import_torch()
-        model = cls._get_model(torch_module)
-        signed_scores = compute_gradient_channel_attribution(
-            model=model,
-            window=subject_data.windows[window_index],
-            target_class_id=prediction.predicted_class_id,
-            torch_module=torch_module,
-        )
-        max_abs_score = float(np.max(np.abs(signed_scores))) if signed_scores.size else 0.0
-
-        response = ModelAttributionResponse(
-            dataset_id=dataset_id,
-            subject_id=subject_id,
-            source=source,
-            window_index=window_index,
-            start_time=prediction.start_time,
-            end_time=prediction.end_time,
-            predicted_class_id=prediction.predicted_class_id,
-            predicted_label=prediction.predicted_label,
-            attribution_method="gradient",
-            global_max_abs_score=max_abs_score,
-            channels=[
-                ModelAttributionChannel(
-                    name=channel_name,
-                    signed_score=float(signed_score),
-                    magnitude=float(abs(signed_score)),
-                )
-                for channel_name, signed_score in zip(MODEL_CHANNELS, signed_scores, strict=True)
-            ],
-        )
-        cls._remember(cls._attribution_cache, cache_key, response, cls._ATTRIBUTION_CACHE_LIMIT)
-        return response
-
-    @classmethod
     def compute_class_evidence(
         cls,
         dataset_id: str,
         subject_id: str,
         source: TimeseriesSource = "derivatives",
         window_index: int = 0,
+        model_name: str = DEFAULT_MODEL_NAME,
     ) -> ModelClassEvidenceResponse:
         if not cls._CHECKPOINT_READY_FOR_INFERENCE:
             raise ModelInferenceUnavailableError(cls._CHECKPOINT_UNAVAILABLE_MESSAGE)
 
-        checkpoint_signature = cls._get_checkpoint_signature()
-        cache_key = (dataset_id, subject_id, source, window_index, checkpoint_signature)
+        model_spec = cls._get_model_spec(model_name)
+        checkpoint_signature = cls._get_checkpoint_signature(model_spec)
+        cache_key = (model_spec.name, dataset_id, subject_id, source, window_index, checkpoint_signature)
         cached_response = cls._class_evidence_cache.get(cache_key)
         if cached_response is not None:
             cls._class_evidence_cache.move_to_end(cache_key)
             return cached_response
 
-        subject_data = cls._get_prepared_subject_data(dataset_id, subject_id, source)
+        subject_data = cls._get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
         cls._validate_window_index(window_index, len(subject_data.prediction_ranges))
 
         torch_module = cls._import_torch()
-        model = cls._get_model(torch_module)
+        model = cls._get_model(torch_module, model_spec)
         window = torch_module.tensor(subject_data.windows[window_index : window_index + 1], dtype=torch_module.float32)
 
         with torch_module.no_grad():
@@ -266,14 +212,16 @@ class ModelService:
         subject_id: str,
         source: TimeseriesSource = "derivatives",
         window_index: int = 0,
+        model_name: str = DEFAULT_MODEL_NAME,
     ) -> ModelBandPowerResponse:
-        cache_key = (dataset_id, subject_id, source, window_index)
+        model_spec = cls._get_model_spec(model_name)
+        cache_key = (model_spec.name, dataset_id, subject_id, source, window_index)
         cached_response = cls._band_power_cache.get(cache_key)
         if cached_response is not None:
             cls._band_power_cache.move_to_end(cache_key)
             return cached_response
 
-        subject_data = cls._get_prepared_subject_data(dataset_id, subject_id, source)
+        subject_data = cls._get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
         cls._validate_window_index(window_index, len(subject_data.prediction_ranges))
         window_data = subject_data.windows[window_index].astype(np.float64, copy=False)
         window_data -= np.mean(window_data, axis=1, keepdims=True)
@@ -326,15 +274,17 @@ class ModelService:
         return response
 
     @classmethod
-    def get_scalp_topologies(cls) -> ModelScalpTopologyResponse:
-        checkpoint_signature = cls._get_checkpoint_signature()
-        cached_response = cls._scalp_topology_cache.get(checkpoint_signature)
+    def get_scalp_topologies(cls, model_name: str = DEFAULT_MODEL_NAME) -> ModelScalpTopologyResponse:
+        model_spec = cls._get_model_spec(model_name)
+        checkpoint_signature = cls._get_checkpoint_signature(model_spec)
+        cache_key = f"{model_spec.name}:{checkpoint_signature}"
+        cached_response = cls._scalp_topology_cache.get(cache_key)
         if cached_response is not None:
-            cls._scalp_topology_cache.move_to_end(checkpoint_signature)
+            cls._scalp_topology_cache.move_to_end(cache_key)
             return cached_response
 
         torch_module = cls._import_torch()
-        model = cls._get_model(torch_module)
+        model = cls._get_model(torch_module, model_spec)
         conv2_weights = model.encoder.conv2.weight.detach().cpu().numpy().squeeze(1).squeeze(-1)
         grid_resolution = 72
         channel_positions, grid_x, grid_y, interpolated_band_values = cls._compute_mne_topology_grid(
@@ -379,7 +329,7 @@ class ModelService:
                 )
             ],
         )
-        cls._remember(cls._scalp_topology_cache, checkpoint_signature, response, cls._SCALP_TOPOLOGY_CACHE_LIMIT)
+        cls._remember(cls._scalp_topology_cache, cache_key, response, cls._SCALP_TOPOLOGY_CACHE_LIMIT)
         return response
 
     @staticmethod
@@ -424,11 +374,12 @@ class ModelService:
     @classmethod
     def _get_prepared_subject_data(
         cls,
+        model_spec: ModelSpec,
         dataset_id: str,
         subject_id: str,
         source: TimeseriesSource,
     ) -> PreparedSubjectData:
-        cache_key = (dataset_id, subject_id, source)
+        cache_key = (model_spec.name, dataset_id, subject_id, source)
         cached_subject_data = cls._subject_data_cache.get(cache_key)
         if cached_subject_data is not None:
             cls._subject_data_cache.move_to_end(cache_key)
@@ -439,7 +390,7 @@ class ModelService:
             working_raw = preprocess_raw_for_xeegnet(raw)
             windows, sampling_frequency, prediction_ranges = preprocessed_raw_to_windows(
                 working_raw,
-                sample_length=int(PARAMETERS_DEFAULT["sample_length"]),
+                sample_length=model_spec.sample_length,
             )
         except ValueError as exc:
             if "required model channels" in str(exc) or "too short for inference" in str(exc):
@@ -507,10 +458,17 @@ class ModelService:
         except TimeseriesServiceError as exc:
             raise ModelServiceError(str(exc)) from exc
 
+    @staticmethod
+    def _get_model_spec(model_name: str) -> ModelSpec:
+        try:
+            return get_model_spec(model_name)
+        except KeyError as exc:
+            raise ModelNotFoundError(str(exc)) from exc
+
     @classmethod
-    def _run_inference(cls, windows: np.ndarray) -> np.ndarray:
+    def _run_inference(cls, model_spec: ModelSpec, windows: np.ndarray) -> np.ndarray:
         torch_module = cls._import_torch()
-        model = cls._get_model(torch_module)
+        model = cls._get_model(torch_module, model_spec)
         batch = torch_module.tensor(windows, dtype=torch_module.float32)
 
         with torch_module.no_grad():
@@ -520,14 +478,15 @@ class ModelService:
         return probabilities.detach().cpu().numpy()
 
     @classmethod
-    def _get_model(cls, torch_module):
-        checkpoint_signature = cls._get_checkpoint_signature()
-        if cls._cached_model is not None and cls._cached_model_signature == checkpoint_signature:
-            return cls._cached_model
+    def _get_model(cls, torch_module, model_spec: ModelSpec):
+        checkpoint_signature = cls._get_checkpoint_signature(model_spec)
+        cached_model = cls._cached_models.get(model_spec.name)
+        if cached_model is not None and cls._cached_model_signatures.get(model_spec.name) == checkpoint_signature:
+            return cached_model
 
         try:
             model = build_xeegnet()
-            state_dict = torch_module.load(cls._cached_model_path, map_location="cpu")
+            state_dict = torch_module.load(model_spec.checkpoint_path.resolve(), map_location="cpu")
             model.load_state_dict(state_dict)
             model.to("cpu")
             model.eval()
@@ -538,16 +497,17 @@ class ModelService:
         except Exception as exc:
             raise ModelServiceError(f"Could not load pretrained xEEGNet weights: {exc}") from exc
 
-        cls._cached_model = model
-        cls._cached_model_signature = checkpoint_signature
-        return cls._cached_model
+        cls._cached_models[model_spec.name] = model
+        cls._cached_model_signatures[model_spec.name] = checkpoint_signature
+        return model
 
     @classmethod
-    def _get_checkpoint_signature(cls) -> str:
-        if not cls._cached_model_path.is_file():
-            raise ModelServiceError(f"Pretrained model weights were not found at '{cls._cached_model_path}'.")
-        stat = cls._cached_model_path.stat()
-        return f"{cls._cached_model_path}:{stat.st_mtime_ns}:{stat.st_size}"
+    def _get_checkpoint_signature(cls, model_spec: ModelSpec) -> str:
+        checkpoint_path = model_spec.checkpoint_path.resolve()
+        if not checkpoint_path.is_file():
+            raise ModelServiceError(f"Pretrained model weights were not found at '{checkpoint_path}'.")
+        stat = checkpoint_path.stat()
+        return f"{checkpoint_path}:{stat.st_mtime_ns}:{stat.st_size}"
 
     @staticmethod
     def _iterate_band_powers(freqs: np.ndarray, mean_psd: np.ndarray):

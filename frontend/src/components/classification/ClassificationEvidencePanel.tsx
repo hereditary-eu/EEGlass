@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
+import { MODEL_CLASS_LABELS, formatCompactClassLabel } from "../../constants/eegModel";
 import { TimeseriesService } from "../../services/TimeseriesService";
 import type { ModelClassEvidenceResponse, TimeseriesSource } from "../../types";
 import "./ClassificationEvidencePanel.css";
@@ -12,7 +13,7 @@ interface ClassificationEvidencePanelProps {
   windowIndex: number | null;
 }
 
-const CLASS_LABELS = ["Healthy", "Alzheimer", "Frontotemporal Dementia"];
+type EvidenceDisplayMode = "relative" | "raw";
 
 export function ClassificationEvidencePanel({
   datasetId,
@@ -22,6 +23,7 @@ export function ClassificationEvidencePanel({
 }: ClassificationEvidencePanelProps) {
   const cacheRef = useRef(new Map<string, ModelClassEvidenceResponse>());
   const [evidence, setEvidence] = useState<ModelClassEvidenceResponse | null>(null);
+  const [displayMode, setDisplayMode] = useState<EvidenceDisplayMode>("relative");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,11 +78,11 @@ export function ClassificationEvidencePanel({
 
   const classLabels = useMemo(() => {
     if (!evidence?.bands.length) {
-      return CLASS_LABELS;
+      return [...MODEL_CLASS_LABELS];
     }
 
     const labels = evidence.bands[0]?.class_contributions.map((contribution) => contribution.class_label) ?? [];
-    return labels.length ? labels : CLASS_LABELS;
+    return labels.length ? labels : [...MODEL_CLASS_LABELS];
   }, [evidence]);
 
   const maxAbsContribution = Math.max(evidence?.global_max_abs_contribution ?? 0, 1e-12);
@@ -92,12 +94,30 @@ export function ClassificationEvidencePanel({
           <h3 className="classification-evidence-title">Classification evidence</h3>
           <p className="classification-evidence-subtitle">Band feature x class weight for the selected 4s window</p>
         </div>
-        {evidence ? (
-          <div className="classification-evidence-prediction">
-            <strong>{evidence.predicted_label}</strong>
-            <span>{Math.round(evidence.confidence * 100)}%</span>
+        <div className="classification-evidence-header-side">
+          <div className="classification-evidence-mode-toggle" aria-label="Evidence value mode">
+            <button
+              type="button"
+              className={`classification-evidence-mode-button${displayMode === "relative" ? " classification-evidence-mode-button--active" : ""}`}
+              onClick={() => setDisplayMode("relative")}
+            >
+              rel
+            </button>
+            <button
+              type="button"
+              className={`classification-evidence-mode-button${displayMode === "raw" ? " classification-evidence-mode-button--active" : ""}`}
+              onClick={() => setDisplayMode("raw")}
+            >
+              raw
+            </button>
           </div>
-        ) : null}
+          {evidence ? (
+            <div className="classification-evidence-prediction">
+              <strong>{evidence.predicted_label}</strong>
+              <span>{Math.round(evidence.confidence * 100)}%</span>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       <div className="classification-evidence-body">
@@ -119,6 +139,7 @@ export function ClassificationEvidencePanel({
                   key={classLabel}
                   classLabel={classLabel}
                   evidence={evidence}
+                  displayMode={displayMode}
                   maxAbsContribution={maxAbsContribution}
                 />
               ))}
@@ -128,7 +149,7 @@ export function ClassificationEvidencePanel({
               <span>
                 Window {evidence.window_index + 1}: {evidence.start_time.toFixed(1)}s-{evidence.end_time.toFixed(1)}s
               </span>
-              <span>{evidence.unit_label}</span>
+              <span>{displayMode === "relative" ? "|contrib| - column mean" : evidence.unit_label}</span>
             </div>
           </>
         ) : null}
@@ -148,10 +169,12 @@ export function ClassificationEvidencePanel({
 function EvidenceClassRow({
   classLabel,
   evidence,
+  displayMode,
   maxAbsContribution,
 }: {
   classLabel: string;
   evidence: ModelClassEvidenceResponse;
+  displayMode: EvidenceDisplayMode;
   maxAbsContribution: number;
 }) {
   return (
@@ -163,14 +186,20 @@ function EvidenceClassRow({
       </div>
       {evidence.bands.map((band) => {
         const contribution = band.class_contributions.find((item) => item.class_label === classLabel);
-        const contributionValue = contribution?.contribution ?? 0;
+        const rawContributionValue = contribution?.contribution ?? 0;
+        const contributionValue =
+          displayMode === "relative" ? getRelativeBandContribution(rawContributionValue, band) : rawContributionValue;
+        const colorScale =
+          displayMode === "relative" ? getMaxAbsRelativeBandContribution(band) : maxAbsContribution;
 
         return (
           <div
             key={`${classLabel}-${band.band}`}
             className={`classification-evidence-cell${classLabel === evidence.predicted_label ? " classification-evidence-cell--predicted" : ""}`}
-            style={{ background: getEvidenceColor(contributionValue, maxAbsContribution) }}
-            title={`${band.band} -> ${classLabel}: ${contributionValue.toFixed(4)}`}
+            style={{ background: getEvidenceColor(contributionValue, colorScale) }}
+            title={`${band.band} -> ${classLabel}: ${formatContribution(contributionValue)}${
+              displayMode === "relative" ? ` relative, raw ${rawContributionValue.toFixed(4)}` : ""
+            }`}
           >
             {formatContribution(contributionValue)}
           </div>
@@ -178,6 +207,35 @@ function EvidenceClassRow({
       })}
     </>
   );
+}
+
+function getRelativeBandContribution(
+  contributionValue: number,
+  band: ModelClassEvidenceResponse["bands"][number],
+): number {
+  return Math.abs(contributionValue) - getMeanAbsBandContribution(band);
+}
+
+function getMaxAbsRelativeBandContribution(band: ModelClassEvidenceResponse["bands"][number]): number {
+  const meanAbsContribution = getMeanAbsBandContribution(band);
+  return Math.max(
+    ...band.class_contributions.map((contribution) =>
+      Math.abs(Math.abs(contribution.contribution) - meanAbsContribution),
+    ),
+    1e-12,
+  );
+}
+
+function getMeanAbsBandContribution(band: ModelClassEvidenceResponse["bands"][number]): number {
+  if (!band.class_contributions.length) {
+    return 0;
+  }
+
+  const absContributionSum = band.class_contributions.reduce(
+    (sum, contribution) => sum + Math.abs(contribution.contribution),
+    0,
+  );
+  return absContributionSum / band.class_contributions.length;
 }
 
 function getEvidenceColor(value: number, maxAbsContribution: number): string {
@@ -202,10 +260,7 @@ function formatContribution(value: number): string {
 }
 
 function formatClassLabel(classLabel: string): string {
-  if (classLabel === "Frontotemporal Dementia") {
-    return "FTD";
-  }
-  return classLabel;
+  return formatCompactClassLabel(classLabel);
 }
 
 function getEvidenceErrorMessage(error: unknown): string {

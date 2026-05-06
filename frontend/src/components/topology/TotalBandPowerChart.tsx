@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
+import { MODEL_BAND_LABELS } from "../../constants/eegModel";
 import type { ChannelId, ModelBandPowerResponse } from "../../types";
 
 interface TotalBandPowerChartProps {
@@ -11,16 +12,6 @@ interface TotalBandPowerChartProps {
   selectedChannels: ChannelId[];
   onChannelSelect: (channel: ChannelId) => void;
 }
-
-const BAND_LABELS: Record<string, string> = {
-  delta: "delta",
-  theta: "theta",
-  alpha: "alpha",
-  beta1: "beta1",
-  beta2: "beta2",
-  beta3: "beta3",
-  gamma: "gamma",
-};
 
 export function TotalBandPowerChart({
   bandPower,
@@ -46,7 +37,7 @@ export function TotalBandPowerChart({
       (activeChannel?.bands ?? []).map((band, index) => ({
         order: index,
         band: band.band,
-        label: BAND_LABELS[band.band] ?? band.band,
+        label: MODEL_BAND_LABELS[band.band] ?? band.band,
         relativePower: band.relative_power,
         percent: band.relative_power * 100,
         range: `${band.start_hz.toFixed(1)}-${band.end_hz.toFixed(1)} Hz`,
@@ -170,7 +161,7 @@ export function TotalBandPowerChart({
           <p className="topology-bandpower-subtitle">
             {activeChannel && bandPower
               ? `Window ${bandPower.window_index + 1}: ${bandPower.start_time.toFixed(1)}s-${bandPower.end_time.toFixed(1)}s · ${activeChannel.channel}`
-              : "Click a 4s prediction window to view channel band power"}
+              : ""}
           </p>
         </div>
         {bandPower ? (
