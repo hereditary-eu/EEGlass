@@ -35,10 +35,33 @@ class ModelInferenceResponse(BaseModel):
 ModelMetadataValue = str | int | float | bool | List[str] | List[int] | List[float]
 
 
+class ModelClassColors(BaseModel):
+    annotation: str
+    distribution: str
+    embedding_fill: str
+    embedding_stroke: str
+
+
+class ModelClassPresentation(BaseModel):
+    class_id: int
+    label: str
+    compact_label: str
+    colors: ModelClassColors
+
+
+class ModelBandPresentation(BaseModel):
+    name: str
+    label: str
+    start_hz: float
+    end_hz: float
+
+
 class ModelInfoResponse(BaseModel):
     name: str
     display_name: str
     architecture: str
+    classes: List[ModelClassPresentation]
+    bands: List[ModelBandPresentation]
     metadata: Dict[str, ModelMetadataValue]
 
 

@@ -1,4 +1,3 @@
-import { DEFAULT_MODEL_NAME, MODEL_DISPLAY_NAME } from "../../constants/eegModel";
 import type { ModelInfoResponse, ModelMetadataValue, ModelPredictionCacheProgress, ModelPredictionCacheStatus } from "../../types";
 import { PredictionCacheProgressBar } from "./PredictionCacheProgressBar";
 import { getCacheSummary, isCacheJobRunning } from "./overviewUtils";
@@ -28,14 +27,14 @@ export function ModelCard({
   onStartPredictionCacheJob,
   onDeletePredictionCache,
 }: ModelCardProps) {
-  const metadataEntries = Object.entries(modelInfo?.metadata ?? fallbackModelMetadata());
+  const metadataEntries = Object.entries(modelInfo?.metadata ?? {});
 
   return (
     <section className="overview-placeholder-card overview-model-card">
       <div className="overview-model-card-header">
         <div>
           <p className="overview-kicker">Model card</p>
-          <h3>{modelInfo?.display_name ?? MODEL_DISPLAY_NAME}</h3>
+          <h3>{modelInfo?.display_name ?? "Model unavailable"}</h3>
         </div>
         <button
           type="button"
@@ -73,7 +72,7 @@ export function ModelCard({
               type="button"
               className="overview-model-compute-button"
               onClick={onStartPredictionCacheJob}
-              disabled={!selectedDatasetId || isStartingCacheJob || isCacheJobRunning(cacheProgress)}
+              disabled={!modelInfo || !selectedDatasetId || isStartingCacheJob || isCacheJobRunning(cacheProgress)}
             >
               Compute all
             </button>
@@ -83,6 +82,7 @@ export function ModelCard({
               onClick={onDeletePredictionCache}
               disabled={
                 !selectedDatasetId ||
+                !modelInfo ||
                 isDeletingCache ||
                 isCacheJobRunning(cacheProgress) ||
                 cacheStatus?.status === "missing"
@@ -109,10 +109,4 @@ function formatModelMetadataValue(value: ModelMetadataValue): string {
   }
 
   return String(value);
-}
-
-function fallbackModelMetadata(): Record<string, ModelMetadataValue> {
-  return {
-    "API name": DEFAULT_MODEL_NAME,
-  };
 }

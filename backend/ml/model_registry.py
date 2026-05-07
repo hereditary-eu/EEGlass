@@ -6,9 +6,26 @@ from pathlib import Path
 from backend.ml.model_vars import (
     MODEL_BANDS,
     MODEL_CHANNELS,
+    MODEL_CLASS_LABELS,
     PARAMETERS_DEFAULT,
     PRETRAINED_MODEL_PATH,
 )
+
+
+@dataclass(frozen=True)
+class ModelClassColors:
+    annotation: str
+    distribution: str
+    embedding_fill: str
+    embedding_stroke: str
+
+
+@dataclass(frozen=True)
+class ModelClassSpec:
+    class_id: int
+    label: str
+    compact_label: str
+    colors: ModelClassColors
 
 
 @dataclass(frozen=True)
@@ -22,9 +39,43 @@ class ModelSpec:
     sampling_frequency: int
     sample_length: int
     window_size_seconds: float
+    classes: tuple[ModelClassSpec, ...]
 
 
 DEFAULT_MODEL_NAME = "xeegnet-v1"
+
+DEFAULT_MODEL_CLASSES = tuple(
+    ModelClassSpec(
+        class_id=class_id,
+        label=label,
+        compact_label={
+            "Healthy": "H",
+            "Alzheimer": "Alz",
+            "Frontotemporal Dementia": "FTD",
+        }.get(label, label),
+        colors={
+            "Healthy": ModelClassColors(
+                annotation="rgb(21 128 61 / 22%)",
+                distribution="rgb(21 128 61 / 32%)",
+                embedding_fill="rgb(21 128 61 / 22%)",
+                embedding_stroke="#15803d",
+            ),
+            "Alzheimer": ModelClassColors(
+                annotation="rgb(225 29 72 / 28%)",
+                distribution="rgb(225 29 72 / 34%)",
+                embedding_fill="rgb(225 29 72 / 22%)",
+                embedding_stroke="#be123c",
+            ),
+            "Frontotemporal Dementia": ModelClassColors(
+                annotation="#c2ddfc",
+                distribution="#c2ddfc",
+                embedding_fill="rgb(37 99 235 / 20%)",
+                embedding_stroke="#2563eb",
+            ),
+        }[label],
+    )
+    for class_id, label in MODEL_CLASS_LABELS.items()
+)
 
 MODEL_REGISTRY: dict[str, ModelSpec] = {
     DEFAULT_MODEL_NAME: ModelSpec(
@@ -37,6 +88,7 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         sampling_frequency=int(PARAMETERS_DEFAULT["srate"]),
         sample_length=int(PARAMETERS_DEFAULT["sample_length"]),
         window_size_seconds=float(PARAMETERS_DEFAULT["window"]),
+        classes=DEFAULT_MODEL_CLASSES,
     ),
 }
 

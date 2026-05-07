@@ -15,6 +15,7 @@ from backend.pydantic_models.inference import (
     ModelPatientEmbeddingsResponse,
     ModelPredictionCacheJobRequest,
     ModelPredictionCacheJobResponse,
+    ModelPredictionCacheProgress,
     ModelPredictionCacheStatus,
     ModelScalpTopologyResponse,
 )
@@ -32,6 +33,14 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 model_router = APIRouter(tags=["model"])
+
+
+@model_router.get("/models/default", response_model=ModelInfoResponse)
+async def get_default_model_info() -> ModelInfoResponse:
+    try:
+        return ModelService.get_model_info(model_name=DEFAULT_MODEL_NAME)
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
 
 
 @model_router.get("/models/{model_name}", response_model=ModelInfoResponse)
@@ -130,6 +139,25 @@ async def get_prediction_cache_status(
 ) -> ModelPredictionCacheStatus:
     try:
         return PredictionCacheService.get_cache_status(
+            dataset_id=dataset_id,
+            model_name=model_name,
+            source=source,
+        )
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@model_router.get(
+    "/models/{model_name}/datasets/{dataset_id}/prediction-cache/jobs/active",
+    response_model=ModelPredictionCacheProgress | None,
+)
+async def get_active_prediction_cache_job(
+    dataset_id: str,
+    model_name: str = DEFAULT_MODEL_NAME,
+    source: TimeseriesSource = Query("derivatives"),
+) -> ModelPredictionCacheProgress | None:
+    try:
+        return PredictionCacheService.get_active_job_progress(
             dataset_id=dataset_id,
             model_name=model_name,
             source=source,

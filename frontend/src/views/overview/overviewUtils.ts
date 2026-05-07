@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
-import { CLASS_COLORS, MODEL_CLASS_LABELS, formatCompactClassLabel, getPatientClassName } from "../../constants/eegModel";
-import type { ModelPredictionCacheProgress, ModelPredictionCacheStatus, ModelPredictionSummary } from "../../types";
+import { formatCompactClassLabel, getAnnotationClassColor, getDistributionClassColor } from "../../constants/eegModel";
+import type { ModelClassPresentation, ModelPredictionCacheProgress, ModelPredictionCacheStatus, ModelPredictionSummary } from "../../types";
 
 export type DirectoryLevel = "datasets" | "patients";
 
@@ -54,31 +54,46 @@ export function getClassWindowCount(summary: ModelPredictionSummary | null, clas
   return String(summary.windows_per_class.find((entry) => entry.class_label === classLabel)?.count ?? 0);
 }
 
-export function getClassDistributionStyle(summary: ModelPredictionSummary): CSSProperties {
-  const healthy = getClassWindowCountNumber(summary, MODEL_CLASS_LABELS[0]);
-  const alzheimer = getClassWindowCountNumber(summary, MODEL_CLASS_LABELS[1]);
-  const ftd = getClassWindowCountNumber(summary, MODEL_CLASS_LABELS[2]);
-  const total = Math.max(1, healthy + alzheimer + ftd);
-  const healthyStop = (healthy / total) * 100;
-  const alzheimerStop = healthyStop + (alzheimer / total) * 100;
+export function getClassDistributionStyle(
+  summary: ModelPredictionSummary,
+  modelClasses: ModelClassPresentation[],
+): CSSProperties {
+  if (!modelClasses.length) {
+    return {};
+  }
 
-  return {
-    background: `linear-gradient(90deg,
-      ${CLASS_COLORS.distribution.Healthy} 0%,
-      ${CLASS_COLORS.distribution.Healthy} ${healthyStop}%,
-      ${CLASS_COLORS.distribution.Alzheimer} ${healthyStop}%,
-      ${CLASS_COLORS.distribution.Alzheimer} ${alzheimerStop}%,
-      ${CLASS_COLORS.distribution["Frontotemporal Dementia"]} ${alzheimerStop}%,
-      ${CLASS_COLORS.distribution["Frontotemporal Dementia"]} 100%)`,
-  };
+  const counts = modelClasses.map((modelClass) => ({
+    color: getDistributionClassColor(modelClass.label, modelClasses),
+    count: getClassWindowCountNumber(summary, modelClass.label),
+  }));
+  const total = Math.max(1, counts.reduce((sum, item) => sum + item.count, 0));
+  let previousStop = 0;
+  const stops = counts.flatMap((item) => {
+    const nextStop = previousStop + (item.count / total) * 100;
+    const segment = [`${item.color} ${previousStop}%`, `${item.color} ${nextStop}%`];
+    previousStop = nextStop;
+    return segment;
+  });
+
+  return { background: `linear-gradient(90deg, ${stops.join(", ")})` };
 }
 
-export function getPatientLabelClass(label: string | null | undefined): string {
-  return `overview-patient-label ${getPatientClassName(label)}`;
+export function getPatientLabelClass(): string {
+  return "overview-patient-label";
 }
 
-export function getCompactPatientLabel(label: string | null | undefined): string {
-  return formatCompactClassLabel(label);
+export function getPatientLabelStyle(
+  label: string | null | undefined,
+  modelClasses: ModelClassPresentation[],
+): CSSProperties {
+  return { background: getAnnotationClassColor(label, modelClasses) };
+}
+
+export function getCompactPatientLabel(
+  label: string | null | undefined,
+  modelClasses: ModelClassPresentation[],
+): string {
+  return formatCompactClassLabel(label, modelClasses);
 }
 
 export function getDirectoryStatus(

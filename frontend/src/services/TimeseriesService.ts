@@ -10,6 +10,7 @@ import type {
   ModelInferenceResponse,
   ModelPatientEmbeddingsResponse,
   ModelPredictionCacheJobResponse,
+  ModelPredictionCacheProgress,
   ModelPredictionCacheStatus,
   ModelScalpTopologyResponse,
   TimeseriesDatasetInfo,
@@ -45,6 +46,8 @@ interface ModelInferenceRequest {
 }
 
 export class TimeseriesService {
+  private static defaultModelInfoPromise: Promise<ModelInfoResponse> | null = null;
+
   static async getDatasets(): Promise<TimeseriesDatasetInfo[]> {
     const response = await ApiClient.get<TimeseriesDatasetListResponse>(API_ROUTES.timeseries.datasets);
     return response.datasets;
@@ -89,24 +92,32 @@ export class TimeseriesService {
     datasetId: string,
     subjectId: string,
     source: TimeseriesSource = "derivatives",
+    modelName?: string,
   ): Promise<ModelInferenceResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
     const request: ModelInferenceRequest = {
       dataset_id: datasetId,
       subject_id: subjectId,
       source,
     };
-    return ApiClient.post<ModelInferenceResponse>(API_ROUTES.model.infer(), request);
+    return ApiClient.post<ModelInferenceResponse>(API_ROUTES.model.infer(resolvedModelName), request);
   }
 
-  static async getModelInfo(): Promise<ModelInfoResponse> {
-    return ApiClient.get<ModelInfoResponse>(API_ROUTES.model.info());
+  static async getModelInfo(modelName?: string): Promise<ModelInfoResponse> {
+    if (modelName) {
+      return ApiClient.get<ModelInfoResponse>(API_ROUTES.model.info(modelName));
+    }
+
+    return this.getDefaultModelInfo();
   }
 
   static async startPredictionCacheJob(
     datasetId: string,
     source: TimeseriesSource = "derivatives",
+    modelName?: string,
   ): Promise<ModelPredictionCacheJobResponse> {
-    return ApiClient.post<ModelPredictionCacheJobResponse>(API_ROUTES.model.startPredictionCacheJob(datasetId), {
+    const resolvedModelName = await this.resolveModelName(modelName);
+    return ApiClient.post<ModelPredictionCacheJobResponse>(API_ROUTES.model.startPredictionCacheJob(datasetId, resolvedModelName), {
       source,
     });
   }
@@ -114,27 +125,44 @@ export class TimeseriesService {
   static async getPredictionCacheStatus(
     datasetId: string,
     source: TimeseriesSource = "derivatives",
+    modelName?: string,
   ): Promise<ModelPredictionCacheStatus> {
+    const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelPredictionCacheStatus>(
-      `${API_ROUTES.model.predictionCacheStatus(datasetId)}?${this.toQueryString({ source })}`,
+      `${API_ROUTES.model.predictionCacheStatus(datasetId, resolvedModelName)}?${this.toQueryString({ source })}`,
+    );
+  }
+
+  static async getActivePredictionCacheJob(
+    datasetId: string,
+    source: TimeseriesSource = "derivatives",
+    modelName?: string,
+  ): Promise<ModelPredictionCacheProgress | null> {
+    const resolvedModelName = await this.resolveModelName(modelName);
+    return ApiClient.get<ModelPredictionCacheProgress | null>(
+      `${API_ROUTES.model.activePredictionCacheJob(datasetId, resolvedModelName)}?${this.toQueryString({ source })}`,
     );
   }
 
   static async getPatientEmbeddings(
     datasetId: string,
     source: TimeseriesSource = "derivatives",
+    modelName?: string,
   ): Promise<ModelPatientEmbeddingsResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelPatientEmbeddingsResponse>(
-      `${API_ROUTES.model.patientEmbeddings(datasetId)}?${this.toQueryString({ source })}`,
+      `${API_ROUTES.model.patientEmbeddings(datasetId, resolvedModelName)}?${this.toQueryString({ source })}`,
     );
   }
 
   static async deletePredictionCache(
     datasetId: string,
     source: TimeseriesSource = "derivatives",
+    modelName?: string,
   ): Promise<ModelPredictionCacheStatus> {
+    const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.delete<ModelPredictionCacheStatus>(
-      `${API_ROUTES.model.predictionCacheStatus(datasetId)}?${this.toQueryString({ source })}`,
+      `${API_ROUTES.model.predictionCacheStatus(datasetId, resolvedModelName)}?${this.toQueryString({ source })}`,
     );
   }
 
@@ -142,9 +170,11 @@ export class TimeseriesService {
     datasetId: string,
     subjectId: string,
     source: TimeseriesSource = "derivatives",
+    modelName?: string,
   ): Promise<ModelInferenceResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelInferenceResponse>(
-      `${API_ROUTES.model.subjectPredictions(datasetId, subjectId)}?${this.toQueryString({ source })}`,
+      `${API_ROUTES.model.subjectPredictions(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({ source })}`,
     );
   }
 
@@ -152,14 +182,16 @@ export class TimeseriesService {
     datasetId: string,
     subjectId: string,
     source: TimeseriesSource = "derivatives",
+    modelName?: string,
   ): Promise<ModelInferenceResponse> {
-    return ApiClient.post<ModelInferenceResponse>(API_ROUTES.model.subjectPredictions(datasetId, subjectId), {
+    const resolvedModelName = await this.resolveModelName(modelName);
+    return ApiClient.post<ModelInferenceResponse>(API_ROUTES.model.subjectPredictions(datasetId, subjectId, resolvedModelName), {
       source,
     });
   }
 
-  static createPredictionCacheProgressSocket(jobId: string): WebSocket {
-    return new WebSocket(API_ROUTES.model.predictionCacheProgressSocket(jobId));
+  static createPredictionCacheProgressSocket(jobId: string, modelName: string): WebSocket {
+    return new WebSocket(API_ROUTES.model.predictionCacheProgressSocket(jobId, modelName));
   }
 
   static async computeBandPower(
@@ -167,14 +199,16 @@ export class TimeseriesService {
     subjectId: string,
     windowIndex: number,
     source: TimeseriesSource = "derivatives",
+    modelName?: string,
   ): Promise<ModelBandPowerResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
     const request: ModelBandPowerRequest = {
       dataset_id: datasetId,
       subject_id: subjectId,
       source,
       window_index: windowIndex,
     };
-    return ApiClient.post<ModelBandPowerResponse>(API_ROUTES.model.bandPower(), request);
+    return ApiClient.post<ModelBandPowerResponse>(API_ROUTES.model.bandPower(resolvedModelName), request);
   }
 
   static async computeClassEvidence(
@@ -182,18 +216,33 @@ export class TimeseriesService {
     subjectId: string,
     windowIndex: number,
     source: TimeseriesSource = "derivatives",
+    modelName?: string,
   ): Promise<ModelClassEvidenceResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
     const request: ModelClassEvidenceRequest = {
       dataset_id: datasetId,
       subject_id: subjectId,
       source,
       window_index: windowIndex,
     };
-    return ApiClient.post<ModelClassEvidenceResponse>(API_ROUTES.model.classEvidence(), request);
+    return ApiClient.post<ModelClassEvidenceResponse>(API_ROUTES.model.classEvidence(resolvedModelName), request);
   }
 
-  static async getScalpTopologies(): Promise<ModelScalpTopologyResponse> {
-    return ApiClient.get<ModelScalpTopologyResponse>(API_ROUTES.model.scalpTopologies());
+  static async getScalpTopologies(modelName?: string): Promise<ModelScalpTopologyResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
+    return ApiClient.get<ModelScalpTopologyResponse>(API_ROUTES.model.scalpTopologies(resolvedModelName));
+  }
+
+  private static getDefaultModelInfo(): Promise<ModelInfoResponse> {
+    this.defaultModelInfoPromise ??= ApiClient.get<ModelInfoResponse>(API_ROUTES.model.defaultInfo).catch((error) => {
+      this.defaultModelInfoPromise = null;
+      throw error;
+    });
+    return this.defaultModelInfoPromise;
+  }
+
+  private static async resolveModelName(modelName?: string): Promise<string> {
+    return modelName ?? (await this.getDefaultModelInfo()).name;
   }
 
   private static toSignalQueryString(request: TimeseriesSignalRequest): string {

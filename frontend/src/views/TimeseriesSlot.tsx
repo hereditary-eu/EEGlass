@@ -5,7 +5,7 @@ import { EegTimeseries } from "../components";
 import type { TimeseriesWindowAnnotationRow } from "../components";
 import { getAnnotationClassColor } from "../constants/eegModel";
 import type { TimeseriesDataController } from "../hooks/useTimeseriesData";
-import type { ChannelId, ModelInferenceResponse, TimeseriesSource } from "../types";
+import type { ChannelId, ModelClassPresentation, ModelInferenceResponse, TimeseriesSource } from "../types";
 import "./TimeseriesSlot.css";
 
 const DEFAULT_WINDOW_SIZE_SECONDS = 4;
@@ -19,7 +19,10 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
 
   const annotationChannel =
     ts.hoveredChannel && ts.activeChannels.includes(ts.hoveredChannel) ? ts.hoveredChannel : ts.activeChannels[0];
-  const windowAnnotationRows = useMemo(() => createWindowAnnotationRows(ts.inferenceResult), [ts.inferenceResult]);
+  const windowAnnotationRows = useMemo(
+    () => createWindowAnnotationRows(ts.inferenceResult, ts.modelInfo?.classes ?? []),
+    [ts.inferenceResult, ts.modelInfo],
+  );
 
   return (
     <div className="timeseries-slot">
@@ -53,6 +56,9 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
           {ts.isLoadingSubjects ? <span className="timeseries-slot-status">Loading subjects</span> : null}
           {ts.isRefreshingFullSignal ? <span className="timeseries-slot-status">Loading full signal</span> : null}
           {ts.isComputingInference ? <span className="timeseries-slot-status">Loading predictions</span> : null}
+          {ts.isDatasetPredictionJobRunning ? (
+            <span className="timeseries-slot-status">Dataset prediction job running</span>
+          ) : null}
           {ts.signal && ts.error ? (
             <span className="timeseries-slot-status timeseries-slot-status--error">{ts.error}</span>
           ) : null}
@@ -85,7 +91,13 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
             type="button"
             className="timeseries-slot-button"
             onClick={ts.handleComputeInference}
-            disabled={!ts.subjectId || !ts.signal || ts.activeChannels.length === 0 || ts.isComputingInference}
+            disabled={
+              !ts.subjectId ||
+              !ts.signal ||
+              ts.activeChannels.length === 0 ||
+              ts.isComputingInference ||
+              ts.isDatasetPredictionJobRunning
+            }
           >
             Compute
           </button>
@@ -174,7 +186,10 @@ function getChannelPickerLabel(selectedChannels: ChannelId[]): string {
   return `${selectedChannels[0]} +${selectedChannels.length - 1}`;
 }
 
-function createWindowAnnotationRows(inferenceResult: ModelInferenceResponse | null): TimeseriesWindowAnnotationRow[] {
+function createWindowAnnotationRows(
+  inferenceResult: ModelInferenceResponse | null,
+  modelClasses: ModelClassPresentation[],
+): TimeseriesWindowAnnotationRow[] {
   const rows: TimeseriesWindowAnnotationRow[] = [
     { id: "class", label: "Class", values: [], colors: [], defaultColor: "rgb(226 232 240 / 65%)" },
     { id: "confidence", label: "Conf", values: [], colors: [], defaultColor: "rgb(226 232 240 / 65%)" },
@@ -187,7 +202,7 @@ function createWindowAnnotationRows(inferenceResult: ModelInferenceResponse | nu
 
   inferenceResult.predictions.forEach((prediction) => {
     rows[0].values?.push(prediction.predicted_label);
-    rows[0].colors?.push(getAnnotationClassColor(prediction.predicted_label));
+    rows[0].colors?.push(getAnnotationClassColor(prediction.predicted_label, modelClasses));
     rows[1].values?.push(`${Math.round(prediction.confidence * 100)}%`);
     rows[1].colors?.push(getConfidenceColor(prediction.confidence));
   });

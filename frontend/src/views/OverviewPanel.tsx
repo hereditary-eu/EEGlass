@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { StatusOverlay } from "../components/ui";
@@ -74,6 +74,50 @@ export function OverviewPanel() {
     [cacheStatus],
   );
   const highlightedSubjectId = hoveredSubjectId ?? selectedSubjectId;
+  const activeModelName = modelInfo?.name ?? null;
+
+  const refreshPredictionCacheStatus = useCallback((datasetId: string, modelName: string) => {
+    TimeseriesService.getPredictionCacheStatus(datasetId, "derivatives", modelName)
+      .then(setCacheStatus)
+      .catch((loadError) => setCacheError(getOverviewError(loadError, "Unable to refresh prediction cache status.")));
+  }, []);
+
+  const connectPredictionCacheProgress = useCallback(
+    (initialProgress: ModelPredictionCacheProgress) => {
+      progressSocketRef.current?.close();
+      setCacheProgress(initialProgress);
+
+      const socket = TimeseriesService.createPredictionCacheProgressSocket(
+        initialProgress.job_id,
+        initialProgress.model_name,
+      );
+      progressSocketRef.current = socket;
+
+      socket.onmessage = (event) => {
+        let progress: ModelPredictionCacheProgress;
+        try {
+          progress = JSON.parse(event.data) as ModelPredictionCacheProgress;
+        } catch {
+          setCacheError("Prediction progress payload could not be read.");
+          return;
+        }
+
+        if (progress.dataset_id !== selectedDatasetId || progress.model_name !== activeModelName) {
+          return;
+        }
+
+        setCacheProgress(progress);
+        if (progress.status === "completed" || progress.status === "failed") {
+          socket.close();
+          refreshPredictionCacheStatus(progress.dataset_id, progress.model_name);
+        }
+      };
+      socket.onerror = () => {
+        setCacheError("Prediction progress connection failed.");
+      };
+    },
+    [activeModelName, refreshPredictionCacheStatus, selectedDatasetId],
+  );
 
   useEffect(() => {
     let isCurrent = true;
@@ -207,13 +251,13 @@ export function OverviewPanel() {
     setPatientEmbeddings(null);
     setEmbeddingError(null);
 
-    if (!selectedDatasetId) {
+    if (!selectedDatasetId || !activeModelName) {
       setIsLoadingEmbeddings(false);
       return;
     }
 
     setIsLoadingEmbeddings(true);
-    TimeseriesService.getPatientEmbeddings(selectedDatasetId)
+    TimeseriesService.getPatientEmbeddings(selectedDatasetId, "derivatives", activeModelName)
       .then((embeddings) => {
         if (isCurrent) {
           setPatientEmbeddings(embeddings);
@@ -233,7 +277,7 @@ export function OverviewPanel() {
     return () => {
       isCurrent = false;
     };
-  }, [selectedDatasetId, embeddingRefreshKey]);
+  }, [activeModelName, selectedDatasetId, embeddingRefreshKey]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -243,26 +287,37 @@ export function OverviewPanel() {
     setCacheProgress(null);
     setCacheError(null);
 
-    if (!selectedDatasetId) {
+    if (!selectedDatasetId || !activeModelName) {
       return;
     }
 
-    TimeseriesService.getPredictionCacheStatus(selectedDatasetId)
-      .then((status) => {
-        if (isCurrent) {
-          setCacheStatus(status);
+    async function loadPredictionCacheState() {
+      try {
+        const [status, activeProgress] = await Promise.all([
+          TimeseriesService.getPredictionCacheStatus(selectedDatasetId, "derivatives", activeModelName),
+          TimeseriesService.getActivePredictionCacheJob(selectedDatasetId, "derivatives", activeModelName),
+        ]);
+        if (!isCurrent) {
+          return;
         }
-      })
-      .catch((loadError) => {
+
+        setCacheStatus(status);
+        if (activeProgress && isCacheJobRunning(activeProgress)) {
+          connectPredictionCacheProgress(activeProgress);
+        }
+      } catch (loadError) {
         if (isCurrent) {
           setCacheError(getOverviewError(loadError, "Unable to load prediction cache status."));
         }
-      });
+      }
+    }
+
+    loadPredictionCacheState();
 
     return () => {
       isCurrent = false;
     };
-  }, [selectedDatasetId]);
+  }, [activeModelName, connectPredictionCacheProgress, selectedDatasetId]);
 
   useEffect(
     () => () => {
@@ -316,7 +371,7 @@ export function OverviewPanel() {
   };
 
   const startPredictionCacheJob = async () => {
-    if (!selectedDatasetId || isStartingCacheJob || isCacheJobRunning(cacheProgress)) {
+    if (!selectedDatasetId || !activeModelName || isStartingCacheJob || isCacheJobRunning(cacheProgress)) {
       return;
     }
 
@@ -325,8 +380,8 @@ export function OverviewPanel() {
     setCacheError(null);
 
     try {
-      const job = await TimeseriesService.startPredictionCacheJob(selectedDatasetId);
-      setCacheProgress({
+      const job = await TimeseriesService.startPredictionCacheJob(selectedDatasetId, "derivatives", activeModelName);
+      connectPredictionCacheProgress({
         job_id: job.job_id,
         dataset_id: job.dataset_id,
         model_name: job.model_name,
@@ -338,29 +393,6 @@ export function OverviewPanel() {
         current_subject_id: null,
         message: "Queued",
       });
-
-      const socket = TimeseriesService.createPredictionCacheProgressSocket(job.job_id);
-      progressSocketRef.current = socket;
-      socket.onmessage = (event) => {
-        let progress: ModelPredictionCacheProgress;
-        try {
-          progress = JSON.parse(event.data) as ModelPredictionCacheProgress;
-        } catch {
-          setCacheError("Prediction progress payload could not be read.");
-          return;
-        }
-
-        setCacheProgress(progress);
-        if (progress.status === "completed" || progress.status === "failed") {
-          socket.close();
-          TimeseriesService.getPredictionCacheStatus(selectedDatasetId)
-            .then(setCacheStatus)
-            .catch((loadError) => setCacheError(getOverviewError(loadError, "Unable to refresh prediction cache status.")));
-        }
-      };
-      socket.onerror = () => {
-        setCacheError("Prediction progress connection failed.");
-      };
     } catch (startError) {
       setCacheError(getOverviewError(startError, "Unable to start prediction cache job."));
     } finally {
@@ -369,7 +401,7 @@ export function OverviewPanel() {
   };
 
   const deletePredictionCache = async () => {
-    if (!selectedDatasetId || isDeletingCache || isCacheJobRunning(cacheProgress)) {
+    if (!selectedDatasetId || !activeModelName || isDeletingCache || isCacheJobRunning(cacheProgress)) {
       return;
     }
 
@@ -382,7 +414,7 @@ export function OverviewPanel() {
     setCacheError(null);
 
     try {
-      const nextStatus = await TimeseriesService.deletePredictionCache(selectedDatasetId);
+      const nextStatus = await TimeseriesService.deletePredictionCache(selectedDatasetId, "derivatives", activeModelName);
       setCacheStatus(nextStatus);
       setCacheProgress(null);
     } catch (deleteError) {
@@ -406,6 +438,7 @@ export function OverviewPanel() {
         selectedSubjectId={selectedSubjectId}
         focusSubjectId={focusSubjectId}
         focusDatasetId={focusDatasetId}
+        modelInfo={modelInfo}
         onSelectDataset={selectDataset}
         onEnterPatientSelection={enterPatientSelection}
         onBackToDatasets={backToDatasets}
@@ -425,6 +458,7 @@ export function OverviewPanel() {
             subjects={subjects}
             cacheStatus={cacheStatus}
             isLoadingSubjects={isLoadingSubjects}
+            modelInfo={modelInfo}
           />
 
           <PatientEmbeddingScatterplot
@@ -432,6 +466,7 @@ export function OverviewPanel() {
             isLoading={isLoadingEmbeddings}
             error={embeddingError}
             highlightedSubjectId={highlightedSubjectId}
+            modelInfo={modelInfo}
             onOpenSubject={openWorkspaceBySubjectId}
           />
 

@@ -275,6 +275,8 @@ class PredictionCacheService:
         # Validate model/checkpoint before creating a job.
         ModelService.get_checkpoint_signature(model_name)
         cls._list_subjects(dataset_id)
+        if cls._has_running_job(dataset_id=dataset_id, model_name=model_name, source=source):
+            raise ModelValidationError("A prediction cache job is already running for this dataset.")
 
         job_id = uuid.uuid4().hex
         job = _PredictionCacheJob(job_id=job_id, dataset_id=dataset_id, model_name=model_name, source=source)
@@ -288,6 +290,26 @@ class PredictionCacheService:
             source=source,
             status=job.status,
         )
+
+    @classmethod
+    def get_active_job_progress(
+        cls,
+        dataset_id: str,
+        model_name: str = DEFAULT_MODEL_NAME,
+        source: TimeseriesSource = "derivatives",
+    ) -> ModelPredictionCacheProgress | None:
+        active_job = next(
+            (
+                job
+                for job in cls._jobs.values()
+                if job.dataset_id == dataset_id
+                and job.model_name == model_name
+                and job.source == source
+                and job.status in ("queued", "running")
+            ),
+            None,
+        )
+        return cls._progress(active_job) if active_job else None
 
     @classmethod
     async def watch_job(cls, job_id: str):

@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 
 import { TimeseriesService } from "../../services/TimeseriesService";
-import type { ChannelId, ModelInferenceResponse, TimeseriesSignalResponse, TimeseriesSource } from "../../types";
+import type {
+  ChannelId,
+  ModelInferenceResponse,
+  ModelPredictionCacheProgress,
+  TimeseriesSignalResponse,
+  TimeseriesSource,
+} from "../../types";
 import {
   getErrorStatusCode,
   getInferenceErrorMessage,
@@ -38,7 +44,10 @@ export function useTimeseriesPredictions({
 }: UseTimeseriesPredictionsOptions) {
   const [inferenceResult, setInferenceResult] = useState<ModelInferenceResponse | null>(null);
   const [isComputingInference, setIsComputingInference] = useState(false);
+  const [activePredictionCacheProgress, setActivePredictionCacheProgress] =
+    useState<ModelPredictionCacheProgress | null>(null);
   const [inferenceError, setInferenceError] = useState<string | null>(null);
+  const isDatasetPredictionJobRunning = isPredictionCacheJobRunning(activePredictionCacheProgress);
 
   const resetPredictions = () => {
     setInferenceResult(null);
@@ -48,7 +57,14 @@ export function useTimeseriesPredictions({
   };
 
   const handleComputeInference = async () => {
-    if (!datasetId || !subjectId || !signal || activeChannels.length === 0 || isComputingInference) {
+    if (
+      !datasetId ||
+      !subjectId ||
+      !signal ||
+      activeChannels.length === 0 ||
+      isComputingInference ||
+      isDatasetPredictionJobRunning
+    ) {
       return;
     }
 
@@ -69,6 +85,58 @@ export function useTimeseriesPredictions({
       setIsComputingInference(false);
     }
   };
+
+  useEffect(() => {
+    if (!datasetId) {
+      setActivePredictionCacheProgress(null);
+      return;
+    }
+
+    let isCurrent = true;
+    let socket: WebSocket | null = null;
+
+    TimeseriesService.getActivePredictionCacheJob(datasetId, source)
+      .then((progress) => {
+        if (!isCurrent) {
+          return;
+        }
+
+        if (!progress || !isPredictionCacheJobRunning(progress)) {
+          setActivePredictionCacheProgress(null);
+          return;
+        }
+
+        setActivePredictionCacheProgress(progress);
+        socket = TimeseriesService.createPredictionCacheProgressSocket(progress.job_id, progress.model_name);
+        socket.onmessage = (event) => {
+          let nextProgress: ModelPredictionCacheProgress;
+          try {
+            nextProgress = JSON.parse(event.data) as ModelPredictionCacheProgress;
+          } catch {
+            return;
+          }
+
+          if (!isCurrent || nextProgress.dataset_id !== datasetId) {
+            return;
+          }
+
+          setActivePredictionCacheProgress(nextProgress);
+          if (!isPredictionCacheJobRunning(nextProgress)) {
+            socket?.close();
+          }
+        };
+      })
+      .catch(() => {
+        if (isCurrent) {
+          setActivePredictionCacheProgress(null);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+      socket?.close();
+    };
+  }, [datasetId, source]);
 
   useEffect(() => {
     if (!datasetId || !subjectId) {
@@ -130,10 +198,15 @@ export function useTimeseriesPredictions({
   return {
     inferenceResult,
     isComputingInference,
+    isDatasetPredictionJobRunning,
     inferenceError,
     resetPredictions,
     handleComputeInference,
   };
+}
+
+function isPredictionCacheJobRunning(progress: ModelPredictionCacheProgress | null): boolean {
+  return progress?.status === "queued" || progress?.status === "running";
 }
 
 async function getCachedPredictionsWithRetry(

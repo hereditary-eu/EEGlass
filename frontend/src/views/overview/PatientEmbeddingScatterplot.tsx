@@ -2,14 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
-import { getEmbeddingClassColors, MODEL_CLASS_LABELS } from "../../constants/eegModel";
-import type { ModelPatientEmbeddingsResponse } from "../../types";
+import { getEmbeddingClassColors, getModelClassLabels } from "../../constants/eegModel";
+import type { ModelInfoResponse, ModelPatientEmbeddingsResponse } from "../../types";
+
+type LegendHighlightTarget = { kind: "true" | "predicted"; label: string };
 
 interface PatientEmbeddingScatterplotProps {
   embeddings: ModelPatientEmbeddingsResponse | null;
   isLoading: boolean;
   error: string | null;
   highlightedSubjectId: string | null;
+  modelInfo: ModelInfoResponse | null;
   onOpenSubject: (subjectId: string) => void;
 }
 
@@ -34,18 +37,30 @@ export function PatientEmbeddingScatterplot({
   isLoading,
   error,
   highlightedSubjectId,
+  modelInfo,
   onOpenSubject,
 }: PatientEmbeddingScatterplotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [plotHeight, setPlotHeight] = useState(280);
+  const [legendHighlightTarget, setLegendHighlightTarget] = useState<LegendHighlightTarget | null>(null);
+  const modelClasses = modelInfo?.classes ?? [];
+  const modelClassLabels = useMemo(() => getModelClassLabels(modelClasses), [modelClasses]);
 
   const values = useMemo<PatientEmbeddingDatum[]>(
     () =>
       (embeddings?.points ?? []).map((point) => {
-        const trueColors = getEmbeddingClassColors(point.true_label);
-        const predictedColors = getEmbeddingClassColors(point.predicted_label);
-        const isHighlighted = point.subject_id === highlightedSubjectId;
-        const isMuted = Boolean(highlightedSubjectId && !isHighlighted);
+        const trueColors = getEmbeddingClassColors(point.true_label, modelClasses);
+        const predictedColors = getEmbeddingClassColors(point.predicted_label, modelClasses);
+        const isSubjectHighlighted = point.subject_id === highlightedSubjectId;
+        const isLegendHighlighted =
+          legendHighlightTarget?.kind === "true"
+            ? point.true_label === legendHighlightTarget.label
+            : legendHighlightTarget?.kind === "predicted"
+              ? point.predicted_label === legendHighlightTarget.label
+              : false;
+        const hasActiveHighlight = Boolean(highlightedSubjectId || legendHighlightTarget);
+        const isHighlighted = isSubjectHighlighted || isLegendHighlighted;
+        const isMuted = hasActiveHighlight && !isHighlighted;
 
         return {
           subjectId: point.subject_id,
@@ -55,15 +70,22 @@ export function PatientEmbeddingScatterplot({
           predictedLabel: point.predicted_label ?? "Unknown",
           trueColor: trueColors.fill,
           predictedColor: predictedColors.stroke,
-          pointSize: isHighlighted ? 210 : 88,
-          opacity: isMuted ? 0.3 : isHighlighted ? 1 : 0.72,
-          strokeWidth: isHighlighted ? 3.5 : point.true_label !== point.predicted_label ? 2.2 : 1.4,
+          pointSize: isSubjectHighlighted ? 210 : isLegendHighlighted ? 132 : 88,
+          opacity: isMuted ? 0.18 : isHighlighted ? 1 : 0.72,
+          strokeWidth: isSubjectHighlighted ? 3.5 : isLegendHighlighted ? 2.8 : point.true_label !== point.predicted_label ? 2.2 : 1.4,
           meanConfidence: point.mean_confidence ?? null,
           meanConfidencePercent: point.mean_confidence == null ? null : point.mean_confidence * 100,
           totalWindows: point.total_windows,
         };
       }),
-    [embeddings, highlightedSubjectId],
+    [embeddings, highlightedSubjectId, legendHighlightTarget, modelClasses],
+  );
+  const legendClassLabels = useMemo(
+    () =>
+      modelClassLabels.filter((label) =>
+        values.some((value) => value.trueLabel === label || value.predictedLabel === label),
+      ),
+    [modelClassLabels, values],
   );
 
   useEffect(() => {
@@ -184,16 +206,22 @@ export function PatientEmbeddingScatterplot({
   }, [error, isLoading, onOpenSubject, plotHeight, values]);
 
   const emptyMessage =
-    embeddings?.reduction.status === "insufficient_data"
+    !modelInfo
+      ? "Model metadata unavailable."
+      : embeddings?.reduction.status === "insufficient_data"
       ? "Need at least two cached patient embeddings."
       : "Compute prediction cache to populate patient embeddings.";
+  const highlightLegendLabel = (kind: LegendHighlightTarget["kind"], label: string) => {
+    setLegendHighlightTarget({ kind, label });
+  };
+  const clearLegendHighlight = () => setLegendHighlightTarget(null);
 
   return (
     <section className="overview-placeholder-card overview-placeholder-card--wide overview-embedding-card">
       <div className="overview-embedding-header">
         <div>
           <p className="overview-kicker">Patient embedding</p>
-          <h3>Penultimate embedding PCA</h3>
+          <h3>{embeddings?.embedding_label ?? (modelInfo ? "Patient embedding" : "Model unavailable")}</h3>
         </div>
         {embeddings ? (
           <span className="overview-embedding-meta">
@@ -209,29 +237,50 @@ export function PatientEmbeddingScatterplot({
         {!isLoading && !error && !values.length ? <div className="overview-embedding-overlay">{emptyMessage}</div> : null}
       </div>
 
-      <div className="overview-embedding-legend" aria-label="Embedding color legend">
-        <div>
-          <span>True</span>
-          {MODEL_CLASS_LABELS.map((label) => (
-            <span key={`true-${label}`} className="overview-embedding-legend-item">
-              <i
-                className="overview-embedding-legend-fill"
-                style={{ background: getEmbeddingClassColors(label).fill, borderColor: getEmbeddingClassColors(label).stroke }}
-              />
-              {label}
-            </span>
-          ))}
+      {legendClassLabels.length ? (
+        <div className="overview-embedding-legend" aria-label="Embedding color legend">
+          <div>
+            <span>True</span>
+            {legendClassLabels.map((label) => (
+              <button
+                key={`true-${label}`}
+                type="button"
+                className="overview-embedding-legend-item"
+                onBlur={clearLegendHighlight}
+                onFocus={() => highlightLegendLabel("true", label)}
+                onMouseEnter={() => highlightLegendLabel("true", label)}
+                onMouseLeave={clearLegendHighlight}
+              >
+                <i
+                  className="overview-embedding-legend-fill"
+                  style={{ backgroundColor: getEmbeddingClassColors(label, modelClasses).fill }}
+                />
+                {label}
+              </button>
+            ))}
+          </div>
+          <div>
+            <span>Pred</span>
+            {legendClassLabels.map((label) => (
+              <button
+                key={`predicted-${label}`}
+                type="button"
+                className="overview-embedding-legend-item"
+                onBlur={clearLegendHighlight}
+                onFocus={() => highlightLegendLabel("predicted", label)}
+                onMouseEnter={() => highlightLegendLabel("predicted", label)}
+                onMouseLeave={clearLegendHighlight}
+              >
+                <i
+                  className="overview-embedding-legend-stroke"
+                  style={{ borderColor: getEmbeddingClassColors(label, modelClasses).stroke }}
+                />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div>
-          <span>Pred</span>
-          {MODEL_CLASS_LABELS.map((label) => (
-            <span key={`predicted-${label}`} className="overview-embedding-legend-item">
-              <i className="overview-embedding-legend-stroke" style={{ borderColor: getEmbeddingClassColors(label).stroke }} />
-              {label}
-            </span>
-          ))}
-        </div>
-      </div>
+      ) : null}
     </section>
   );
 }

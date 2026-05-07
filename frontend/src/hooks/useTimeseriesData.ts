@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAppStore } from "../stores/useAppStore";
-import type { ChannelId, TimeseriesSource } from "../types";
+import { TimeseriesService } from "../services/TimeseriesService";
+import type { ChannelId, ModelInfoResponse, TimeseriesSource } from "../types";
 import { DEFAULT_DATASET_ID, DEFAULT_SOURCE, DEFAULT_SUBJECT_ID } from "./timeseries/shared";
 import { useSelectedTimeseriesWindow } from "./timeseries/useSelectedTimeseriesWindow";
 import { useTimeseriesBandPower } from "./timeseries/useTimeseriesBandPower";
@@ -33,8 +34,29 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
 
   const [resetViewSignal, setResetViewSignal] = useState(0);
   const [hoveredChannel, setHoveredChannel] = useState<ChannelId | null>(null);
+  const [modelInfo, setModelInfo] = useState<ModelInfoResponse | null>(null);
   const channelsClearedByUserRef = useRef(false);
   const [bandPowerResetSignal, setBandPowerResetSignal] = useState(0);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    TimeseriesService.getModelInfo()
+      .then((nextModelInfo) => {
+        if (isCurrent) {
+          setModelInfo(nextModelInfo);
+        }
+      })
+      .catch(() => {
+        if (isCurrent) {
+          setModelInfo(null);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   const clearBandPowerFromCoordinator = useCallback(() => {
     setBandPowerResetSignal((current) => current + 1);
@@ -111,7 +133,14 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     clearBandPowerData();
   }, [clearBandPowerData]);
 
-  const { inferenceResult, isComputingInference, inferenceError, resetPredictions, handleComputeInference } =
+  const {
+    inferenceResult,
+    isComputingInference,
+    isDatasetPredictionJobRunning,
+    inferenceError,
+    resetPredictions,
+    handleComputeInference,
+  } =
     useTimeseriesPredictions({
       datasetId,
       subjectId,
@@ -168,6 +197,7 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     datasetId,
     subjectId,
     source,
+    modelInfo,
     metadata,
     signal,
     isLoadingDatasets,
@@ -177,6 +207,7 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     error: subjectSourceError ?? signalError,
     inferenceResult,
     isComputingInference,
+    isDatasetPredictionJobRunning,
     inferenceError,
     hoveredPredictionWindowIndex,
     lockedPredictionWindowIndex,

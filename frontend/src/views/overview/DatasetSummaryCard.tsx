@@ -2,14 +2,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
-import { CLASS_COLORS, MODEL_CLASS_LABELS, MODEL_COMPACT_CLASS_LABELS } from "../../constants/eegModel";
-import type { ModelPredictionCacheStatus, TimeseriesDatasetInfo, TimeseriesSubjectInfo } from "../../types";
+import { formatCompactClassLabel, getDistributionClassColor, getModelClassLabels } from "../../constants/eegModel";
+import type { ModelInfoResponse, ModelPredictionCacheStatus, TimeseriesDatasetInfo, TimeseriesSubjectInfo } from "../../types";
 
 interface DatasetSummaryCardProps {
   dataset: TimeseriesDatasetInfo | null;
   subjects: TimeseriesSubjectInfo[];
   cacheStatus: ModelPredictionCacheStatus | null;
   isLoadingSubjects: boolean;
+  modelInfo: ModelInfoResponse | null;
 }
 
 interface LabelDistributionDatum {
@@ -21,12 +22,13 @@ interface LabelDistributionDatum {
   opacity: number;
 }
 
-export function DatasetSummaryCard({ dataset, subjects, cacheStatus, isLoadingSubjects }: DatasetSummaryCardProps) {
+export function DatasetSummaryCard({ dataset, subjects, cacheStatus, isLoadingSubjects, modelInfo }: DatasetSummaryCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [plotHeight, setPlotHeight] = useState(180);
+  const classLabels = useMemo(() => getModelClassLabels(modelInfo?.classes), [modelInfo]);
   const values = useMemo(
-    () => createLabelDistributionValues(subjects, cacheStatus),
-    [cacheStatus, subjects],
+    () => createLabelDistributionValues(subjects, cacheStatus, modelInfo),
+    [cacheStatus, modelInfo, subjects],
   );
   const hasPredictedLabels = useMemo(() => values.some((value) => value.series === "Predicted label"), [values]);
 
@@ -76,7 +78,7 @@ export function DatasetSummaryCard({ dataset, subjects, cacheStatus, isLoadingSu
         x: {
           field: "classShort",
           type: "nominal",
-          sort: MODEL_CLASS_LABELS.map((label) => MODEL_COMPACT_CLASS_LABELS[label]),
+          sort: classLabels.map((label) => formatCompactClassLabel(label, modelInfo?.classes)),
           axis: {
             title: null,
             labelColor: "#5d6b78",
@@ -134,7 +136,7 @@ export function DatasetSummaryCard({ dataset, subjects, cacheStatus, isLoadingSu
       finalized = true;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [isLoadingSubjects, plotHeight, values]);
+  }, [classLabels, isLoadingSubjects, modelInfo, plotHeight, values]);
 
   return (
     <section className="overview-placeholder-card overview-dataset-summary-card">
@@ -172,29 +174,36 @@ export function DatasetSummaryCard({ dataset, subjects, cacheStatus, isLoadingSu
 function createLabelDistributionValues(
   subjects: TimeseriesSubjectInfo[],
   cacheStatus: ModelPredictionCacheStatus | null,
+  modelInfo: ModelInfoResponse | null,
 ): LabelDistributionDatum[] {
+  const modelClasses = modelInfo?.classes ?? [];
+  const modelClassLabels = getModelClassLabels(modelClasses);
+  if (!modelClassLabels.length) {
+    return [];
+  }
+
   const trueCounts = countLabels(subjects.map((subject) => subject.subject_label));
   const predictedCounts = countLabels(cacheStatus?.subject_summaries.map((summary) => summary.predicted_label) ?? []);
   const hasPredictions = Object.values(predictedCounts).some((count) => count > 0);
   const values: LabelDistributionDatum[] = [];
 
-  MODEL_CLASS_LABELS.forEach((classLabel) => {
+  modelClassLabels.forEach((classLabel) => {
     values.push({
       classLabel,
-      classShort: MODEL_COMPACT_CLASS_LABELS[classLabel],
+      classShort: formatCompactClassLabel(classLabel, modelClasses),
       series: "True label",
       count: trueCounts[classLabel] ?? 0,
-      color: CLASS_COLORS.distribution[classLabel],
+      color: getDistributionClassColor(classLabel, modelClasses),
       opacity: 0.46,
     });
 
     if (hasPredictions) {
       values.push({
         classLabel,
-        classShort: MODEL_COMPACT_CLASS_LABELS[classLabel],
+        classShort: formatCompactClassLabel(classLabel, modelClasses),
         series: "Predicted label",
         count: predictedCounts[classLabel] ?? 0,
-        color: CLASS_COLORS.distribution[classLabel],
+        color: getDistributionClassColor(classLabel, modelClasses),
         opacity: 0.95,
       });
     }
@@ -204,14 +213,11 @@ function createLabelDistributionValues(
 }
 
 function countLabels(labels: Array<string | null | undefined>) {
-  const counts = Object.fromEntries(MODEL_CLASS_LABELS.map((label) => [label, 0])) as Record<
-    (typeof MODEL_CLASS_LABELS)[number],
-    number
-  >;
+  const counts: Record<string, number> = {};
 
   labels.forEach((label) => {
-    if (label && label in counts) {
-      counts[label as keyof typeof counts] += 1;
+    if (label) {
+      counts[label] = (counts[label] ?? 0) + 1;
     }
   });
 

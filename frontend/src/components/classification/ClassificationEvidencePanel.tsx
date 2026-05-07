@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
-import { MODEL_CLASS_LABELS, formatCompactClassLabel } from "../../constants/eegModel";
+import { formatCompactClassLabel } from "../../constants/eegModel";
 import { TimeseriesService } from "../../services/TimeseriesService";
 import type { ModelClassEvidenceResponse, TimeseriesSource } from "../../types";
 import "./ClassificationEvidencePanel.css";
@@ -78,11 +78,11 @@ export function ClassificationEvidencePanel({
 
   const classLabels = useMemo(() => {
     if (!evidence?.bands.length) {
-      return [...MODEL_CLASS_LABELS];
+      return [];
     }
 
     const labels = evidence.bands[0]?.class_contributions.map((contribution) => contribution.class_label) ?? [];
-    return labels.length ? labels : [...MODEL_CLASS_LABELS];
+    return labels;
   }, [evidence]);
 
   const maxAbsContribution = Math.max(evidence?.global_max_abs_contribution ?? 0, 1e-12);
@@ -260,7 +260,7 @@ function formatContribution(value: number): string {
 }
 
 function formatClassLabel(classLabel: string): string {
-  return formatCompactClassLabel(classLabel);
+  return formatCompactClassLabel(classLabel, null);
 }
 
 function getEvidenceErrorMessage(error: unknown): string {

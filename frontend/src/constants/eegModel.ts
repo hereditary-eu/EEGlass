@@ -1,15 +1,4 @@
-import type { TimeseriesBandFilter } from "../types";
-
-export const DEFAULT_MODEL_NAME = "xeegnet-v1";
-export const MODEL_DISPLAY_NAME = "xEEGNet v1";
-
-export const MODEL_CLASS_LABELS = ["Healthy", "Alzheimer", "Frontotemporal Dementia"] as const;
-export type ModelClassLabel = (typeof MODEL_CLASS_LABELS)[number];
-export const MODEL_COMPACT_CLASS_LABELS: Record<ModelClassLabel, string> = {
-  Healthy: "H",
-  Alzheimer: "Alz",
-  "Frontotemporal Dementia": "FTD",
-};
+import type { ModelClassPresentation, TimeseriesBandFilter } from "../types";
 
 export const MODEL_BANDS = ["delta", "theta", "alpha", "beta1", "beta2", "beta3", "gamma"] as const satisfies readonly TimeseriesBandFilter[];
 
@@ -23,60 +12,53 @@ export const MODEL_BAND_LABELS: Record<TimeseriesBandFilter, string> = {
   gamma: "gamma",
 };
 
-export const CLASS_COLORS = {
-  annotation: {
-    Healthy: "rgb(21 128 61 / 22%)",
-    Alzheimer: "rgb(225 29 72 / 28%)",
-    "Frontotemporal Dementia": "#c2ddfc",
-    empty: "rgb(23 33 43 / 8%)",
-  },
-  patientCell: {
-    Healthy: "overview-patient-label--healthy",
-    Alzheimer: "overview-patient-label--alzheimer",
-    "Frontotemporal Dementia": "overview-patient-label--ftd",
-    empty: "overview-patient-label--empty",
-  },
-  distribution: {
-    Healthy: "rgb(21 128 61 / 32%)",
-    Alzheimer: "rgb(225 29 72 / 34%)",
-    "Frontotemporal Dementia": "#c2ddfc",
-  },
-  embedding: {
-    Healthy: {
-      fill: "rgb(21 128 61 / 22%)",
-      stroke: "#15803d",
-    },
-    Alzheimer: {
-      fill: "rgb(225 29 72 / 22%)",
-      stroke: "#be123c",
-    },
-    "Frontotemporal Dementia": {
-      fill: "rgb(37 99 235 / 20%)",
-      stroke: "#2563eb",
-    },
-    empty: {
-      fill: "rgb(148 163 184 / 22%)",
-      stroke: "#64748b",
-    },
-  },
-} as const;
+const EMPTY_CLASS_COLORS = {
+  annotation: "rgb(23 33 43 / 8%)",
+  distribution: "rgb(148 163 184 / 22%)",
+  embedding_fill: "rgb(148 163 184 / 22%)",
+  embedding_stroke: "#64748b",
+};
 
-export function isModelClassLabel(label: string | null | undefined): label is ModelClassLabel {
-  return MODEL_CLASS_LABELS.includes(label as ModelClassLabel);
+export function getModelClassLabels(classes: ModelClassPresentation[] | null | undefined): string[] {
+  return classes?.map((modelClass) => modelClass.label) ?? [];
 }
 
-export function formatCompactClassLabel(label: string | null | undefined): string {
-  return isModelClassLabel(label) ? MODEL_COMPACT_CLASS_LABELS[label] : (label || "--");
+export function getClassPresentation(
+  classes: ModelClassPresentation[] | null | undefined,
+  label: string | null | undefined,
+): ModelClassPresentation | null {
+  if (!label) {
+    return null;
+  }
+
+  return classes?.find((modelClass) => modelClass.label === label) ?? null;
 }
 
-export function getAnnotationClassColor(label: string | null | undefined): string {
-  return isModelClassLabel(label) ? CLASS_COLORS.annotation[label] : CLASS_COLORS.annotation.empty;
+export function formatCompactClassLabel(
+  label: string | null | undefined,
+  classes: ModelClassPresentation[] | null | undefined,
+): string {
+  return getClassPresentation(classes, label)?.compact_label ?? label ?? "--";
 }
 
-export function getPatientClassName(label: string | null | undefined): string {
-  return isModelClassLabel(label) ? CLASS_COLORS.patientCell[label] : CLASS_COLORS.patientCell.empty;
+export function getAnnotationClassColor(
+  label: string | null | undefined,
+  classes: ModelClassPresentation[] | null | undefined,
+): string {
+  return getClassPresentation(classes, label)?.colors.annotation ?? EMPTY_CLASS_COLORS.annotation;
 }
 
-export function getEmbeddingClassColors(label: string | null | undefined): { fill: string; stroke: string } {
-  return isModelClassLabel(label) ? CLASS_COLORS.embedding[label] : CLASS_COLORS.embedding.empty;
+export function getDistributionClassColor(
+  label: string | null | undefined,
+  classes: ModelClassPresentation[] | null | undefined,
+): string {
+  return getClassPresentation(classes, label)?.colors.distribution ?? EMPTY_CLASS_COLORS.distribution;
+}
+
+export function getEmbeddingClassColors(
+  label: string | null | undefined,
+  classes: ModelClassPresentation[] | null | undefined,
+): { fill: string; stroke: string } {
+  const colors = getClassPresentation(classes, label)?.colors ?? EMPTY_CLASS_COLORS;
+  return { fill: colors.embedding_fill, stroke: colors.embedding_stroke };
 }

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import type { KeyboardEvent } from "react";
 
 import { DrillButton } from "../../components/ui";
-import type { ModelPredictionSummary, TimeseriesDatasetInfo, TimeseriesSubjectInfo } from "../../types";
+import type { ModelInfoResponse, ModelPredictionSummary, TimeseriesDatasetInfo, TimeseriesSubjectInfo } from "../../types";
 import { PatientList } from "./PatientList";
 import type { DirectoryLevel } from "./overviewUtils";
 import { getDirectoryStatus } from "./overviewUtils";
@@ -21,6 +21,7 @@ interface DatasetDirectoryProps {
   selectedSubjectId: string | null;
   focusSubjectId: string | null;
   focusDatasetId: string | null;
+  modelInfo: ModelInfoResponse | null;
   onSelectDataset: (datasetId: string) => void;
   onEnterPatientSelection: (datasetId: string) => void;
   onBackToDatasets: () => void;
@@ -43,6 +44,7 @@ export function DatasetDirectory({
   selectedSubjectId,
   focusSubjectId,
   focusDatasetId,
+  modelInfo,
   onSelectDataset,
   onEnterPatientSelection,
   onBackToDatasets,
@@ -167,6 +169,7 @@ export function DatasetDirectory({
             hoveredSubjectId={hoveredSubjectId}
             selectedSubjectId={selectedSubjectId}
             focusSubjectId={focusSubjectId}
+            modelInfo={modelInfo}
             onOpenWorkspace={onOpenWorkspace}
             onBackToDatasets={onBackToDatasets}
             onHoveredSubjectIdChange={onHoveredSubjectIdChange}

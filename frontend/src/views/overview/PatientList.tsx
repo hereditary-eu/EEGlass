@@ -1,15 +1,16 @@
 import { useEffect } from "react";
-import type { KeyboardEvent } from "react";
+import type { CSSProperties, KeyboardEvent } from "react";
 
 import { ClassLabelCountCell, CompactGridSelectorRow, DrillButton } from "../../components/ui";
-import { MODEL_CLASS_LABELS } from "../../constants/eegModel";
-import type { ModelPredictionSummary, TimeseriesSubjectInfo } from "../../types";
+import { formatCompactClassLabel } from "../../constants/eegModel";
+import type { ModelInfoResponse, ModelPredictionSummary, TimeseriesSubjectInfo } from "../../types";
 import {
   formatMeanConfidence,
   getClassDistributionStyle,
   getClassWindowCount,
   getCompactPatientLabel,
   getPatientLabelClass,
+  getPatientLabelStyle,
   isPredictionMismatch,
 } from "./overviewUtils";
 
@@ -23,6 +24,7 @@ interface PatientListProps {
   hoveredSubjectId: string | null;
   selectedSubjectId: string | null;
   focusSubjectId: string | null;
+  modelInfo: ModelInfoResponse | null;
   onOpenWorkspace: (subject: TimeseriesSubjectInfo) => void;
   onBackToDatasets: () => void;
   onHoveredSubjectIdChange: (subjectId: string | null) => void;
@@ -38,12 +40,16 @@ export function PatientList({
   hoveredSubjectId,
   selectedSubjectId,
   focusSubjectId,
+  modelInfo,
   onOpenWorkspace,
   onBackToDatasets,
   onHoveredSubjectIdChange,
   onSelectedSubjectIdChange,
   onFocusSubjectHandled,
 }: PatientListProps) {
+  const modelClasses = modelInfo?.classes ?? [];
+  const classGridStyle = { "--model-class-count": modelClasses.length } as CSSProperties;
+
   useEffect(() => {
     if (!focusSubjectId || !subjects.some((subject) => subject.id === focusSubjectId)) {
       return;
@@ -103,11 +109,11 @@ export function PatientList({
 
   return (
     <div className="overview-patient-list">
-      <div className="overview-patient-list-header" aria-hidden="true">
+      <div className="overview-patient-list-header" style={classGridStyle} aria-hidden="true">
         <span>id</span>
-        <span>H</span>
-        <span>A</span>
-        <span>FTD</span>
+        {modelClasses.map((modelClass) => (
+          <span key={modelClass.label}>{formatCompactClassLabel(modelClass.label, modelClasses)}</span>
+        ))}
         <span>true label</span>
         <span>pred</span>
         <span>conf</span>
@@ -145,6 +151,7 @@ export function PatientList({
               role="button"
               tabIndex={0}
               aria-pressed={selectedSubjectId === subject.id}
+              style={classGridStyle}
               onClick={toggleSelectedSubject}
               onKeyDown={(event) => {
                 handlePatientNavigationKey(event, subjectIndex);
@@ -158,28 +165,26 @@ export function PatientList({
               }}
             >
               <span className="overview-patient-id">{subject.id}</span>
-              <span className="overview-patient-count overview-patient-count--healthy">
-                {getClassWindowCount(summary, MODEL_CLASS_LABELS[0])}
-              </span>
-              <span className="overview-patient-count overview-patient-count--alzheimer">
-                {getClassWindowCount(summary, MODEL_CLASS_LABELS[1])}
-              </span>
-              <span className="overview-patient-count overview-patient-count--ftd">
-                {getClassWindowCount(summary, MODEL_CLASS_LABELS[2])}
-              </span>
+              {modelClasses.map((modelClass) => (
+                <span key={modelClass.label} className="overview-patient-count">
+                  {getClassWindowCount(summary, modelClass.label)}
+                </span>
+              ))}
               <ClassLabelCountCell
-                className={getPatientLabelClass(summary?.true_label)}
+                className={getPatientLabelClass()}
                 title={summary?.true_label ?? undefined}
-                value={getCompactPatientLabel(summary?.true_label)}
+                style={getPatientLabelStyle(summary?.true_label, modelClasses)}
+                value={getCompactPatientLabel(summary?.true_label, modelClasses)}
               />
               <ClassLabelCountCell
-                className={getPatientLabelClass(summary?.predicted_label)}
+                className={getPatientLabelClass()}
                 title={summary?.predicted_label ?? undefined}
-                value={getCompactPatientLabel(summary?.predicted_label)}
+                style={getPatientLabelStyle(summary?.predicted_label, modelClasses)}
+                value={getCompactPatientLabel(summary?.predicted_label, modelClasses)}
               />
               <span className="overview-patient-confidence">{formatMeanConfidence(summary)}</span>
-              {summary ? (
-                <span className="overview-patient-distribution" style={getClassDistributionStyle(summary)} />
+              {summary && modelClasses.length ? (
+                <span className="overview-patient-distribution" style={getClassDistributionStyle(summary, modelClasses)} />
               ) : null}
             </CompactGridSelectorRow>
             <DrillButton label={`Open workspace for ${subject.id}`} onClick={() => onOpenWorkspace(subject)} />

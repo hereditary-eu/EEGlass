@@ -97,10 +97,33 @@ export interface ModelInferenceResponse {
 
 export type ModelMetadataValue = string | number | boolean | string[] | number[];
 
+export interface ModelClassColors {
+  annotation: string;
+  distribution: string;
+  embedding_fill: string;
+  embedding_stroke: string;
+}
+
+export interface ModelClassPresentation {
+  class_id: number;
+  label: string;
+  compact_label: string;
+  colors: ModelClassColors;
+}
+
+export interface ModelBandPresentation {
+  name: string;
+  label: string;
+  start_hz: number;
+  end_hz: number;
+}
+
 export interface ModelInfoResponse {
   name: string;
   display_name: string;
   architecture: string;
+  classes: ModelClassPresentation[];
+  bands: ModelBandPresentation[];
   metadata: Record<string, ModelMetadataValue>;
 }
 

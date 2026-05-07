@@ -237,6 +237,24 @@ def build_model_info_response(model_spec: ModelSpec) -> ModelInfoResponse:
         name=model_spec.name,
         display_name=model_spec.display_name,
         architecture=model_spec.architecture,
+        classes=[
+            {
+                "class_id": class_spec.class_id,
+                "label": class_spec.label,
+                "compact_label": class_spec.compact_label,
+                "colors": {
+                    "annotation": class_spec.colors.annotation,
+                    "distribution": class_spec.colors.distribution,
+                    "embedding_fill": class_spec.colors.embedding_fill,
+                    "embedding_stroke": class_spec.colors.embedding_stroke,
+                },
+            }
+            for class_spec in model_spec.classes
+        ],
+        bands=[
+            {"name": band_name, "label": band_name, "start_hz": start_hz, "end_hz": end_hz}
+            for band_name, start_hz, end_hz in model_spec.bands
+        ],
         metadata={
             "API name": model_spec.name,
             "Architecture": model_spec.architecture,
@@ -244,7 +262,7 @@ def build_model_info_response(model_spec: ModelSpec) -> ModelInfoResponse:
             "Window": f"{model_spec.window_size_seconds:g}s",
             "Sampling rate": f"{model_spec.sampling_frequency:g} Hz",
             "Sample length": model_spec.sample_length,
-            "Classes": list(MODEL_CLASS_LABELS.values()),
+            "Classes": [class_spec.label for class_spec in model_spec.classes],
             "Bands": [band_name for band_name, _start_hz, _end_hz in model_spec.bands],
         },
     )
