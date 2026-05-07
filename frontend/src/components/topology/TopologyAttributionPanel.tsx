@@ -297,6 +297,7 @@ export function TopologyAttributionPanel() {
                       textAnchor="middle"
                       dominantBaseline="middle"
                       className={`topology-panel-electrode-label${selectedChannels.includes(channel.name) ? " topology-panel-electrode-label--active" : ""}`}
+                      onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
                         selectSingleTimeseriesChannel(channel.name);
                         if (applyBandFilterOnClick) {

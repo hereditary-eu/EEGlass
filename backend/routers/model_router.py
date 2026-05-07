@@ -9,8 +9,10 @@ from backend.pydantic_models.inference import (
     ModelBandPowerResponse,
     ModelClassEvidenceRequest,
     ModelClassEvidenceResponse,
+    ModelInfoResponse,
     ModelInferenceRequest,
     ModelInferenceResponse,
+    ModelPatientEmbeddingsResponse,
     ModelPredictionCacheJobRequest,
     ModelPredictionCacheJobResponse,
     ModelPredictionCacheStatus,
@@ -30,6 +32,14 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 model_router = APIRouter(tags=["model"])
+
+
+@model_router.get("/models/{model_name}", response_model=ModelInfoResponse)
+async def get_model_info(model_name: str = DEFAULT_MODEL_NAME) -> ModelInfoResponse:
+    try:
+        return ModelService.get_model_info(model_name=model_name)
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
 
 
 @model_router.post("/models/{model_name}/infer", response_model=ModelInferenceResponse)
@@ -120,6 +130,25 @@ async def get_prediction_cache_status(
 ) -> ModelPredictionCacheStatus:
     try:
         return PredictionCacheService.get_cache_status(
+            dataset_id=dataset_id,
+            model_name=model_name,
+            source=source,
+        )
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@model_router.get(
+    "/models/{model_name}/datasets/{dataset_id}/patient-embeddings",
+    response_model=ModelPatientEmbeddingsResponse,
+)
+async def get_patient_embeddings(
+    dataset_id: str,
+    model_name: str = DEFAULT_MODEL_NAME,
+    source: TimeseriesSource = Query("derivatives"),
+) -> ModelPatientEmbeddingsResponse:
+    try:
+        return PredictionCacheService.get_patient_embeddings(
             dataset_id=dataset_id,
             model_name=model_name,
             source=source,

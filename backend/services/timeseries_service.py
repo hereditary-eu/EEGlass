@@ -82,7 +82,13 @@ class TimeseriesService:
         for subject_dir in cls._list_subject_dirs(dataset_dir):
             sources = cls._available_subject_sources(dataset_dir, subject_dir.name)
             if sources:
-                subjects.append(TimeseriesSubjectInfo(id=subject_dir.name, sources=sources))
+                subjects.append(
+                    TimeseriesSubjectInfo(
+                        id=subject_dir.name,
+                        sources=sources,
+                        subject_label=cls.get_subject_label(dataset_id, subject_dir.name),
+                    )
+                )
 
         return subjects
 

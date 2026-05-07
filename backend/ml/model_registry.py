@@ -30,7 +30,7 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
     DEFAULT_MODEL_NAME: ModelSpec(
         name=DEFAULT_MODEL_NAME,
         display_name="xEEGNet v1",
-        architecture="xeegnet",
+        architecture="xEEGNet",
         checkpoint_path=PRETRAINED_MODEL_PATH,
         channels=MODEL_CHANNELS,
         bands=MODEL_BANDS,

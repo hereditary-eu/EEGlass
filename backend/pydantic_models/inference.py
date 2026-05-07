@@ -32,6 +32,16 @@ class ModelInferenceResponse(BaseModel):
     predictions: List[WindowPrediction]
 
 
+ModelMetadataValue = str | int | float | bool | List[str] | List[int] | List[float]
+
+
+class ModelInfoResponse(BaseModel):
+    name: str
+    display_name: str
+    architecture: str
+    metadata: Dict[str, ModelMetadataValue]
+
+
 class ModelPredictionCacheJobRequest(BaseModel):
     source: TimeseriesSource = "derivatives"
 
@@ -86,6 +96,37 @@ class ModelPredictionCacheStatus(BaseModel):
     subject_summaries: List[ModelPredictionSummary] = []
     manifest_path: str
     updated_at: str | None = None
+
+
+class ModelPatientEmbeddingPoint(BaseModel):
+    subject_id: str
+    x: float
+    y: float
+    true_label: str | None = None
+    predicted_label: str | None = None
+    mean_confidence: float | None = None
+    total_windows: int
+
+
+class ModelPatientEmbeddingReduction(BaseModel):
+    method: Literal["pca"]
+    status: Literal["ok", "insufficient_data"]
+    source_dimension: int
+    output_dimension: int
+    explained_variance_ratio: List[float]
+
+
+class ModelPatientEmbeddingsResponse(BaseModel):
+    dataset_id: str
+    model_name: str
+    source: TimeseriesSource
+    checkpoint_signature: str
+    checkpoint_key: str
+    preprocessing_version: str
+    embedding_layer: str
+    embedding_label: str
+    reduction: ModelPatientEmbeddingReduction
+    points: List[ModelPatientEmbeddingPoint]
 
 
 class ModelClassEvidenceRequest(BaseModel):

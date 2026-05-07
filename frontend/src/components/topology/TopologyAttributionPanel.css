@@ -238,6 +238,17 @@
   fill: #0e7490;
 }
 
+.topology-panel-electrode-label:focus,
+.topology-panel-electrode-label:focus-visible {
+  outline: none;
+}
+
+.topology-panel-electrode-label:focus-visible {
+  fill: #0e7490;
+  stroke: rgb(219 240 245 / 96%);
+  stroke-width: 0.036px;
+}
+
 .topology-panel-electrode-label--active {
   fill: #0f5f76;
   stroke: rgb(219 240 245 / 92%);

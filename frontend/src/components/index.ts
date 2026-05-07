@@ -16,3 +16,4 @@ export { TopologyAttributionPanel, TotalBandPowerChart } from "./topology";
 export type { TopologyAttributionPanelProps, TotalBandPowerChartProps } from "./topology";
 export { ClassificationEvidencePanel } from "./classification";
 export type { ClassificationEvidencePanelProps } from "./classification";
+export { ClassLabelCountCell, CompactGridSelectorRow, DrillButton, PanelHeader, StatusOverlay } from "./ui";

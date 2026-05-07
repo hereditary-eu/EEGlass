@@ -6,7 +6,9 @@ import type {
   ModelBandPowerResponse,
   ModelClassEvidenceRequest,
   ModelClassEvidenceResponse,
+  ModelInfoResponse,
   ModelInferenceResponse,
+  ModelPatientEmbeddingsResponse,
   ModelPredictionCacheJobResponse,
   ModelPredictionCacheStatus,
   ModelScalpTopologyResponse,
@@ -96,6 +98,10 @@ export class TimeseriesService {
     return ApiClient.post<ModelInferenceResponse>(API_ROUTES.model.infer(), request);
   }
 
+  static async getModelInfo(): Promise<ModelInfoResponse> {
+    return ApiClient.get<ModelInfoResponse>(API_ROUTES.model.info());
+  }
+
   static async startPredictionCacheJob(
     datasetId: string,
     source: TimeseriesSource = "derivatives",
@@ -111,6 +117,15 @@ export class TimeseriesService {
   ): Promise<ModelPredictionCacheStatus> {
     return ApiClient.get<ModelPredictionCacheStatus>(
       `${API_ROUTES.model.predictionCacheStatus(datasetId)}?${this.toQueryString({ source })}`,
+    );
+  }
+
+  static async getPatientEmbeddings(
+    datasetId: string,
+    source: TimeseriesSource = "derivatives",
+  ): Promise<ModelPatientEmbeddingsResponse> {
+    return ApiClient.get<ModelPatientEmbeddingsResponse>(
+      `${API_ROUTES.model.patientEmbeddings(datasetId)}?${this.toQueryString({ source })}`,
     );
   }
 

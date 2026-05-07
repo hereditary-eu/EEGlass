@@ -1,28 +1,35 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
-import {
-  CLASS_COLORS,
-  DEFAULT_MODEL_NAME,
-  MODEL_CLASS_LABELS,
-  formatCompactClassLabel,
-  getPatientClassName,
-} from "../constants/eegModel";
+import { StatusOverlay } from "../components/ui";
 import { TimeseriesService } from "../services/TimeseriesService";
 import type {
+  ModelPatientEmbeddingsResponse,
+  ModelInfoResponse,
   ModelPredictionCacheProgress,
   ModelPredictionCacheStatus,
-  ModelPredictionSummary,
   TimeseriesDatasetInfo,
   TimeseriesSubjectInfo,
 } from "../types";
+import { DatasetDirectory } from "./overview/DatasetDirectory";
+import { DatasetSummaryCard } from "./overview/DatasetSummaryCard";
+import { ModelCard } from "./overview/ModelCard";
+import { PatientEmbeddingScatterplot } from "./overview/PatientEmbeddingScatterplot";
+import type { DirectoryLevel } from "./overview/overviewUtils";
+import { getOverviewError, isCacheJobRunning } from "./overview/overviewUtils";
 import "./OverviewPanel.css";
 
-type DirectoryLevel = "datasets" | "patients";
+interface OverviewRouteState {
+  datasetId?: string;
+  directoryLevel?: DirectoryLevel;
+  selectedSubjectId?: string;
+}
 
 export function OverviewPanel() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const routeState = (location.state ?? null) as OverviewRouteState | null;
+  const shouldRestoreRouteStateRef = useRef(Boolean(routeState?.datasetId) && location.key !== "default");
   const [datasets, setDatasets] = useState<TimeseriesDatasetInfo[]>([]);
   const [subjects, setSubjects] = useState<TimeseriesSubjectInfo[]>([]);
   const [selectedDatasetId, setSelectedDatasetId] = useState("");
@@ -33,6 +40,16 @@ export function OverviewPanel() {
   const [cacheStatus, setCacheStatus] = useState<ModelPredictionCacheStatus | null>(null);
   const [cacheProgress, setCacheProgress] = useState<ModelPredictionCacheProgress | null>(null);
   const [cacheError, setCacheError] = useState<string | null>(null);
+  const [modelInfo, setModelInfo] = useState<ModelInfoResponse | null>(null);
+  const [modelInfoError, setModelInfoError] = useState<string | null>(null);
+  const [patientEmbeddings, setPatientEmbeddings] = useState<ModelPatientEmbeddingsResponse | null>(null);
+  const [isLoadingEmbeddings, setIsLoadingEmbeddings] = useState(false);
+  const [embeddingError, setEmbeddingError] = useState<string | null>(null);
+  const [hoveredSubjectId, setHoveredSubjectId] = useState<string | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
+  const [focusSubjectId, setFocusSubjectId] = useState<string | null>(null);
+  const [focusDatasetId, setFocusDatasetId] = useState<string | null>(null);
+  const [shouldFocusFirstPatient, setShouldFocusFirstPatient] = useState(false);
   const [isStartingCacheJob, setIsStartingCacheJob] = useState(false);
   const [isDeletingCache, setIsDeletingCache] = useState(false);
   const progressSocketRef = useRef<WebSocket | null>(null);
@@ -45,6 +62,40 @@ export function OverviewPanel() {
     () => new Map((cacheStatus?.subject_summaries ?? []).map((summary) => [summary.subject_id, summary])),
     [cacheStatus],
   );
+  const embeddingRefreshKey = useMemo(
+    () =>
+      [
+        cacheStatus?.checkpoint_key ?? "",
+        cacheStatus?.preprocessing_version ?? "",
+        cacheStatus?.status ?? "",
+        cacheStatus?.completed_subjects ?? 0,
+        cacheStatus?.updated_at ?? "",
+      ].join(":"),
+    [cacheStatus],
+  );
+  const highlightedSubjectId = hoveredSubjectId ?? selectedSubjectId;
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    TimeseriesService.getModelInfo()
+      .then((nextModelInfo) => {
+        if (isCurrent) {
+          setModelInfo(nextModelInfo);
+          setModelInfoError(null);
+        }
+      })
+      .catch((loadError) => {
+        if (isCurrent) {
+          setModelInfo(null);
+          setModelInfoError(getOverviewError(loadError, "Unable to load model metadata."));
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isCurrent = true;
@@ -59,12 +110,29 @@ export function OverviewPanel() {
           return;
         }
 
+        const routeDatasetId =
+          shouldRestoreRouteStateRef.current &&
+          routeState?.datasetId &&
+          nextDatasets.some((dataset) => dataset.id === routeState.datasetId)
+            ? routeState.datasetId
+            : "";
+
         setDatasets(nextDatasets);
-        setSelectedDatasetId((currentDatasetId) =>
-          nextDatasets.some((dataset) => dataset.id === currentDatasetId)
+        setSelectedDatasetId((currentDatasetId) => {
+          if (routeDatasetId) {
+            return routeDatasetId;
+          }
+
+          return nextDatasets.some((dataset) => dataset.id === currentDatasetId)
             ? currentDatasetId
-            : (nextDatasets[0]?.id ?? ""),
-        );
+            : (nextDatasets[0]?.id ?? "");
+        });
+        if (routeDatasetId) {
+          setDirectoryLevel(routeState?.directoryLevel ?? "datasets");
+          setSelectedSubjectId(routeState?.selectedSubjectId ?? null);
+          setFocusSubjectId(routeState?.directoryLevel === "patients" ? (routeState.selectedSubjectId ?? null) : null);
+          navigate(".", { replace: true, state: null });
+        }
       } catch (loadError) {
         if (isCurrent) {
           setError(getOverviewError(loadError, "Unable to load datasets."));
@@ -120,6 +188,54 @@ export function OverviewPanel() {
   }, [selectedDatasetId]);
 
   useEffect(() => {
+    setSelectedSubjectId((currentSubjectId) =>
+      currentSubjectId && subjects.some((subject) => subject.id === currentSubjectId) ? currentSubjectId : null,
+    );
+  }, [subjects]);
+
+  useEffect(() => {
+    if (!shouldFocusFirstPatient || directoryLevel !== "patients" || isLoadingSubjects) {
+      return;
+    }
+
+    setFocusSubjectId(subjects[0]?.id ?? null);
+    setShouldFocusFirstPatient(false);
+  }, [directoryLevel, isLoadingSubjects, shouldFocusFirstPatient, subjects]);
+
+  useEffect(() => {
+    let isCurrent = true;
+    setPatientEmbeddings(null);
+    setEmbeddingError(null);
+
+    if (!selectedDatasetId) {
+      setIsLoadingEmbeddings(false);
+      return;
+    }
+
+    setIsLoadingEmbeddings(true);
+    TimeseriesService.getPatientEmbeddings(selectedDatasetId)
+      .then((embeddings) => {
+        if (isCurrent) {
+          setPatientEmbeddings(embeddings);
+        }
+      })
+      .catch((loadError) => {
+        if (isCurrent) {
+          setEmbeddingError(getOverviewError(loadError, "Unable to load patient embeddings."));
+        }
+      })
+      .finally(() => {
+        if (isCurrent) {
+          setIsLoadingEmbeddings(false);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedDatasetId, embeddingRefreshKey]);
+
+  useEffect(() => {
     let isCurrent = true;
     progressSocketRef.current?.close();
     progressSocketRef.current = null;
@@ -158,11 +274,29 @@ export function OverviewPanel() {
   const selectDataset = (datasetId: string) => {
     setSelectedDatasetId(datasetId);
     setDirectoryLevel("datasets");
+    setHoveredSubjectId(null);
+    setSelectedSubjectId(null);
+    setFocusSubjectId(null);
+    setFocusDatasetId(datasetId);
+    setShouldFocusFirstPatient(false);
   };
 
   const enterPatientSelection = (datasetId: string) => {
     setSelectedDatasetId(datasetId);
     setDirectoryLevel("patients");
+    setHoveredSubjectId(null);
+    setSelectedSubjectId(null);
+    setFocusSubjectId(null);
+    setFocusDatasetId(null);
+    setShouldFocusFirstPatient(true);
+  };
+
+  const backToDatasets = () => {
+    setDirectoryLevel("datasets");
+    setHoveredSubjectId(null);
+    setFocusSubjectId(null);
+    setShouldFocusFirstPatient(false);
+    setFocusDatasetId(selectedDatasetId);
   };
 
   const openWorkspace = (subject: TimeseriesSubjectInfo) => {
@@ -171,6 +305,14 @@ export function OverviewPanel() {
     }
 
     navigate(`/workspace/${encodeURIComponent(selectedDatasetId)}/${encodeURIComponent(subject.id)}`);
+  };
+
+  const openWorkspaceBySubjectId = (subjectId: string) => {
+    if (!selectedDatasetId) {
+      return;
+    }
+
+    navigate(`/workspace/${encodeURIComponent(selectedDatasetId)}/${encodeURIComponent(subjectId)}`);
   };
 
   const startPredictionCacheJob = async () => {
@@ -252,352 +394,61 @@ export function OverviewPanel() {
 
   return (
     <section className="overview-panel" aria-label="Dataset and patient overview">
-      <aside className="overview-directory" aria-label="Dataset directory">
-        <div className="overview-directory-toolbar">
-          {directoryLevel === "patients" ? (
-            <button type="button" className="overview-back-button" onClick={() => setDirectoryLevel("datasets")}>
-              Back
-            </button>
-          ) : null}
-          <div>
-            <p>{directoryLevel === "patients" ? selectedDatasetId : "Datasets"}</p>
-            <span>{getDirectoryStatus(directoryLevel, datasets.length, subjects.length, isLoadingDatasets, isLoadingSubjects)}</span>
-          </div>
-        </div>
-
-        <div className="overview-directory-section">
-          {directoryLevel === "datasets" ? (
-            <div className="overview-dataset-list">
-              {datasets.map((dataset) => (
-                <div
-                  key={dataset.id}
-                  className={
-                    dataset.id === selectedDatasetId
-                      ? "overview-dataset-row overview-dataset-row--active"
-                      : "overview-dataset-row"
-                  }
-                >
-                  <button type="button" className="overview-dataset-select" onClick={() => selectDataset(dataset.id)}>
-                    <span>{dataset.id}</span>
-                    <small>{dataset.subject_count} patients</small>
-                  </button>
-                  <OverviewDrillButton
-                    label={`Open patients in ${dataset.id}`}
-                    onClick={() => enterPatientSelection(dataset.id)}
-                  />
-                </div>
-              ))}
-              {!isLoadingDatasets && datasets.length === 0 ? (
-                <div className="overview-empty-state">No EEG datasets found.</div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="overview-patient-list">
-              <div className="overview-patient-list-header" aria-hidden="true">
-                <span>id</span>
-                <span>H</span>
-                <span>A</span>
-                <span>FTD</span>
-                <span>true label</span>
-                <span>pred</span>
-                <span>conf</span>
-              </div>
-              {subjects.map((subject) => {
-                const summary = predictionSummariesBySubject.get(subject.id) ?? null;
-                return (
-                  <div
-                    key={subject.id}
-                    className={
-                      isPredictionMismatch(summary)
-                        ? "overview-patient-card overview-patient-card--mismatch"
-                        : "overview-patient-card"
-                    }
-                  >
-                    <div className="overview-patient-select">
-                      <span className="overview-patient-id">{subject.id}</span>
-                      <span className="overview-patient-count overview-patient-count--healthy">
-                        {getClassWindowCount(summary, MODEL_CLASS_LABELS[0])}
-                      </span>
-                      <span className="overview-patient-count overview-patient-count--alzheimer">
-                        {getClassWindowCount(summary, MODEL_CLASS_LABELS[1])}
-                      </span>
-                      <span className="overview-patient-count overview-patient-count--ftd">
-                        {getClassWindowCount(summary, MODEL_CLASS_LABELS[2])}
-                      </span>
-                      <span
-                        className={`overview-patient-label ${getPatientClassName(summary?.true_label)}`}
-                        title={summary?.true_label ?? undefined}
-                      >
-                        {formatCompactClassLabel(summary?.true_label)}
-                      </span>
-                      <span
-                        className={`overview-patient-label ${getPatientClassName(summary?.predicted_label)}`}
-                        title={summary?.predicted_label ?? undefined}
-                      >
-                        {formatCompactClassLabel(summary?.predicted_label)}
-                      </span>
-                      <span className="overview-patient-confidence">{formatMeanConfidence(summary)}</span>
-                      {summary ? (
-                        <span className="overview-patient-distribution" style={getClassDistributionStyle(summary)} />
-                      ) : null}
-                    </div>
-                    <OverviewDrillButton label={`Open workspace for ${subject.id}`} onClick={() => openWorkspace(subject)} />
-                  </div>
-                );
-              })}
-              {!isLoadingSubjects && selectedDatasetId && subjects.length === 0 ? (
-                <div className="overview-empty-state">No patients found for this dataset.</div>
-              ) : null}
-            </div>
-          )}
-        </div>
-      </aside>
+      <DatasetDirectory
+        datasets={datasets}
+        subjects={subjects}
+        selectedDatasetId={selectedDatasetId}
+        directoryLevel={directoryLevel}
+        isLoadingDatasets={isLoadingDatasets}
+        isLoadingSubjects={isLoadingSubjects}
+        predictionSummariesBySubject={predictionSummariesBySubject}
+        hoveredSubjectId={hoveredSubjectId}
+        selectedSubjectId={selectedSubjectId}
+        focusSubjectId={focusSubjectId}
+        focusDatasetId={focusDatasetId}
+        onSelectDataset={selectDataset}
+        onEnterPatientSelection={enterPatientSelection}
+        onBackToDatasets={backToDatasets}
+        onOpenWorkspace={openWorkspace}
+        onHoveredSubjectIdChange={setHoveredSubjectId}
+        onSelectedSubjectIdChange={setSelectedSubjectId}
+        onFocusSubjectHandled={() => setFocusSubjectId(null)}
+        onFocusDatasetHandled={() => setFocusDatasetId(null)}
+      />
 
       <div className="overview-content" aria-label="Dataset overview">
-        {error ? <div className="overview-error">{error}</div> : null}
+        <StatusOverlay message={error} />
 
         <div className="overview-placeholder-grid">
-          <section className="overview-placeholder-card overview-dataset-summary-card">
-            <p className="overview-kicker">Dataset Summary</p>
-            <h3>{selectedDataset?.name || selectedDataset?.id || "Dataset summary"}</h3>
-            {selectedDataset ? (
-              <dl className="overview-metrics overview-metrics--summary">
-                <div>
-                  <dt>Dataset ID</dt>
-                  <dd>{selectedDataset.id}</dd>
-                </div>
-                <div>
-                  <dt>Patients</dt>
-                  <dd>{selectedDataset.subject_count}</dd>
-                </div>
-                <div>
-                  <dt>Sources</dt>
-                  <dd>{selectedDataset.sources.join(", ") || "None"}</dd>
-                </div>
-              </dl>
-            ) : null}
-            <p>TODO: Reserved for cohort-level distributions, label counts, and signal quality metrics.</p>
-          </section>
+          <DatasetSummaryCard
+            dataset={selectedDataset}
+            subjects={subjects}
+            cacheStatus={cacheStatus}
+            isLoadingSubjects={isLoadingSubjects}
+          />
 
-          <section className="overview-placeholder-card overview-placeholder-card--wide">
-            <p className="overview-kicker">Patient embedding</p>
-            <h3>Activation scatterplot</h3>
-            <p>
-              TODO: Reserved for a future embedding of last-layer activations. Selecting a patient card can highlight the
-              matching datapoint here.
-            </p>
-          </section>
+          <PatientEmbeddingScatterplot
+            embeddings={patientEmbeddings}
+            isLoading={isLoadingEmbeddings}
+            error={embeddingError}
+            highlightedSubjectId={highlightedSubjectId}
+            onOpenSubject={openWorkspaceBySubjectId}
+          />
 
-          <section className="overview-placeholder-card overview-model-card">
-            <div className="overview-model-card-header">
-              <div>
-                <p className="overview-kicker">Model card</p>
-                <h3>xEEGNet v1</h3>
-              </div>
-              <button
-                type="button"
-                className="overview-model-config-button"
-                title="Model settings and metadata panel"
-                aria-label="Open model settings and metadata panel"
-              >
-                {"\u2699"}
-              </button>
-            </div>
-
-            <dl className="overview-model-details">
-              <div>
-                <dt>API name</dt>
-                <dd>{DEFAULT_MODEL_NAME}</dd>
-              </div>
-              <div>
-                <dt>Architecture</dt>
-                <dd>xEEGNet</dd>
-              </div>
-              <div>
-                <dt>Input</dt>
-                <dd>19 channels, 4s windows, 125 Hz</dd>
-              </div>
-              <div>
-                <dt>Classes</dt>
-                <dd>Healthy, Alzheimer, FTD</dd>
-              </div>
-            </dl>
-
-            <div className="overview-model-cache">
-              <div className="overview-model-cache-toolbar">
-                <div>
-                  <p className="overview-model-cache-label">Prediction cache</p>
-                  <span>{getCacheSummary(cacheStatus, cacheProgress)}</span>
-                </div>
-                <div className="overview-model-cache-actions">
-                  <button
-                    type="button"
-                    className="overview-model-compute-button"
-                    onClick={startPredictionCacheJob}
-                    disabled={!selectedDatasetId || isStartingCacheJob || isCacheJobRunning(cacheProgress)}
-                  >
-                    Compute all
-                  </button>
-                  <button
-                    type="button"
-                    className="overview-model-delete-button"
-                    onClick={deletePredictionCache}
-                    disabled={
-                      !selectedDatasetId ||
-                      isDeletingCache ||
-                      isCacheJobRunning(cacheProgress) ||
-                      cacheStatus?.status === "missing"
-                    }
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-              {isCacheJobRunning(cacheProgress) ? (
-                <PredictionCacheProgressBar progress={cacheProgress} />
-              ) : null}
-              {cacheError ? <p className="overview-model-cache-error">{cacheError}</p> : null}
-            </div>
-          </section>
+          <ModelCard
+            modelInfo={modelInfo}
+            modelInfoError={modelInfoError}
+            selectedDatasetId={selectedDatasetId}
+            cacheStatus={cacheStatus}
+            cacheProgress={cacheProgress}
+            cacheError={cacheError}
+            isStartingCacheJob={isStartingCacheJob}
+            isDeletingCache={isDeletingCache}
+            onStartPredictionCacheJob={startPredictionCacheJob}
+            onDeletePredictionCache={deletePredictionCache}
+          />
         </div>
       </div>
     </section>
   );
-}
-
-interface OverviewDrillButtonProps {
-  label: string;
-  onClick: () => void;
-}
-
-function OverviewDrillButton({ label, onClick }: OverviewDrillButtonProps) {
-  return (
-    <button type="button" className="overview-drill-button" aria-label={label} onClick={onClick}>
-      <span aria-hidden="true" />
-    </button>
-  );
-}
-
-interface PredictionCacheProgressBarProps {
-  progress: ModelPredictionCacheProgress;
-}
-
-function PredictionCacheProgressBar({ progress }: PredictionCacheProgressBarProps) {
-  const total = progress.total || 0;
-  const done = progress.done;
-  const percent = total > 0 ? Math.max(0, Math.min(100, (done / total) * 100)) : 0;
-  const label = progress.current_subject_id ?? progress.message ?? "prediction-cache";
-
-  return (
-    <div className="overview-model-progress-row">
-      <span className="overview-model-progress-label">{label}</span>
-      <div
-        className="overview-model-progress"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(percent)}
-        aria-label="Prediction cache progress"
-      >
-        <div className="overview-model-progress-fill" style={{ width: `${percent}%` }} />
-      </div>
-      <span className="overview-model-progress-count">
-        {done}/{total || "?"}
-      </span>
-    </div>
-  );
-}
-
-function isCacheJobRunning(progress: ModelPredictionCacheProgress | null): boolean {
-  return progress?.status === "queued" || progress?.status === "running";
-}
-
-function getCacheSummary(
-  status: ModelPredictionCacheStatus | null,
-  progress: ModelPredictionCacheProgress | null,
-): string {
-  if (progress && isCacheJobRunning(progress)) {
-    return `${progress.done}/${progress.total || "?"} predicted - ${progress.failed} failed`;
-  }
-
-  if (progress?.status === "completed") {
-    return `${progress.done}/${progress.total} predicted - ${progress.failed} failed`;
-  }
-
-  if (!status) {
-    return "Prediction status unavailable";
-  }
-
-  if (status.status === "complete") {
-    return `${status.completed_subjects}/${status.total_subjects} predictions ready`;
-  }
-
-  if (status.status === "partial") {
-    return `${status.completed_subjects}/${status.total_subjects} predictions ready - ${status.failed_subjects} failed`;
-  }
-
-  return `No predictions cached - ${status.total_subjects} patients`;
-}
-
-function formatMeanConfidence(summary: ModelPredictionSummary | null): string {
-  return summary?.mean_confidence === null || summary?.mean_confidence === undefined
-    ? "--"
-    : `${Math.round(summary.mean_confidence * 100)}%`;
-}
-
-function isPredictionMismatch(summary: ModelPredictionSummary | null): boolean {
-  return Boolean(summary?.true_label && summary.predicted_label && summary.true_label !== summary.predicted_label);
-}
-
-function getClassWindowCount(summary: ModelPredictionSummary | null, classLabel: string): string {
-  if (!summary) {
-    return "--";
-  }
-
-  return String(summary.windows_per_class.find((entry) => entry.class_label === classLabel)?.count ?? 0);
-}
-
-function getClassDistributionStyle(summary: ModelPredictionSummary): CSSProperties {
-  const healthy = getClassWindowCountNumber(summary, MODEL_CLASS_LABELS[0]);
-  const alzheimer = getClassWindowCountNumber(summary, MODEL_CLASS_LABELS[1]);
-  const ftd = getClassWindowCountNumber(summary, MODEL_CLASS_LABELS[2]);
-  const total = Math.max(1, healthy + alzheimer + ftd);
-  const healthyStop = (healthy / total) * 100;
-  const alzheimerStop = healthyStop + (alzheimer / total) * 100;
-
-  return {
-    background: `linear-gradient(90deg,
-      ${CLASS_COLORS.distribution.Healthy} 0%,
-      ${CLASS_COLORS.distribution.Healthy} ${healthyStop}%,
-      ${CLASS_COLORS.distribution.Alzheimer} ${healthyStop}%,
-      ${CLASS_COLORS.distribution.Alzheimer} ${alzheimerStop}%,
-      ${CLASS_COLORS.distribution["Frontotemporal Dementia"]} ${alzheimerStop}%,
-      ${CLASS_COLORS.distribution["Frontotemporal Dementia"]} 100%)`,
-  };
-}
-
-function getClassWindowCountNumber(summary: ModelPredictionSummary, classLabel: string): number {
-  return summary.windows_per_class.find((entry) => entry.class_label === classLabel)?.count ?? 0;
-}
-
-function getDirectoryStatus(
-  directoryLevel: DirectoryLevel,
-  datasetCount: number,
-  subjectCount: number,
-  isLoadingDatasets: boolean,
-  isLoadingSubjects: boolean,
-): string {
-  if (directoryLevel === "patients") {
-    return isLoadingSubjects ? "Loading patients" : `${subjectCount} patients`;
-  }
-
-  return isLoadingDatasets ? "Loading datasets" : `${datasetCount} datasets`;
-}
-
-function getOverviewError(error: unknown, fallback: string): string {
-  if (error instanceof Error) {
-    return `${fallback} ${error.message}`;
-  }
-
-  return fallback;
 }

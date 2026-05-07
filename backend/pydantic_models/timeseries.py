@@ -21,6 +21,7 @@ class TimeseriesDatasetListResponse(BaseModel):
 class TimeseriesSubjectInfo(BaseModel):
     id: str
     sources: List[TimeseriesSource]
+    subject_label: Optional[str] = None
 
 
 class TimeseriesSubjectListResponse(BaseModel):

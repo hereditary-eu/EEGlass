@@ -32,6 +32,7 @@ export interface TimeseriesDatasetInfo {
 export interface TimeseriesSubjectInfo {
   id: string;
   sources: TimeseriesSource[];
+  subject_label?: string | null;
 }
 
 export interface TimeseriesChannelMetadata {
@@ -94,6 +95,15 @@ export interface ModelInferenceResponse {
   predictions: WindowPrediction[];
 }
 
+export type ModelMetadataValue = string | number | boolean | string[] | number[];
+
+export interface ModelInfoResponse {
+  name: string;
+  display_name: string;
+  architecture: string;
+  metadata: Record<string, ModelMetadataValue>;
+}
+
 export interface ModelPredictionCacheJobResponse {
   job_id: string;
   dataset_id: string;
@@ -144,6 +154,37 @@ export interface ModelPredictionCacheStatus {
   subject_summaries: ModelPredictionSummary[];
   manifest_path: string;
   updated_at?: string | null;
+}
+
+export interface ModelPatientEmbeddingPoint {
+  subject_id: string;
+  x: number;
+  y: number;
+  true_label?: string | null;
+  predicted_label?: string | null;
+  mean_confidence?: number | null;
+  total_windows: number;
+}
+
+export interface ModelPatientEmbeddingReduction {
+  method: "pca";
+  status: "ok" | "insufficient_data";
+  source_dimension: number;
+  output_dimension: number;
+  explained_variance_ratio: number[];
+}
+
+export interface ModelPatientEmbeddingsResponse {
+  dataset_id: string;
+  model_name: string;
+  source: TimeseriesSource;
+  checkpoint_signature: string;
+  checkpoint_key: string;
+  preprocessing_version: string;
+  embedding_layer: string;
+  embedding_label: string;
+  reduction: ModelPatientEmbeddingReduction;
+  points: ModelPatientEmbeddingPoint[];
 }
 
 export interface ModelClassEvidenceRequest {

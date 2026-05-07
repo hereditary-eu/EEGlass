@@ -43,6 +43,7 @@ function buildWebSocketUrl(path: string): string {
 
 export const API_ROUTES = {
   model: {
+    info: (modelName: string = DEFAULT_MODEL_NAME) => buildApiUrl(`/models/${encodeURIComponent(modelName)}`),
     infer: (modelName: string = DEFAULT_MODEL_NAME) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/infer`),
     classEvidence: (modelName: string = DEFAULT_MODEL_NAME) =>
       buildApiUrl(`/models/${encodeURIComponent(modelName)}/class-evidence`),
@@ -54,6 +55,8 @@ export const API_ROUTES = {
       buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache/jobs`),
     predictionCacheStatus: (datasetId: string, modelName: string = DEFAULT_MODEL_NAME) =>
       buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache`),
+    patientEmbeddings: (datasetId: string, modelName: string = DEFAULT_MODEL_NAME) =>
+      buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/patient-embeddings`),
     subjectPredictions: (datasetId: string, subjectId: string, modelName: string = DEFAULT_MODEL_NAME) =>
       buildApiUrl(
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/predictions`,
