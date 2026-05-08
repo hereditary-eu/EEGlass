@@ -265,7 +265,7 @@ async def watch_prediction_cache_job(websocket: WebSocket, job_id: str, model_na
                 )
                 return
             await websocket.send_json(payload)
-    except (WebSocketDisconnect, ClientDisconnected):
+    except WebSocketDisconnect, ClientDisconnected:
         return
 
 

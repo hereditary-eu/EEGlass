@@ -578,7 +578,9 @@ class ModelService:
 
         subject_data = SubjectPreprocessingService.get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
         if include_penultimate_embedding:
-            probabilities, penultimate_embeddings = ModelRuntime.run_inference_with_embeddings(model_spec, subject_data.windows)
+            probabilities, penultimate_embeddings = ModelRuntime.run_inference_with_embeddings(
+                model_spec, subject_data.windows
+            )
         else:
             probabilities = ModelRuntime.run_inference(model_spec, subject_data.windows)
             penultimate_embeddings = np.empty((0, 0), dtype=float)

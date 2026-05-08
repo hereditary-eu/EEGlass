@@ -194,11 +194,8 @@ function EvidenceClassRow({
         const contribution = band.class_contributions.find((item) => item.class_label === classLabel);
         const rawContributionValue = contribution?.contribution ?? 0;
         const contributionValue =
-          displayMode === "within-band"
-            ? getWithinBandContribution(rawContributionValue, band)
-            : rawContributionValue;
-        const colorScale =
-          displayMode === "within-band" ? getMaxAbsWithinBandContribution(band) : maxAbsContribution;
+          displayMode === "within-band" ? getWithinBandContribution(rawContributionValue, band) : rawContributionValue;
+        const colorScale = displayMode === "within-band" ? getMaxAbsWithinBandContribution(band) : maxAbsContribution;
 
         return (
           <div

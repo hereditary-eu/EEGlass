@@ -2,7 +2,12 @@ import { useEffect } from "react";
 import type { KeyboardEvent } from "react";
 
 import { DrillButton } from "../../components/ui";
-import type { ModelInfoResponse, ModelPredictionSummary, TimeseriesDatasetInfo, TimeseriesSubjectInfo } from "../../types";
+import type {
+  ModelInfoResponse,
+  ModelPredictionSummary,
+  TimeseriesDatasetInfo,
+  TimeseriesSubjectInfo,
+} from "../../types";
 import { PatientList } from "./PatientList";
 import type { DirectoryLevel } from "./overviewUtils";
 import { getDirectoryStatus } from "./overviewUtils";
@@ -55,7 +60,11 @@ export function DatasetDirectory({
   onFocusDatasetHandled,
 }: DatasetDirectoryProps) {
   useEffect(() => {
-    if (directoryLevel !== "datasets" || !focusDatasetId || !datasets.some((dataset) => dataset.id === focusDatasetId)) {
+    if (
+      directoryLevel !== "datasets" ||
+      !focusDatasetId ||
+      !datasets.some((dataset) => dataset.id === focusDatasetId)
+    ) {
       return;
     }
 
@@ -153,7 +162,10 @@ export function DatasetDirectory({
                   <span>{dataset.id}</span>
                   <small>{dataset.subject_count} patients</small>
                 </button>
-                <DrillButton label={`Open patients in ${dataset.id}`} onClick={() => onEnterPatientSelection(dataset.id)} />
+                <DrillButton
+                  label={`Open patients in ${dataset.id}`}
+                  onClick={() => onEnterPatientSelection(dataset.id)}
+                />
               </div>
             ))}
             {!isLoadingDatasets && datasets.length === 0 ? (
@@ -187,5 +199,12 @@ function getDatasetRowId(datasetId: string): string {
 }
 
 function isDatasetNavigationKey(key: string): key is DatasetNavigationKey {
-  return key === "ArrowDown" || key === "ArrowUp" || key === "ArrowRight" || key === "ArrowLeft" || key === "Home" || key === "End";
+  return (
+    key === "ArrowDown" ||
+    key === "ArrowUp" ||
+    key === "ArrowRight" ||
+    key === "ArrowLeft" ||
+    key === "Home" ||
+    key === "End"
+  );
 }

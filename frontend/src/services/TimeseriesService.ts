@@ -117,9 +117,12 @@ export class TimeseriesService {
     modelName?: string,
   ): Promise<ModelPredictionCacheJobResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
-    return ApiClient.post<ModelPredictionCacheJobResponse>(API_ROUTES.model.startPredictionCacheJob(datasetId, resolvedModelName), {
-      source,
-    });
+    return ApiClient.post<ModelPredictionCacheJobResponse>(
+      API_ROUTES.model.startPredictionCacheJob(datasetId, resolvedModelName),
+      {
+        source,
+      },
+    );
   }
 
   static async getPredictionCacheStatus(
@@ -185,9 +188,12 @@ export class TimeseriesService {
     modelName?: string,
   ): Promise<ModelInferenceResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
-    return ApiClient.post<ModelInferenceResponse>(API_ROUTES.model.subjectPredictions(datasetId, subjectId, resolvedModelName), {
-      source,
-    });
+    return ApiClient.post<ModelInferenceResponse>(
+      API_ROUTES.model.subjectPredictions(datasetId, subjectId, resolvedModelName),
+      {
+        source,
+      },
+    );
   }
 
   static createPredictionCacheProgressSocket(jobId: string, modelName: string): WebSocket {

@@ -1,7 +1,12 @@
 import type { CSSProperties } from "react";
 
 import { formatCompactClassLabel, getAnnotationClassColor, getDistributionClassColor } from "../../constants/eegModel";
-import type { ModelClassPresentation, ModelPredictionCacheProgress, ModelPredictionCacheStatus, ModelPredictionSummary } from "../../types";
+import type {
+  ModelClassPresentation,
+  ModelPredictionCacheProgress,
+  ModelPredictionCacheStatus,
+  ModelPredictionSummary,
+} from "../../types";
 
 export type DirectoryLevel = "datasets" | "patients";
 
@@ -66,7 +71,10 @@ export function getClassDistributionStyle(
     color: getDistributionClassColor(modelClass.label, modelClasses),
     count: getClassWindowCountNumber(summary, modelClass.label),
   }));
-  const total = Math.max(1, counts.reduce((sum, item) => sum + item.count, 0));
+  const total = Math.max(
+    1,
+    counts.reduce((sum, item) => sum + item.count, 0),
+  );
   let previousStop = 0;
   const stops = counts.flatMap((item) => {
     const nextStop = previousStop + (item.count / total) * 100;

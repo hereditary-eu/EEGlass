@@ -42,26 +42,33 @@ export const API_ROUTES = {
     defaultInfo: buildApiUrl("/models/default"),
     info: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}`),
     infer: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/infer`),
-    classEvidence: (modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/class-evidence`),
-    bandPower: (modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/band-power`),
-    scalpTopologies: (modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/scalp-topologies`),
+    classEvidence: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/class-evidence`),
+    bandPower: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/band-power`),
+    scalpTopologies: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/scalp-topologies`),
     startPredictionCacheJob: (datasetId: string, modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache/jobs`),
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache/jobs`,
+      ),
     activePredictionCacheJob: (datasetId: string, modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache/jobs/active`),
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache/jobs/active`,
+      ),
     predictionCacheStatus: (datasetId: string, modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache`),
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache`,
+      ),
     patientEmbeddings: (datasetId: string, modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/patient-embeddings`),
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/patient-embeddings`,
+      ),
     subjectPredictions: (datasetId: string, subjectId: string, modelName: string) =>
       buildApiUrl(
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/predictions`,
       ),
     predictionCacheProgressSocket: (jobId: string, modelName: string) =>
-      buildWebSocketUrl(`/models/${encodeURIComponent(modelName)}/prediction-cache/jobs/${encodeURIComponent(jobId)}/progress`),
+      buildWebSocketUrl(
+        `/models/${encodeURIComponent(modelName)}/prediction-cache/jobs/${encodeURIComponent(jobId)}/progress`,
+      ),
   },
 
   timeseries: {

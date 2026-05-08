@@ -66,7 +66,9 @@ def subject_path(
     subject_id: str,
     source: TimeseriesSource,
 ) -> Path:
-    return cache_dir(dataset_id, model_name, checkpoint_key_value) / "subjects" / f"{subject_id}.{source}.predictions.json"
+    return (
+        cache_dir(dataset_id, model_name, checkpoint_key_value) / "subjects" / f"{subject_id}.{source}.predictions.json"
+    )
 
 
 def read_manifest(
@@ -94,7 +96,7 @@ def read_json(path: Path) -> dict[str, Any] | None:
     try:
         with path.open("r", encoding="utf-8") as file:
             data = json.load(file)
-    except (OSError, json.JSONDecodeError):
+    except OSError, json.JSONDecodeError:
         return None
     return data if isinstance(data, dict) else None
 
@@ -446,7 +448,9 @@ class PredictionCacheService:
                 points=[],
             )
 
-        coordinates, explained_variance_ratio, reduction_status = reduce_embeddings_pca(np.asarray(vectors, dtype=float))
+        coordinates, explained_variance_ratio, reduction_status = reduce_embeddings_pca(
+            np.asarray(vectors, dtype=float)
+        )
         points = [
             ModelPatientEmbeddingPoint(
                 subject_id=summary.subject_id,
@@ -590,7 +594,9 @@ class PredictionCacheService:
             job.message = "Starting predictions"
             await asyncio.sleep(0)
 
-            manifest = cls._base_manifest(job.dataset_id, job.model_name, job.source, checkpoint_signature, checkpoint_key)
+            manifest = cls._base_manifest(
+                job.dataset_id, job.model_name, job.source, checkpoint_signature, checkpoint_key
+            )
             existing_manifest = cls._read_manifest(job.dataset_id, job.model_name, checkpoint_key, job.source)
             if cls._is_manifest_valid(
                 existing_manifest,
@@ -617,7 +623,9 @@ class PredictionCacheService:
                     cls._write_manifest(manifest, job.dataset_id, job.model_name, checkpoint_key, job.source)
                     continue
 
-                cached = cls._read_prediction_artifact(job.dataset_id, job.model_name, checkpoint_key, subject.id, job.source)
+                cached = cls._read_prediction_artifact(
+                    job.dataset_id, job.model_name, checkpoint_key, subject.id, job.source
+                )
                 if cls._is_artifact_valid(
                     cached,
                     dataset_id=job.dataset_id,
@@ -886,7 +894,9 @@ class PredictionCacheService:
     ) -> None:
         manifest = cls._base_manifest(dataset_id, model_name, source, checkpoint_signature, checkpoint_key)
         existing_manifest = cls._read_manifest(dataset_id, model_name, checkpoint_key, source)
-        if cls._is_manifest_valid(existing_manifest, dataset_id, model_name, source, checkpoint_signature, checkpoint_key):
+        if cls._is_manifest_valid(
+            existing_manifest, dataset_id, model_name, source, checkpoint_signature, checkpoint_key
+        ):
             manifest["completed_subjects"] = list(existing_manifest.get("completed_subjects", []))
             manifest["failed_subjects"] = dict(existing_manifest.get("failed_subjects", {}))
 

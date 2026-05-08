@@ -1,6 +1,14 @@
 import type { ModelClassPresentation, TimeseriesBandFilter } from "../types";
 
-export const MODEL_BANDS = ["delta", "theta", "alpha", "beta1", "beta2", "beta3", "gamma"] as const satisfies readonly TimeseriesBandFilter[];
+export const MODEL_BANDS = [
+  "delta",
+  "theta",
+  "alpha",
+  "beta1",
+  "beta2",
+  "beta3",
+  "gamma",
+] as const satisfies readonly TimeseriesBandFilter[];
 
 export const MODEL_BAND_LABELS: Record<TimeseriesBandFilter, string> = {
   delta: "delta",

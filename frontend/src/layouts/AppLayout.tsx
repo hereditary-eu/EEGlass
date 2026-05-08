@@ -3,7 +3,11 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 export function AppLayout() {
   const { pathname } = useLocation();
   const isWorkspaceRoute = pathname.startsWith("/workspace");
-  const pageTitle = isWorkspaceRoute ? "EEG Workspace" : pathname === "/components" ? "Retained Components" : "Overview";
+  const pageTitle = isWorkspaceRoute
+    ? "EEG Workspace"
+    : pathname === "/components"
+      ? "Retained Components"
+      : "Overview";
 
   return (
     <main className={isWorkspaceRoute ? "app-shell app-shell--tool" : "app-shell"}>

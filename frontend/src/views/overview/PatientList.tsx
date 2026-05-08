@@ -184,7 +184,10 @@ export function PatientList({
               />
               <span className="overview-patient-confidence">{formatMeanConfidence(summary)}</span>
               {summary && modelClasses.length ? (
-                <span className="overview-patient-distribution" style={getClassDistributionStyle(summary, modelClasses)} />
+                <span
+                  className="overview-patient-distribution"
+                  style={getClassDistributionStyle(summary, modelClasses)}
+                />
               ) : null}
             </CompactGridSelectorRow>
             <DrillButton label={`Open workspace for ${subject.id}`} onClick={() => onOpenWorkspace(subject)} />
@@ -203,5 +206,12 @@ function getPatientRowId(subjectId: string): string {
 }
 
 function isPatientNavigationKey(key: string): key is PatientNavigationKey {
-  return key === "ArrowDown" || key === "ArrowUp" || key === "ArrowRight" || key === "ArrowLeft" || key === "Home" || key === "End";
+  return (
+    key === "ArrowDown" ||
+    key === "ArrowUp" ||
+    key === "ArrowRight" ||
+    key === "ArrowLeft" ||
+    key === "Home" ||
+    key === "End"
+  );
 }

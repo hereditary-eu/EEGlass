@@ -140,19 +140,18 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     inferenceError,
     resetPredictions,
     handleComputeInference,
-  } =
-    useTimeseriesPredictions({
-      datasetId,
-      subjectId,
-      source,
-      signal,
-      activeChannels,
-      isLoadingSubjects,
-      isSelectedSubjectReady,
-      setLockedPredictionWindowIndex,
-      clearSelectedPredictionWindow,
-      onPredictionReset: resetBandPower,
-    });
+  } = useTimeseriesPredictions({
+    datasetId,
+    subjectId,
+    source,
+    signal,
+    activeChannels,
+    isLoadingSubjects,
+    isSelectedSubjectReady,
+    setLockedPredictionWindowIndex,
+    clearSelectedPredictionWindow,
+    onPredictionReset: resetBandPower,
+  });
 
   const { selectedPredictionWindowIndex, selectedPredictionWindow } = useSelectedTimeseriesWindow({
     inferenceResult,

@@ -72,7 +72,13 @@ export function PatientEmbeddingScatterplot({
           predictedColor: predictedColors.stroke,
           pointSize: isSubjectHighlighted ? 210 : isLegendHighlighted ? 132 : 88,
           opacity: isMuted ? 0.18 : isHighlighted ? 1 : 0.72,
-          strokeWidth: isSubjectHighlighted ? 3.5 : isLegendHighlighted ? 2.8 : point.true_label !== point.predicted_label ? 2.2 : 1.4,
+          strokeWidth: isSubjectHighlighted
+            ? 3.5
+            : isLegendHighlighted
+              ? 2.8
+              : point.true_label !== point.predicted_label
+                ? 2.2
+                : 1.4,
           meanConfidence: point.mean_confidence ?? null,
           meanConfidencePercent: point.mean_confidence == null ? null : point.mean_confidence * 100,
           totalWindows: point.total_windows,
@@ -205,10 +211,9 @@ export function PatientEmbeddingScatterplot({
     };
   }, [error, isLoading, onOpenSubject, plotHeight, values]);
 
-  const emptyMessage =
-    !modelInfo
-      ? "Model metadata unavailable."
-      : embeddings?.reduction.status === "insufficient_data"
+  const emptyMessage = !modelInfo
+    ? "Model metadata unavailable."
+    : embeddings?.reduction.status === "insufficient_data"
       ? "Need at least two cached patient embeddings."
       : "Compute prediction cache to populate patient embeddings.";
   const highlightLegendLabel = (kind: LegendHighlightTarget["kind"], label: string) => {
@@ -234,7 +239,9 @@ export function PatientEmbeddingScatterplot({
         <div className="overview-embedding-plot" ref={containerRef} />
         {isLoading ? <div className="overview-embedding-overlay">Loading embeddings...</div> : null}
         {error ? <div className="overview-embedding-overlay overview-embedding-overlay--error">{error}</div> : null}
-        {!isLoading && !error && !values.length ? <div className="overview-embedding-overlay">{emptyMessage}</div> : null}
+        {!isLoading && !error && !values.length ? (
+          <div className="overview-embedding-overlay">{emptyMessage}</div>
+        ) : null}
       </div>
 
       {legendClassLabels.length ? (
