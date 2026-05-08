@@ -150,7 +150,11 @@
 
 .classification-evidence-class {
   justify-items: start;
-  padding: 0 0.45rem;
+  padding: 0 0.28rem;
+  overflow-wrap: anywhere;
+  text-align: left;
+  line-height: 1.15;
+  white-space: normal;
 }
 
 .classification-evidence-cell {

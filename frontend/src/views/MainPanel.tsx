@@ -67,6 +67,7 @@ export function MainPanel() {
             subjectId={ts.subjectId}
             source={ts.source}
             windowIndex={ts.lockedPredictionWindowIndex}
+            modelClasses={ts.modelInfo?.classes ?? []}
           />
         </article>
       </div>

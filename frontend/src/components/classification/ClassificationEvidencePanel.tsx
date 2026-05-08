@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 
 import { formatCompactClassLabel } from "../../constants/eegModel";
 import { TimeseriesService } from "../../services/TimeseriesService";
-import type { ModelClassEvidenceResponse, TimeseriesSource } from "../../types";
+import type { ModelClassEvidenceResponse, ModelClassPresentation, TimeseriesSource } from "../../types";
 import "./ClassificationEvidencePanel.css";
 
 interface ClassificationEvidencePanelProps {
@@ -11,19 +11,21 @@ interface ClassificationEvidencePanelProps {
   subjectId: string;
   source: TimeseriesSource;
   windowIndex: number | null;
+  modelClasses?: ModelClassPresentation[];
 }
 
-type EvidenceDisplayMode = "relative" | "raw";
+type EvidenceDisplayMode = "within-band" | "raw";
 
 export function ClassificationEvidencePanel({
   datasetId,
   subjectId,
   source,
   windowIndex,
+  modelClasses = [],
 }: ClassificationEvidencePanelProps) {
   const cacheRef = useRef(new Map<string, ModelClassEvidenceResponse>());
   const [evidence, setEvidence] = useState<ModelClassEvidenceResponse | null>(null);
-  const [displayMode, setDisplayMode] = useState<EvidenceDisplayMode>("relative");
+  const [displayMode, setDisplayMode] = useState<EvidenceDisplayMode>("within-band");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,10 +100,10 @@ export function ClassificationEvidencePanel({
           <div className="classification-evidence-mode-toggle" aria-label="Evidence value mode">
             <button
               type="button"
-              className={`classification-evidence-mode-button${displayMode === "relative" ? " classification-evidence-mode-button--active" : ""}`}
-              onClick={() => setDisplayMode("relative")}
+              className={`classification-evidence-mode-button${displayMode === "within-band" ? " classification-evidence-mode-button--active" : ""}`}
+              onClick={() => setDisplayMode("within-band")}
             >
-              rel
+              band
             </button>
             <button
               type="button"
@@ -141,6 +143,7 @@ export function ClassificationEvidencePanel({
                   evidence={evidence}
                   displayMode={displayMode}
                   maxAbsContribution={maxAbsContribution}
+                  modelClasses={modelClasses}
                 />
               ))}
             </div>
@@ -149,7 +152,7 @@ export function ClassificationEvidencePanel({
               <span>
                 Window {evidence.window_index + 1}: {evidence.start_time.toFixed(1)}s-{evidence.end_time.toFixed(1)}s
               </span>
-              <span>{displayMode === "relative" ? "|contrib| - column mean" : evidence.unit_label}</span>
+              <span>{displayMode === "within-band" ? "|contrib| - band mean" : evidence.unit_label}</span>
             </div>
           </>
         ) : null}
@@ -171,26 +174,31 @@ function EvidenceClassRow({
   evidence,
   displayMode,
   maxAbsContribution,
+  modelClasses,
 }: {
   classLabel: string;
   evidence: ModelClassEvidenceResponse;
   displayMode: EvidenceDisplayMode;
   maxAbsContribution: number;
+  modelClasses: ModelClassPresentation[];
 }) {
   return (
     <>
       <div
         className={`classification-evidence-class${classLabel === evidence.predicted_label ? " classification-evidence-class--predicted" : ""}`}
+        title={classLabel}
       >
-        {formatClassLabel(classLabel)}
+        {formatClassLabel(classLabel, modelClasses)}
       </div>
       {evidence.bands.map((band) => {
         const contribution = band.class_contributions.find((item) => item.class_label === classLabel);
         const rawContributionValue = contribution?.contribution ?? 0;
         const contributionValue =
-          displayMode === "relative" ? getRelativeBandContribution(rawContributionValue, band) : rawContributionValue;
+          displayMode === "within-band"
+            ? getWithinBandContribution(rawContributionValue, band)
+            : rawContributionValue;
         const colorScale =
-          displayMode === "relative" ? getMaxAbsRelativeBandContribution(band) : maxAbsContribution;
+          displayMode === "within-band" ? getMaxAbsWithinBandContribution(band) : maxAbsContribution;
 
         return (
           <div
@@ -198,7 +206,7 @@ function EvidenceClassRow({
             className={`classification-evidence-cell${classLabel === evidence.predicted_label ? " classification-evidence-cell--predicted" : ""}`}
             style={{ background: getEvidenceColor(contributionValue, colorScale) }}
             title={`${band.band} -> ${classLabel}: ${formatContribution(contributionValue)}${
-              displayMode === "relative" ? ` relative, raw ${rawContributionValue.toFixed(4)}` : ""
+              displayMode === "within-band" ? ` within-band, raw ${rawContributionValue.toFixed(4)}` : ""
             }`}
           >
             {formatContribution(contributionValue)}
@@ -209,14 +217,14 @@ function EvidenceClassRow({
   );
 }
 
-function getRelativeBandContribution(
+function getWithinBandContribution(
   contributionValue: number,
   band: ModelClassEvidenceResponse["bands"][number],
 ): number {
   return Math.abs(contributionValue) - getMeanAbsBandContribution(band);
 }
 
-function getMaxAbsRelativeBandContribution(band: ModelClassEvidenceResponse["bands"][number]): number {
+function getMaxAbsWithinBandContribution(band: ModelClassEvidenceResponse["bands"][number]): number {
   const meanAbsContribution = getMeanAbsBandContribution(band);
   return Math.max(
     ...band.class_contributions.map((contribution) =>
@@ -259,8 +267,8 @@ function formatContribution(value: number): string {
   return `${sign}${value.toFixed(2)}`;
 }
 
-function formatClassLabel(classLabel: string): string {
-  return formatCompactClassLabel(classLabel, null);
+function formatClassLabel(classLabel: string, modelClasses: ModelClassPresentation[]): string {
+  return formatCompactClassLabel(classLabel, modelClasses);
 }
 
 function getEvidenceErrorMessage(error: unknown): string {
