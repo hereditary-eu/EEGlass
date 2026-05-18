@@ -5,29 +5,9 @@ RUN apk add --no-cache ca-certificates unzip wget
 WORKDIR /app
 
 ENV DATASET_URL=https://cloud.tugraz.at/index.php/s/kDEwkJbSggxZW2c \
-    DATASET_STORAGE_DIR=/app/data/datasets
+    DATASET_STORAGE_DIR=/app/data/datasets \
+    UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE
 
-CMD set -eu; \
-    mkdir -p "$DATASET_STORAGE_DIR"; \
-    dataset_dirs="$(find "$DATASET_STORAGE_DIR" -mindepth 1 -maxdepth 1 -type d ! -name '.download.*' | head -n 1)"; \
-    if [ -f "$DATASET_STORAGE_DIR/.download-complete" ] && [ -n "$dataset_dirs" ]; then \
-        echo "Dataset volume already contains a completed dataset download; skipping download."; \
-        find "$DATASET_STORAGE_DIR" -mindepth 1 -maxdepth 1 -type d ! -name '.download.*' -print; \
-        exit 0; \
-    fi; \
-    rm -rf "$DATASET_STORAGE_DIR"/.download.*; \
-    work_dir="$(mktemp -d "$DATASET_STORAGE_DIR/.download.XXXXXX")"; \
-    trap 'rm -rf "$work_dir"' EXIT; \
-    echo "Downloading dataset zip from $DATASET_URL"; \
-    wget --progress=bar:force:noscroll -O "$work_dir/data.zip" "${DATASET_URL}/download" \
-        || wget --progress=bar:force:noscroll -O "$work_dir/data.zip" "$DATASET_URL"; \
-    mkdir "$work_dir/dataset"; \
-    unzip -q "$work_dir/data.zip" -d "$work_dir/dataset"; \
-    if [ -z "$(find "$work_dir/dataset" -mindepth 1 -maxdepth 1 -type d | head -n 1)" ]; then \
-        echo "Dataset zip must contain a top-level dataset folder." >&2; \
-        exit 1; \
-    fi; \
-    cp -a "$work_dir/dataset/." "$DATASET_STORAGE_DIR/"; \
-    touch "$DATASET_STORAGE_DIR/.download-complete"; \
-    echo "Dataset extracted into $DATASET_STORAGE_DIR:"; \
-    find "$DATASET_STORAGE_DIR" -mindepth 1 -maxdepth 1 -type d ! -name '.download.*' -print
+COPY backend/scripts/download-dataset.sh /usr/local/bin/download-dataset
+
+CMD ["sh", "/usr/local/bin/download-dataset"]

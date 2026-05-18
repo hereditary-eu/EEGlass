@@ -10,6 +10,8 @@ RUN apt-get update \
 RUN wget -O data.zip -nv "${DATASET_URL}/download" \
     || wget -O data.zip -nv "${DATASET_URL}"
 
+ENV UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE
+
 RUN mkdir dataset \
     && unzip -q data.zip -d dataset \
     && test -n "$(find dataset -mindepth 1 -maxdepth 1 -type d | head -n 1)"
