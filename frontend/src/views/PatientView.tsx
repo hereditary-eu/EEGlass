@@ -19,23 +19,37 @@ export function PatientView() {
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "ArrowLeft" || isEditableTarget(event.target)) {
+      if (isEditableTarget(event.target)) {
         return;
       }
 
-      event.preventDefault();
-      navigate("/", {
-        state: {
-          datasetId,
-          directoryLevel: "patients",
-          selectedSubjectId: subjectId,
-        },
-      });
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        navigate("/", {
+          state: {
+            datasetId,
+            directoryLevel: "patients",
+            selectedSubjectId: subjectId,
+          },
+        });
+        return;
+      }
+
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        const subjects = ts.subjects;
+        if (!subjects.length) return;
+        const currentIndex = subjects.findIndex((s) => s.id === subjectId);
+        if (currentIndex === -1) return;
+        event.preventDefault();
+        const direction = event.key === "ArrowDown" ? 1 : -1;
+        const nextIndex = (currentIndex + direction + subjects.length) % subjects.length;
+        navigate(`/datasets/${encodeURIComponent(datasetId)}/patients/${encodeURIComponent(subjects[nextIndex].id)}`);
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [datasetId, navigate, subjectId]);
+  }, [datasetId, navigate, subjectId, ts.subjects]);
 
   useEffect(() => {
     if (!datasetId || !subjectId) {
