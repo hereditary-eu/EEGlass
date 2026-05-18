@@ -1,0 +1,10 @@
+.git
+.ruff_cache
+.venv
+.vscode
+__pycache__
+node_modules
+dist
+data
+local
+paper

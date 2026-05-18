@@ -1,0 +1,30 @@
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates unzip wget
+
+WORKDIR /app
+
+ENV DATASET_URL=https://cloud.tugraz.at/index.php/s/kDEwkJbSggxZW2c \
+    DATASET_STORAGE_DIR=/app/data/datasets
+
+CMD set -eu; \
+    mkdir -p "$DATASET_STORAGE_DIR"; \
+    if [ -n "$(find "$DATASET_STORAGE_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)" ]; then \
+        echo "Dataset directory already contains a top-level dataset folder; skipping download."; \
+        find "$DATASET_STORAGE_DIR" -mindepth 1 -maxdepth 1 -type d -print; \
+        exit 0; \
+    fi; \
+    work_dir="$(mktemp -d)"; \
+    trap 'rm -rf "$work_dir"' EXIT; \
+    echo "Downloading dataset zip from $DATASET_URL"; \
+    wget --progress=bar:force:noscroll -O "$work_dir/data.zip" "${DATASET_URL}/download" \
+        || wget --progress=bar:force:noscroll -O "$work_dir/data.zip" "$DATASET_URL"; \
+    mkdir "$work_dir/dataset"; \
+    unzip -q "$work_dir/data.zip" -d "$work_dir/dataset"; \
+    if [ -z "$(find "$work_dir/dataset" -mindepth 1 -maxdepth 1 -type d | head -n 1)" ]; then \
+        echo "Dataset zip must contain a top-level dataset folder." >&2; \
+        exit 1; \
+    fi; \
+    cp -a "$work_dir/dataset/." "$DATASET_STORAGE_DIR/"; \
+    echo "Dataset extracted into $DATASET_STORAGE_DIR:"; \
+    find "$DATASET_STORAGE_DIR" -mindepth 1 -maxdepth 1 -type d -print

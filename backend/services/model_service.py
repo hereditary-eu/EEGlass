@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any, Literal, TypeVar
 
 import numpy as np
@@ -86,6 +87,17 @@ class ModelInferenceResult:
     response: ModelInferenceResponse
     mean_penultimate_embedding: list[float]
     penultimate_embeddings: list[list[float]]
+
+
+@dataclass(frozen=True)
+class BandPowerComputationPlan:
+    taper: np.ndarray
+    window_norm: float
+    freqs: np.ndarray
+    total_mask: np.ndarray
+    has_total_bins: bool
+    band_masks: tuple[np.ndarray, ...]
+    has_band_bins: tuple[bool, ...]
 
 
 class SubjectPreprocessingService:
@@ -353,26 +365,15 @@ def compute_band_power_response(
     source: TimeseriesSource,
     window_index: int,
 ) -> ModelBandPowerResponse:
-    window_data = subject_data.windows[window_index].astype(np.float64, copy=False)
-    window_data -= np.mean(window_data, axis=1, keepdims=True)
+    absolute_power, relative_power = compute_band_power_arrays(
+        subject_data.windows[window_index],
+        subject_data.sampling_frequency,
+    )
+    window_absolute_power = absolute_power[0]
+    window_relative_power = relative_power[0]
 
-    sample_count = window_data.shape[1]
-    if sample_count < 2:
-        raise ModelValidationError("Recording is too short to compute band power.")
-
-    window = np.hanning(sample_count)
-    window_norm = np.sum(window**2)
-    if window_norm <= 0:
-        raise ModelServiceError("Could not compute band power due to invalid window normalization.")
-
-    freqs = np.fft.rfftfreq(sample_count, d=1.0 / subject_data.sampling_frequency)
     channel_band_powers: list[ModelChannelBandPower] = []
-    for channel_name, channel_signal in zip(MODEL_CHANNELS, window_data, strict=True):
-        spectrum = np.fft.rfft(channel_signal * window)
-        channel_psd = (np.abs(spectrum) ** 2) / (subject_data.sampling_frequency * window_norm)
-        total_mask = (freqs >= MODEL_BANDS[0][1]) & (freqs <= MODEL_BANDS[-1][2])
-        total_power = float(trapezoid(channel_psd[total_mask], freqs[total_mask])) if np.any(total_mask) else 0.0
-        safe_total_power = total_power if total_power > 0 else 1.0
+    for channel_index, channel_name in enumerate(MODEL_CHANNELS):
         channel_band_powers.append(
             ModelChannelBandPower(
                 channel=channel_name,
@@ -381,10 +382,10 @@ def compute_band_power_response(
                         band=band_name,
                         start_hz=start_hz,
                         end_hz=end_hz,
-                        absolute_power=band_power,
-                        relative_power=band_power / safe_total_power,
+                        absolute_power=float(window_absolute_power[channel_index, band_index]),
+                        relative_power=float(window_relative_power[channel_index, band_index]),
                     )
-                    for band_name, start_hz, end_hz, band_power in iterate_band_powers(freqs, channel_psd)
+                    for band_index, (band_name, start_hz, end_hz) in enumerate(MODEL_BANDS)
                 ],
             )
         )
@@ -450,45 +451,82 @@ def compute_band_power_stats_response(
 
 
 def compute_subject_relative_band_power_db(subject_data: PreparedSubjectData) -> np.ndarray:
-    relative_powers = [
-        compute_window_relative_band_powers(window, subject_data.sampling_frequency)
-        for window in subject_data.windows
-    ]
-    if not relative_powers:
+    if subject_data.windows.size == 0:
         return np.empty((0, len(MODEL_CHANNELS), len(MODEL_BANDS)), dtype=np.float64)
 
-    relative_power = np.stack(relative_powers, axis=0)
+    _absolute_power, relative_power = compute_band_power_arrays(
+        subject_data.windows,
+        subject_data.sampling_frequency,
+    )
     return 10 * np.log10(np.maximum(relative_power, MIN_RELATIVE_POWER_FOR_DB))
 
 
 def compute_window_relative_band_powers(window: np.ndarray, sampling_frequency: float) -> np.ndarray:
-    window_data = window.astype(np.float64, copy=True)
-    window_data -= np.mean(window_data, axis=1, keepdims=True)
+    _absolute_power, relative_power = compute_band_power_arrays(window, sampling_frequency)
+    return relative_power[0]
 
-    sample_count = window_data.shape[1]
+
+def compute_band_power_arrays(windows: np.ndarray, sampling_frequency: float) -> tuple[np.ndarray, np.ndarray]:
+    window_data = np.array(windows, dtype=np.float64, copy=True)
+    if window_data.ndim == 2:
+        window_data = window_data[np.newaxis, :, :]
+    elif window_data.ndim != 3:
+        raise ModelValidationError(
+            "Expected EEG windows with shape (channels, samples) or (windows, channels, samples)."
+        )
+
+    if window_data.shape[1] != len(MODEL_CHANNELS):
+        raise ModelValidationError(f"Expected {len(MODEL_CHANNELS)} EEG channels, found {window_data.shape[1]}.")
+
+    plan = get_band_power_computation_plan(window_data.shape[-1], sampling_frequency)
+    window_data -= np.mean(window_data, axis=-1, keepdims=True)
+
+    spectrum = np.fft.rfft(window_data * plan.taper, axis=-1)
+    psd = (np.abs(spectrum) ** 2) / (sampling_frequency * plan.window_norm)
+
+    if plan.has_total_bins:
+        total_power = trapezoid(psd[..., plan.total_mask], plan.freqs[plan.total_mask], axis=-1)
+    else:
+        total_power = np.zeros(psd.shape[:2], dtype=np.float64)
+
+    absolute_power = np.empty((*psd.shape[:2], len(MODEL_BANDS)), dtype=np.float64)
+    for band_index, (band_mask, has_band_bins) in enumerate(zip(plan.band_masks, plan.has_band_bins, strict=True)):
+        if has_band_bins:
+            absolute_power[..., band_index] = trapezoid(psd[..., band_mask], plan.freqs[band_mask], axis=-1)
+        else:
+            absolute_power[..., band_index] = 0.0
+
+    safe_total_power = np.where(total_power > 0, total_power, 1.0)
+    relative_power = absolute_power / safe_total_power[..., np.newaxis]
+    return absolute_power, relative_power
+
+
+@lru_cache(maxsize=32)
+def get_band_power_computation_plan(sample_count: int, sampling_frequency: float) -> BandPowerComputationPlan:
     if sample_count < 2:
         raise ModelValidationError("Recording is too short to compute band power.")
 
     taper = np.hanning(sample_count)
-    window_norm = np.sum(taper**2)
+    window_norm = float(np.sum(taper**2))
     if window_norm <= 0:
         raise ModelServiceError("Could not compute band power due to invalid window normalization.")
 
     freqs = np.fft.rfftfreq(sample_count, d=1.0 / sampling_frequency)
     total_mask = (freqs >= MODEL_BANDS[0][1]) & (freqs <= MODEL_BANDS[-1][2])
-    channel_band_powers = np.empty((len(MODEL_CHANNELS), len(MODEL_BANDS)), dtype=np.float64)
 
-    for channel_index, channel_signal in enumerate(window_data):
-        spectrum = np.fft.rfft(channel_signal * taper)
-        channel_psd = (np.abs(spectrum) ** 2) / (sampling_frequency * window_norm)
-        total_power = float(trapezoid(channel_psd[total_mask], freqs[total_mask])) if np.any(total_mask) else 0.0
-        safe_total_power = total_power if total_power > 0 else 1.0
-        channel_band_powers[channel_index] = [
-            band_power / safe_total_power
-            for _band_name, _start_hz, _end_hz, band_power in iterate_band_powers(freqs, channel_psd)
-        ]
-
-    return channel_band_powers
+    band_masks = tuple(
+        (freqs >= start_hz) & (freqs < end_hz if band_name != MODEL_BANDS[-1][0] else freqs <= end_hz)
+        for band_name, start_hz, end_hz in MODEL_BANDS
+    )
+    return BandPowerComputationPlan(
+        taper=taper,
+        window_norm=window_norm,
+        freqs=freqs,
+        total_mask=total_mask,
+        has_total_bins=bool(np.any(total_mask)),
+        band_masks=band_masks,
+        has_band_bins=tuple(bool(np.any(band_mask)) for band_mask in band_masks),
+    )
 
 
 def build_band_power_stats_response(
@@ -715,17 +753,6 @@ def build_window_scalp_topology_mode(
             )
         ],
     )
-
-
-def iterate_band_powers(freqs: np.ndarray, mean_psd: np.ndarray):
-    for band_name, start_hz, end_hz in MODEL_BANDS:
-        band_mask = (freqs >= start_hz) & (freqs < end_hz if band_name != MODEL_BANDS[-1][0] else freqs <= end_hz)
-        if not np.any(band_mask):
-            yield band_name, start_hz, end_hz, 0.0
-            continue
-
-        band_power = float(trapezoid(mean_psd[band_mask], freqs[band_mask]))
-        yield band_name, start_hz, end_hz, band_power
 
 
 def compute_mne_topology_grid(weights: np.ndarray, resolution: int):

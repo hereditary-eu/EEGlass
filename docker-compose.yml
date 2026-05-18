@@ -1,0 +1,50 @@
+services:
+  dataset-downloader:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.dataset-downloader
+    environment:
+      DATASET_URL: https://cloud.tugraz.at/index.php/s/kDEwkJbSggxZW2c
+      DATASET_STORAGE_DIR: /app/data/datasets
+    volumes:
+      - datasets:/app/data/datasets
+    networks:
+      - all-in-on-eeg
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATASET_STORAGE_DIR: /app/data/datasets
+      MODEL_OUTPUT_STORAGE_DIR: /app/data/model_outputs
+      SERVER: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      - datasets:/app/data/datasets:ro
+      - model-outputs:/app/data/model_outputs
+    depends_on:
+      dataset-downloader:
+        condition: service_completed_successfully
+    networks:
+      - all-in-on-eeg
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - all-in-on-eeg
+
+networks:
+  all-in-on-eeg:
+    driver: bridge
+
+volumes:
+  datasets:
+  model-outputs:

@@ -32,9 +32,13 @@ function buildApiUrl(path: string): string {
 }
 
 function buildWebSocketUrl(path: string): string {
-  const apiUrl = new URL(buildApiUrl(path));
+  const apiUrl = new URL(buildApiUrl(path), getBrowserOrigin());
   apiUrl.protocol = apiUrl.protocol === "https:" ? "wss:" : "ws:";
   return apiUrl.toString();
+}
+
+function getBrowserOrigin(): string {
+  return typeof window !== "undefined" ? window.location.origin : "http://localhost:8000";
 }
 
 export const API_ROUTES = {
