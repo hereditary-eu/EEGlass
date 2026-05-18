@@ -307,3 +307,17 @@ select {
     grid-column: auto;
   }
 }
+
+@media print {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  * {
+    scrollbar-width: none;
+  }
+
+  article {
+    box-shadow: none !important;
+  }
+}
