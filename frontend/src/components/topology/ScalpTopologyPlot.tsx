@@ -131,8 +131,7 @@ export function ScalpTopologyPlot({
       return;
     }
 
-    const zeroPosition =
-      colorMode === "diverging" ? clamp((0 - safeValueRange.min) / range, 0, 1) : 0;
+    const zeroPosition = colorMode === "diverging" ? clamp((0 - safeValueRange.min) / range, 0, 1) : 0;
     const gridCanvas = document.createElement("canvas");
     gridCanvas.width = resolution;
     gridCanvas.height = resolution;
@@ -161,7 +160,8 @@ export function ScalpTopologyPlot({
 
       const normalized = clamp((interpolatedValue - safeValueRange.min) / range, 0, 1);
       const edgeFade = clamp(1 - Math.max(0, distanceFromCenter - 0.94) / 0.06, 0, 1);
-      const color = colorMode === "sequential" ? getSequentialColor(normalized) : getDivergingColor(normalized, zeroPosition);
+      const color =
+        colorMode === "sequential" ? getSequentialColor(normalized) : getDivergingColor(normalized, zeroPosition);
 
       image.data[pixelIndex] = color.r;
       image.data[pixelIndex + 1] = color.g;
@@ -283,11 +283,7 @@ export function ScalpTopologyPlot({
 }
 
 function normalizeValueRange(valueRange: ScalpTopologyValueRange, colorMode: ScalpTopologyColorMode) {
-  if (
-    Number.isFinite(valueRange.min) &&
-    Number.isFinite(valueRange.max) &&
-    valueRange.max > valueRange.min
-  ) {
+  if (Number.isFinite(valueRange.min) && Number.isFinite(valueRange.max) && valueRange.max > valueRange.min) {
     return valueRange;
   }
 
@@ -311,11 +307,7 @@ function getDivergingColor(value: number, zeroPosition: number) {
     return mixColor({ r: 8, g: 106, b: 136, a: 0.9 }, ZERO_VALUE_COLOR, clampedValue / clampedZero);
   }
 
-  return mixColor(
-    ZERO_VALUE_COLOR,
-    { r: 225, g: 29, b: 72, a: 0.9 },
-    (clampedValue - clampedZero) / (1 - clampedZero),
-  );
+  return mixColor(ZERO_VALUE_COLOR, { r: 225, g: 29, b: 72, a: 0.9 }, (clampedValue - clampedZero) / (1 - clampedZero));
 }
 
 function getSequentialColor(value: number) {

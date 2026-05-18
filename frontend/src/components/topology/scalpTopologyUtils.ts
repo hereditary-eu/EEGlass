@@ -17,10 +17,7 @@ export interface ScalpTopologyValueRange {
 
 const DEFAULT_DIVERGING_RANGE: ScalpTopologyValueRange = { min: -1, max: 1 };
 
-export function findScalpBand(
-  topologies: ModelScalpTopologyResponse | null,
-  selectedBand: TimeseriesBandFilter,
-) {
+export function findScalpBand(topologies: ModelScalpTopologyResponse | null, selectedBand: TimeseriesBandFilter) {
   if (!topologies?.bands.length) {
     return null;
   }

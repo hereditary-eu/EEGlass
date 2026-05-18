@@ -191,10 +191,9 @@ function getWindowScalpTopologyErrorMessage(error: unknown): string {
 }
 
 function getPerBandDivergingValueRange(band: ModelWindowScalpTopologyBand | null): { min: number; max: number } {
-  const values = [
-    ...(band?.grid_values ?? []),
-    ...(band?.channels.map((channel) => channel.value) ?? []),
-  ].filter((value) => Number.isFinite(value));
+  const values = [...(band?.grid_values ?? []), ...(band?.channels.map((channel) => channel.value) ?? [])].filter(
+    (value) => Number.isFinite(value),
+  );
   const maxAbs = values.reduce((currentMax, value) => Math.max(currentMax, Math.abs(value)), 0);
   const scale = maxAbs > 0 ? maxAbs : 1;
 

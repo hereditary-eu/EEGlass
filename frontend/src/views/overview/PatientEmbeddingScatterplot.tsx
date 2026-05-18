@@ -5,9 +5,7 @@ import type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from
 import { getAnnotationClassColor, getEmbeddingClassColors, getModelClassLabels } from "../../constants/eegModel";
 import type { ModelInfoResponse, ModelPatientEmbeddingsResponse } from "../../types";
 
-type LegendHighlightTarget =
-  | { kind: "true" | "predicted"; label: string }
-  | { kind: "misclassified" };
+type LegendHighlightTarget = { kind: "true" | "predicted"; label: string } | { kind: "misclassified" };
 
 interface PatientEmbeddingScatterplotProps {
   embeddings: ModelPatientEmbeddingsResponse | null;
@@ -107,10 +105,7 @@ export function PatientEmbeddingScatterplot({
     [values],
   );
   const misclassifiedSubjectIds = useMemo(
-    () =>
-      values
-        .filter((value) => value.trueLabel !== value.predictedLabel)
-        .map((value) => value.subjectId),
+    () => values.filter((value) => value.trueLabel !== value.predictedLabel).map((value) => value.subjectId),
     [values],
   );
   const effectiveSelectedSubjectIds = useMemo(() => {

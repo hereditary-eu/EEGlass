@@ -1,6 +1,11 @@
 import { useState } from "react";
 
-import type { ModelInfoResponse, ModelMetadataValue, ModelPredictionCacheProgress, ModelPredictionCacheStatus } from "../../types";
+import type {
+  ModelInfoResponse,
+  ModelMetadataValue,
+  ModelPredictionCacheProgress,
+  ModelPredictionCacheStatus,
+} from "../../types";
 import { ModelScalpTopologyPanel } from "../../components";
 import { PredictionCacheProgressBar } from "./PredictionCacheProgressBar";
 import { getCacheSummary, isCacheJobRunning } from "./overviewUtils";

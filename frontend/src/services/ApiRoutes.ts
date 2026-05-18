@@ -42,16 +42,13 @@ export const API_ROUTES = {
     defaultInfo: buildApiUrl("/models/default"),
     info: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}`),
     infer: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/infer`),
-    classEvidence: (modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/class-evidence`),
-    bandPower: (modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/band-power`),
+    classEvidence: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/class-evidence`),
+    bandPower: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/band-power`),
     bandPowerStats: (datasetId: string, subjectId: string, modelName: string) =>
       buildApiUrl(
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/band-power-stats`,
       ),
-    scalpTopologies: (modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/scalp-topologies`),
+    scalpTopologies: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/scalp-topologies`),
     startPredictionCacheJob: (datasetId: string, modelName: string) =>
       buildApiUrl(
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache/jobs`,
@@ -65,7 +62,9 @@ export const API_ROUTES = {
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache`,
       ),
     patientEmbeddings: (datasetId: string, modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/patient-embeddings`),
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/patient-embeddings`,
+      ),
     windowEmbeddings: (datasetId: string, subjectId: string, modelName: string) =>
       buildApiUrl(
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/window-embeddings`,
@@ -88,13 +87,9 @@ export const API_ROUTES = {
     datasets: buildApiUrl("/data/datasets"),
     subjects: (datasetId: string) => buildApiUrl(`/data/datasets/${encodeURIComponent(datasetId)}/subjects`),
     metadata: (datasetId: string, subjectId: string) =>
-      buildApiUrl(
-        `/data/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/metadata`,
-      ),
+      buildApiUrl(`/data/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/metadata`),
     preview: (datasetId: string, subjectId: string) =>
-      buildApiUrl(
-        `/data/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/preview`,
-      ),
+      buildApiUrl(`/data/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/preview`),
     signal: (datasetId: string, subjectId: string) =>
       buildApiUrl(
         `/data/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/timeseries-signal`,

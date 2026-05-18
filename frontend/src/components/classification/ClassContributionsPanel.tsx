@@ -50,12 +50,7 @@ interface ClassLogitDatum {
   tooltipValue: string;
 }
 
-export function ClassContributionsPanel({
-  datasetId,
-  subjectId,
-  source,
-  windowIndex,
-}: ClassContributionsPanelProps) {
+export function ClassContributionsPanel({ datasetId, subjectId, source, windowIndex }: ClassContributionsPanelProps) {
   const cacheRef = useRef(new Map<string, ModelClassEvidenceResponse>());
   const [evidence, setEvidence] = useState<ModelClassEvidenceResponse | null>(null);
   const [displayMode, setDisplayMode] = useState<EvidenceDisplayMode>("raw");
@@ -125,7 +120,10 @@ export function ClassContributionsPanel({
     () => (evidence ? createClassContributionRows(evidence, classLabels, displayMode, maxAbsContribution) : []),
     [classLabels, displayMode, evidence, maxAbsContribution],
   );
-  const logitRows = useMemo(() => (evidence ? createClassLogitRows(evidence, classLabels) : []), [classLabels, evidence]);
+  const logitRows = useMemo(
+    () => (evidence ? createClassLogitRows(evidence, classLabels) : []),
+    [classLabels, evidence],
+  );
   const decision = useMemo(() => (evidence ? getDecisionSummary(evidence) : null), [evidence]);
   const status = getEvidenceStatus({ error, evidence, isLoading });
 
@@ -148,7 +146,7 @@ export function ClassContributionsPanel({
             <ComponentStatusIndicator status={status.status} label={status.label} />
           </p>
           <div className="classification-evidence-mode-toggle" aria-label="Evidence value mode">
-            <button 
+            <button
               type="button"
               className={`classification-evidence-mode-button${displayMode === "raw" ? " classification-evidence-mode-button--active" : ""}`}
               onClick={() => setDisplayMode("raw")}
@@ -162,7 +160,6 @@ export function ClassContributionsPanel({
             >
               rel
             </button>
-
           </div>
         </div>
       </div>
@@ -177,12 +174,15 @@ export function ClassContributionsPanel({
 
             <div className="classification-evidence-footer">
               <span className="classification-evidence-mode-note">
-                {displayMode === "relative" ? "Relative band salience; logit \u03a9 remains raw" : "Raw band contributions"}
+                {displayMode === "relative"
+                  ? "Relative band salience; logit \u03a9 remains raw"
+                  : "Raw band contributions"}
               </span>
               {decision ? (
                 <div className="classification-evidence-decision">
                   <span className="classification-evidence-decision-kicker">
-                    Decision = argmax(<MathFormula tex={"\\Omega"} />)
+                    Decision = argmax(
+                    <MathFormula tex={"\\Omega"} />)
                   </span>
                   <strong>{decision.label}</strong>
                   <span>{Math.round(decision.confidence * 100)}%</span>
@@ -193,7 +193,9 @@ export function ClassContributionsPanel({
         ) : null}
 
         {!evidence && !isLoading && !error ? (
-          <div className="classification-evidence-empty">Click a 4s prediction window to inspect class contributions.</div>
+          <div className="classification-evidence-empty">
+            Click a 4s prediction window to inspect class contributions.
+          </div>
         ) : null}
       </div>
     </div>
@@ -392,9 +394,7 @@ function ClassLogitPanel({ rows }: { rows: ClassLogitDatum[] }) {
     };
   }, [rows]);
 
-  return (
-    <div className="classification-evidence-logits-chart" ref={containerRef} />
-  );
+  return <div className="classification-evidence-logits-chart" ref={containerRef} />;
 }
 
 function createClassContributionRows(
