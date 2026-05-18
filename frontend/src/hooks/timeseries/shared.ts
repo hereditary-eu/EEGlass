@@ -13,7 +13,7 @@ export function resolveSelectedChannels(selectedChannels: ChannelId[], available
     return validSelectedChannels;
   }
 
-  return availableChannels.slice(0, 1);
+  return availableChannels.slice(0, 4);
 }
 
 export function resolveChannelsForLoad(
