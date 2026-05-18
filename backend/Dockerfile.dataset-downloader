@@ -4,8 +4,7 @@ RUN apk add --no-cache ca-certificates unzip wget
 
 WORKDIR /app
 
-ENV DATASET_URL=https://cloud.tugraz.at/index.php/s/kDEwkJbSggxZW2c \
-    DATASET_STORAGE_DIR=/app/data/datasets \
+ENV DATASET_STORAGE_DIR=/app/data/datasets \
     UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE
 
 COPY backend/scripts/download-dataset.sh /usr/local/bin/download-dataset
