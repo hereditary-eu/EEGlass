@@ -93,6 +93,8 @@ def train_save_model(
     df_train = df_eeg[df_eeg["participant_id"].isin(participant_ids_train_str)]
     df_val = df_eeg[df_eeg["participant_id"].isin(participant_ids_val_str)]
 
+    del df_eeg
+
     trainloader = get_data_loader(
         df_train,
         parameters["Chans"],
@@ -109,6 +111,7 @@ def train_save_model(
         parameters["workers"],
         x_columns=parameters["x_columns"],
     )
+    del df_train, df_val
 
     # define optimizer, loss function and learning rate scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=training_parameters["lr"])
@@ -144,8 +147,8 @@ def train_save_model(
         return_loss_info=True,
     )
 
+    # del trainloader, valloader
     save_model(model, model_path, df_metadata=df_metadata)
-
     return model, df_metadata
 
 
