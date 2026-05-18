@@ -45,7 +45,8 @@ export function TotalBandPowerChart({
 
   const channels = bandPower?.channels ?? [];
   const availableChannels = useMemo(() => channels.map((channel) => channel.channel), [channels]);
-  const selectedChannel = selectedChannels.find((channel) => availableChannels.includes(channel)) ?? availableChannels[0] ?? null;
+  const selectedChannel =
+    selectedChannels.find((channel) => availableChannels.includes(channel)) ?? availableChannels[0] ?? null;
 
   const activeChannel = useMemo(
     () => channels.find((channel) => channel.channel === selectedChannel) ?? channels[0] ?? null,

@@ -8,7 +8,13 @@ import type {
   TimeseriesSource,
   TimeseriesSubjectMetadata,
 } from "../../types";
-import { areSameChannels, DEFAULT_PREVIEW_MAX_POINTS, getErrorMessage, orderSources, resolveChannelsForLoad } from "./shared";
+import {
+  areSameChannels,
+  DEFAULT_PREVIEW_MAX_POINTS,
+  getErrorMessage,
+  orderSources,
+  resolveChannelsForLoad,
+} from "./shared";
 
 interface UseTimeseriesSignalOptions {
   datasetId: string;

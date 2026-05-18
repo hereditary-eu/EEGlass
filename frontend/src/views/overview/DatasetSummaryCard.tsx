@@ -3,7 +3,12 @@ import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
 import { formatCompactClassLabel, getDistributionClassColor, getModelClassLabels } from "../../constants/eegModel";
-import type { ModelInfoResponse, ModelPredictionCacheStatus, TimeseriesDatasetInfo, TimeseriesSubjectInfo } from "../../types";
+import type {
+  ModelInfoResponse,
+  ModelPredictionCacheStatus,
+  TimeseriesDatasetInfo,
+  TimeseriesSubjectInfo,
+} from "../../types";
 
 interface DatasetSummaryCardProps {
   dataset: TimeseriesDatasetInfo | null;
@@ -22,7 +27,13 @@ interface LabelDistributionDatum {
   opacity: number;
 }
 
-export function DatasetSummaryCard({ dataset, subjects, cacheStatus, isLoadingSubjects, modelInfo }: DatasetSummaryCardProps) {
+export function DatasetSummaryCard({
+  dataset,
+  subjects,
+  cacheStatus,
+  isLoadingSubjects,
+  modelInfo,
+}: DatasetSummaryCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [plotHeight, setPlotHeight] = useState(180);
   const classLabels = useMemo(() => getModelClassLabels(modelInfo?.classes), [modelInfo]);

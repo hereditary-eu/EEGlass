@@ -135,10 +135,9 @@ export function PatientEmbeddingScatterplot({
     setLegendHighlightTarget(null);
   }, [embeddings?.dataset_id, embeddings?.checkpoint_key]);
 
-  const emptyMessage =
-    !modelInfo
-      ? "Model metadata unavailable."
-      : embeddings?.reduction.status === "insufficient_data"
+  const emptyMessage = !modelInfo
+    ? "Model metadata unavailable."
+    : embeddings?.reduction.status === "insufficient_data"
       ? "Need at least two cached patient embeddings."
       : "Compute prediction cache to populate patient embeddings.";
   const highlightLegendLabel = (kind: LegendHighlightTarget["kind"], label: string) => {

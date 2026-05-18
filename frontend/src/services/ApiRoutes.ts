@@ -53,11 +53,17 @@ export const API_ROUTES = {
     scalpTopologies: (modelName: string) =>
       buildApiUrl(`/models/${encodeURIComponent(modelName)}/scalp-topologies`),
     startPredictionCacheJob: (datasetId: string, modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache/jobs`),
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache/jobs`,
+      ),
     activePredictionCacheJob: (datasetId: string, modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache/jobs/active`),
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache/jobs/active`,
+      ),
     predictionCacheStatus: (datasetId: string, modelName: string) =>
-      buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache`),
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache`,
+      ),
     patientEmbeddings: (datasetId: string, modelName: string) =>
       buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/patient-embeddings`),
     windowEmbeddings: (datasetId: string, subjectId: string, modelName: string) =>
@@ -73,7 +79,9 @@ export const API_ROUTES = {
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/predictions`,
       ),
     predictionCacheProgressSocket: (jobId: string, modelName: string) =>
-      buildWebSocketUrl(`/models/${encodeURIComponent(modelName)}/prediction-cache/jobs/${encodeURIComponent(jobId)}/progress`),
+      buildWebSocketUrl(
+        `/models/${encodeURIComponent(modelName)}/prediction-cache/jobs/${encodeURIComponent(jobId)}/progress`,
+      ),
   },
 
   timeseries: {

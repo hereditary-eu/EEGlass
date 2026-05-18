@@ -439,7 +439,11 @@ export function OverviewPanel() {
     setCacheError(null);
 
     try {
-      const nextStatus = await TimeseriesService.deletePredictionCache(selectedDatasetId, "derivatives", activeModelName);
+      const nextStatus = await TimeseriesService.deletePredictionCache(
+        selectedDatasetId,
+        "derivatives",
+        activeModelName,
+      );
       setCacheStatus(nextStatus);
       setCacheProgress(null);
     } catch (deleteError) {

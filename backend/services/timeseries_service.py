@@ -374,11 +374,7 @@ class TimeseriesService:
         try:
             with participants_path.open("r", encoding="utf-8") as file:
                 return next(
-                    (
-                        row
-                        for row in csv.DictReader(file, delimiter="\t")
-                        if row.get("participant_id") == subject_id
-                    ),
+                    (row for row in csv.DictReader(file, delimiter="\t") if row.get("participant_id") == subject_id),
                     None,
                 )
         except Exception:
