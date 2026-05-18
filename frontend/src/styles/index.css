@@ -316,4 +316,8 @@ select {
   * {
     scrollbar-width: none;
   }
+
+  article {
+    box-shadow: none !important;
+  }
 }

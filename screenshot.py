@@ -24,7 +24,7 @@ chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
 driver = webdriver.Chrome(options=chrome_options)
 
 screenshot_width = 18
-screenshot_height = 12
+screenshot_height = 11.4
 # note that in landscape mode, dimensions are inverted
 PDF_PARAMS = {"landscape": True, "paperWidth": screenshot_height, "paperHeight": screenshot_width}
 
