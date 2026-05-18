@@ -256,8 +256,7 @@ def is_window_embedding_cluster_summary_valid(window_embedding_clusters: Any) ->
         and window_embedding_clusters.get("method") == WINDOW_EMBEDDING_CLUSTERING_METHOD
         and isinstance(window_embedding_clusters.get("labels"), list)
         and all(
-            label is None or (isinstance(label, int) and label >= 0)
-            for label in window_embedding_clusters["labels"]
+            label is None or (isinstance(label, int) and label >= 0) for label in window_embedding_clusters["labels"]
         )
     )
 
@@ -338,10 +337,7 @@ def aggregate_patient_prediction(class_counts: dict[int, int], total_windows: in
 
 def extract_band_power_mean_values(band_power_stats: dict[str, Any]) -> np.ndarray:
     return np.asarray(
-        [
-            [float(band["mean_db"]) for band in channel["bands"]]
-            for channel in band_power_stats["channels"]
-        ],
+        [[float(band["mean_db"]) for band in channel["bands"]] for channel in band_power_stats["channels"]],
         dtype=np.float64,
     )
 
@@ -888,7 +884,9 @@ class PredictionCacheService:
                     cls._write_manifest(manifest, job.dataset_id, job.model_name, checkpoint_key, job.source)
                     continue
 
-                cached = cls._read_prediction_artifact(job.dataset_id, job.model_name, checkpoint_key, subject.id, job.source)
+                cached = cls._read_prediction_artifact(
+                    job.dataset_id, job.model_name, checkpoint_key, subject.id, job.source
+                )
                 if cls._is_model_artifact_valid(
                     cached,
                     dataset_id=job.dataset_id,
@@ -1254,8 +1252,7 @@ class PredictionCacheService:
 
         response = ModelInferenceResponse(**artifact["response"])
         embedding_rows = [
-            [float(value) for value in row]
-            for row in (artifact.get("window_embeddings", {}).get("values", []) or [])
+            [float(value) for value in row] for row in (artifact.get("window_embeddings", {}).get("values", []) or [])
         ]
         source_dimension = int(artifact.get("window_embeddings", {}).get("dimension", 0) or 0)
         cached_cluster_ids = (
