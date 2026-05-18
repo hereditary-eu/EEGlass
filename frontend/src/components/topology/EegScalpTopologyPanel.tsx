@@ -51,6 +51,12 @@ export function EegScalpTopologyPanel({
   }, [applyBandFilterOnClick, selectedBand, setSelectedTimeseriesBandFilter]);
 
   useEffect(() => {
+    if (selectedTimeseriesBandFilter) {
+      setSelectedBand(selectedTimeseriesBandFilter);
+    }
+  }, [selectedTimeseriesBandFilter]);
+
+  useEffect(() => {
     let isCurrent = true;
 
     if (!datasetId || !subjectId || !modelName || windowIndex === null || windowIndex < 0) {
