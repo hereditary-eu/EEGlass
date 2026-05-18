@@ -3,6 +3,9 @@ import mne
 import pandas as pd
 
 from backend.ml.model_vars import MODEL_CHANNELS, PARAMETERS_DEFAULT
+from backend.utils.mne_logging import configure_mne_logging
+
+configure_mne_logging()
 
 # Functions to load data for the ds004504 Dataset
 
@@ -57,7 +60,7 @@ def load_eeg_df(dir_data: str, participant_id_int: int, gen_path_func: callable)
 
 
 def load_preprocessed_raw_from_file(data_path: str):
-    raw = mne.io.read_raw_eeglab(data_path, preload=True)
+    raw = mne.io.read_raw_eeglab(data_path, preload=True, verbose="ERROR")
     return preprocess_raw_for_xeegnet(raw)
 
 
@@ -67,18 +70,18 @@ def preprocess_raw_for_xeegnet(raw):
     if missing_channels:
         raise ValueError("Recording is missing required model channels: " + ", ".join(missing_channels))
 
-    working_raw = raw.copy().pick(required_channels).load_data()
+    working_raw = raw.copy().pick(required_channels).load_data(verbose="ERROR")
     target_sampling_frequency = float(PARAMETERS_DEFAULT["srate"])
     current_sampling_frequency = float(working_raw.info["sfreq"])
     if current_sampling_frequency != target_sampling_frequency:
-        working_raw.resample(target_sampling_frequency)
+        working_raw.resample(target_sampling_frequency, verbose="ERROR")
 
     return working_raw
 
 
 def preprocessed_raw_to_dataframe(raw) -> pd.DataFrame:
     channels = list(MODEL_CHANNELS)
-    data = raw.get_data(picks=channels) * MICROVOLTS_SCALE
+    data = raw.get_data(picks=channels, verbose="ERROR") * MICROVOLTS_SCALE
     time = raw.times.astype("float32", copy=False)
 
     df_eeg = pd.DataFrame({"time": time})
@@ -93,7 +96,7 @@ def preprocessed_raw_to_windows(raw, sample_length: int | None = None):
     resolved_sample_length = int(sample_length or PARAMETERS_DEFAULT["sample_length"])
     sampling_frequency = float(raw.info["sfreq"])
 
-    data = raw.get_data(picks=channels) * MICROVOLTS_SCALE
+    data = raw.get_data(picks=channels, verbose="ERROR") * MICROVOLTS_SCALE
     total_samples = int(data.shape[1])
     if total_samples < resolved_sample_length:
         duration = total_samples / sampling_frequency

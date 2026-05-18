@@ -3,6 +3,7 @@ set -eu
 
 : "${DATASET_URL:?DATASET_URL is required}"
 : "${DATASET_STORAGE_DIR:=/app/data/datasets}"
+: "${WGET_PROGRESS:=dot:mega}"
 
 complete_marker="$DATASET_STORAGE_DIR/.download-complete"
 
@@ -13,8 +14,8 @@ list_dataset_dirs() {
 download_zip() {
     output_path="$1"
 
-    wget --progress=bar:force:noscroll -O "$output_path" "${DATASET_URL}/download" \
-        || wget --progress=bar:force:noscroll -O "$output_path" "$DATASET_URL"
+    wget --progress="$WGET_PROGRESS" -O "$output_path" "${DATASET_URL}/download" 2>&1 \
+        || wget --progress="$WGET_PROGRESS" -O "$output_path" "$DATASET_URL" 2>&1
 }
 
 mkdir -p "$DATASET_STORAGE_DIR"

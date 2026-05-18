@@ -10,4 +10,7 @@ ENV DATASET_URL=https://cloud.tugraz.at/index.php/s/kDEwkJbSggxZW2c \
 
 COPY backend/scripts/download-dataset.sh /usr/local/bin/download-dataset
 
-CMD ["sh", "/usr/local/bin/download-dataset"]
+RUN sed -i 's/\r$//' /usr/local/bin/download-dataset \
+    && chmod +x /usr/local/bin/download-dataset
+
+CMD ["/usr/local/bin/download-dataset"]

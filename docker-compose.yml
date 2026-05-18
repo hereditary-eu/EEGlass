@@ -18,6 +18,7 @@ services:
     environment:
       DATASET_STORAGE_DIR: /app/data/datasets
       MODEL_OUTPUT_STORAGE_DIR: /app/data/model_outputs
+      MNE_LOG_LEVEL: ERROR
       SERVER: "true"
     ports:
       - "8000:8000"

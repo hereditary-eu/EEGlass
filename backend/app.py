@@ -7,6 +7,9 @@ from backend.routers import (
     timeseries_router,
     model_router,
 )
+from backend.utils.mne_logging import configure_mne_logging
+
+configure_mne_logging()
 
 
 def create_app():

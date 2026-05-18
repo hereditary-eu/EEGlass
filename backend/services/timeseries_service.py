@@ -173,7 +173,7 @@ class TimeseriesService:
             sample_count=raw.n_times,
         )
 
-        data = raw.get_data(picks=channels, start=start_sample, stop=end_sample)
+        data = raw.get_data(picks=channels, start=start_sample, stop=end_sample, verbose="ERROR")
         if band_filter is not None:
             data = cls._apply_band_filter(data, sampling_frequency, band_filter)
 
