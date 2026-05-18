@@ -125,12 +125,28 @@ select {
 }
 
 .app-patient-dataset {
+  border: 0;
+  background: transparent;
   color: #748391;
   padding: 0 0.34rem;
   font-size: 0.68rem;
   font-weight: 800;
   line-height: 1;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.app-patient-dataset:hover,
+.app-patient-dataset:focus-visible {
+  color: #0f5f76;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.app-patient-dataset:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid rgb(14 116 144 / 34%);
+  outline-offset: 2px;
 }
 
 .app-patient-subject {

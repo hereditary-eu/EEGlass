@@ -22,7 +22,7 @@ import "./OverviewPanel.css";
 interface OverviewRouteState {
   datasetId?: string;
   directoryLevel?: DirectoryLevel;
-  selectedSubjectId?: string;
+  selectedSubjectId?: string | null;
 }
 
 export function OverviewPanel() {
@@ -44,6 +44,7 @@ export function OverviewPanel() {
   const [modelInfoError, setModelInfoError] = useState<string | null>(null);
   const [patientEmbeddings, setPatientEmbeddings] = useState<ModelPatientEmbeddingsResponse | null>(null);
   const [embeddingSelectedSubjectIds, setEmbeddingSelectedSubjectIds] = useState<string[] | null>(null);
+  const [embeddingSelectionResetKey, setEmbeddingSelectionResetKey] = useState(0);
   const [isLoadingEmbeddings, setIsLoadingEmbeddings] = useState(false);
   const [embeddingError, setEmbeddingError] = useState<string | null>(null);
   const [hoveredSubjectId, setHoveredSubjectId] = useState<string | null>(null);
@@ -344,6 +345,7 @@ export function OverviewPanel() {
     setHoveredSubjectId(null);
     setSelectedSubjectId(null);
     setEmbeddingSelectedSubjectIds(null);
+    setEmbeddingSelectionResetKey((current) => current + 1);
     setFocusSubjectId(null);
     setFocusDatasetId(datasetId);
     setShouldFocusFirstPatient(false);
@@ -363,6 +365,7 @@ export function OverviewPanel() {
     setDirectoryLevel("datasets");
     setHoveredSubjectId(null);
     setEmbeddingSelectedSubjectIds(null);
+    setEmbeddingSelectionResetKey((current) => current + 1);
     setFocusSubjectId(null);
     setShouldFocusFirstPatient(false);
     setFocusDatasetId(selectedDatasetId);
@@ -497,6 +500,7 @@ export function OverviewPanel() {
             highlightedSubjectId={highlightedSubjectId}
             modelInfo={modelInfo}
             selectedSubjectIds={embeddingSelectedSubjectIds}
+            selectionResetKey={embeddingSelectionResetKey}
             onOpenSubject={openPatientViewBySubjectId}
             onSelectedSubjectIdsChange={selectEmbeddingSubjects}
           />

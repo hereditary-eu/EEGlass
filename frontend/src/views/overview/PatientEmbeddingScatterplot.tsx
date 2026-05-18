@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { EmbeddingScatterplot } from "../../components";
 import type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from "../../components";
@@ -16,6 +16,7 @@ interface PatientEmbeddingScatterplotProps {
   highlightedSubjectId: string | null;
   modelInfo: ModelInfoResponse | null;
   selectedSubjectIds: string[] | null;
+  selectionResetKey: number;
   onOpenSubject: (subjectId: string) => void;
   onSelectedSubjectIdsChange: (subjectIds: string[] | null) => void;
 }
@@ -44,9 +45,11 @@ export function PatientEmbeddingScatterplot({
   highlightedSubjectId,
   modelInfo,
   selectedSubjectIds,
+  selectionResetKey,
   onOpenSubject,
   onSelectedSubjectIdsChange,
 }: PatientEmbeddingScatterplotProps) {
+  const lastSelectionResetKeyRef = useRef(selectionResetKey);
   const [legendHighlightTarget, setLegendHighlightTarget] = useState<LegendHighlightTarget | null>(null);
   const [isMisclassifiedHighlightActive, setIsMisclassifiedHighlightActive] = useState(false);
   const [brushSelectedSubjectIds, setBrushSelectedSubjectIds] = useState<string[] | null>(null);
@@ -124,16 +127,27 @@ export function PatientEmbeddingScatterplot({
   }, [brushSelectedSubjectIds, isMisclassifiedHighlightActive, misclassifiedSubjectIds]);
 
   useEffect(() => {
+    if (lastSelectionResetKeyRef.current !== selectionResetKey) {
+      return;
+    }
+
     if (!areSubjectSelectionsEqual(selectedSubjectIds, effectiveSelectedSubjectIds)) {
       onSelectedSubjectIdsChange(effectiveSelectedSubjectIds);
     }
-  }, [effectiveSelectedSubjectIds, onSelectedSubjectIdsChange, selectedSubjectIds]);
+  }, [effectiveSelectedSubjectIds, onSelectedSubjectIdsChange, selectedSubjectIds, selectionResetKey]);
 
   useEffect(() => {
     setBrushSelectedSubjectIds(null);
     setIsMisclassifiedHighlightActive(false);
     setLegendHighlightTarget(null);
   }, [embeddings?.dataset_id, embeddings?.checkpoint_key]);
+
+  useEffect(() => {
+    lastSelectionResetKeyRef.current = selectionResetKey;
+    setBrushSelectedSubjectIds(null);
+    setIsMisclassifiedHighlightActive(false);
+    setLegendHighlightTarget(null);
+  }, [selectionResetKey]);
 
   const emptyMessage = !modelInfo
     ? "Model metadata unavailable."
@@ -177,11 +191,7 @@ export function PatientEmbeddingScatterplot({
         {embeddings ? (
           <div className="overview-embedding-meta-group">
             {selectedSubjectIds ? (
-              <button
-                type="button"
-                className="overview-embedding-selection-clear"
-                onClick={clearSelectedSubjects}
-              >
+              <button type="button" className="overview-embedding-selection-clear" onClick={clearSelectedSubjects}>
                 {selectedSubjectIds.length} selected
               </button>
             ) : null}
@@ -194,6 +204,7 @@ export function PatientEmbeddingScatterplot({
 
       <div className="overview-embedding-plot-shell">
         <EmbeddingScatterplot
+          key={selectionResetKey}
           points={values}
           isLoading={isLoading}
           error={error}
