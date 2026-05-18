@@ -15,7 +15,11 @@ export function AppLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const isPatientViewRoute = /^\/datasets\/[^/]+\/patients\/[^/]+/.test(pathname);
-  const pageTitle = isPatientViewRoute ? "Patient View" : pathname === "/components" ? "Retained Components" : "Overview";
+  const pageTitle = isPatientViewRoute
+    ? "Patient View"
+    : pathname === "/components"
+      ? "Retained Components"
+      : "Overview";
   const [patientViewHeaderDetails, setPatientViewHeaderDetails] = useState<PatientViewHeaderDetails | null>(null);
 
   const returnToPatientDirectory = () => {

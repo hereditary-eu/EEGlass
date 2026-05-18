@@ -5,7 +5,12 @@ import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
 import { MODEL_BAND_LABELS } from "../../constants/eegModel";
-import type { ChannelId, ModelBandPowerResponse, ModelBandPowerStatsMode, ModelBandPowerStatsResponse } from "../../types";
+import type {
+  ChannelId,
+  ModelBandPowerResponse,
+  ModelBandPowerStatsMode,
+  ModelBandPowerStatsResponse,
+} from "../../types";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
 
 interface TotalBandPowerChartProps {
@@ -120,7 +125,7 @@ export function TotalBandPowerChart({
     }
 
     const spec: VisualizationSpec = {
-      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      $schema: "https://vega.github.io/schema/vega-lite/v6.json",
       width: "container",
       height: plotHeight,
       autosize: {
@@ -223,7 +228,12 @@ export function TotalBandPowerChart({
         if (!finalized) {
           viewRef.current = result.view;
           result.view
-            .change(BAND_POWER_DATA_NAME, changeset().remove(() => true).insert(valuesRef.current))
+            .change(
+              BAND_POWER_DATA_NAME,
+              changeset()
+                .remove(() => true)
+                .insert(valuesRef.current),
+            )
             .runAsync()
             .catch(() => undefined);
         }
@@ -248,7 +258,12 @@ export function TotalBandPowerChart({
     }
 
     view
-      .change(BAND_POWER_DATA_NAME, changeset().remove(() => true).insert(values))
+      .change(
+        BAND_POWER_DATA_NAME,
+        changeset()
+          .remove(() => true)
+          .insert(values),
+      )
       .runAsync()
       .catch(() => undefined);
   }, [values]);
@@ -371,10 +386,10 @@ function getBandPowerStatus({
   isLoading,
   isLoadingStats,
   statsError,
-}: Pick<
-  TotalBandPowerChartProps,
-  "bandPower" | "error" | "isLoading" | "isLoadingStats" | "statsError"
->): { status: "idle" | "loading" | "loaded" | "error"; label: string } {
+}: Pick<TotalBandPowerChartProps, "bandPower" | "error" | "isLoading" | "isLoadingStats" | "statsError">): {
+  status: "idle" | "loading" | "loaded" | "error";
+  label: string;
+} {
   if (error || statsError) {
     return { status: "error", label: error ?? statsError ?? "Unable to load band power." };
   }

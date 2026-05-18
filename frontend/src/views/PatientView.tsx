@@ -2,8 +2,10 @@ import { useEffect } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 
 import { ClassContributionsPanel, EegScalpTopologyPanel, TotalBandPowerChart } from "../components";
+import { MODEL_BANDS } from "../constants/eegModel";
 import { useTimeseriesData } from "../hooks/useTimeseriesData";
 import type { PatientViewOutletContext } from "../layouts/AppLayout";
+import { useAppStore } from "../stores/useAppStore";
 import { TimeseriesSlot } from "./TimeseriesSlot";
 import { WindowEmbeddingPanel } from "./WindowEmbeddingPanel";
 
@@ -12,6 +14,7 @@ export function PatientView() {
   const navigate = useNavigate();
   const { setPatientViewHeaderDetails } = useOutletContext<PatientViewOutletContext>();
   const ts = useTimeseriesData({ datasetId, subjectId });
+  const setSelectedTimeseriesBandFilter = useAppStore((state) => state.setSelectedTimeseriesBandFilter);
 
   useEffect(() => {
     if (!datasetId || !subjectId) {
@@ -19,23 +22,68 @@ export function PatientView() {
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "ArrowLeft" || isEditableTarget(event.target)) {
+      if (isEditableTarget(event.target)) {
         return;
       }
 
-      event.preventDefault();
-      navigate("/", {
-        state: {
-          datasetId,
-          directoryLevel: "patients",
-          selectedSubjectId: subjectId,
-        },
-      });
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        navigate("/", {
+          state: {
+            datasetId,
+            directoryLevel: "patients",
+            selectedSubjectId: subjectId,
+          },
+        });
+        return;
+      }
+
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        const subjects = ts.subjects;
+        if (!subjects.length) return;
+        const currentIndex = subjects.findIndex((s) => s.id === subjectId);
+        if (currentIndex === -1) return;
+        event.preventDefault();
+        const direction = event.key === "ArrowDown" ? 1 : -1;
+        const nextIndex = (currentIndex + direction + subjects.length) % subjects.length;
+        navigate(`/datasets/${encodeURIComponent(datasetId)}/patients/${encodeURIComponent(subjects[nextIndex].id)}`);
+        return;
+      }
+
+      if (event.key === "c" || event.key === "d") {
+        const channels = ts.availableChannels;
+        if (!channels.length) return;
+        const current = ts.activeChannels[0] ?? null;
+        const currentIndex = current ? channels.indexOf(current) : -1;
+        const direction = event.key === "c" ? 1 : -1;
+        const nextIndex = (currentIndex + direction + channels.length) % channels.length;
+        ts.handleSingleChannelSelect(channels[nextIndex]);
+        return;
+      }
+
+      if (event.key === "n" || event.key === "m") {
+        const current = ts.selectedTimeseriesBandFilter;
+        const currentIndex = current ? MODEL_BANDS.indexOf(current) : -1;
+        const direction = event.key === "n" ? 1 : -1;
+        const nextIndex = (currentIndex + direction + MODEL_BANDS.length) % MODEL_BANDS.length;
+        setSelectedTimeseriesBandFilter(MODEL_BANDS[nextIndex]);
+        return;
+      }
+
+      if (event.key === "j" || event.key === "k") {
+        const windows = ts.inferenceResult?.predictions;
+        if (!windows?.length) return;
+        const current = ts.lockedPredictionWindowIndex ?? -1;
+        const direction = event.key === "j" ? 1 : -1;
+        const nextIndex = Math.max(0, Math.min(windows.length - 1, current + direction));
+        ts.setLockedPredictionWindowIndex(nextIndex);
+        return;
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [datasetId, navigate, subjectId]);
+  }, [datasetId, navigate, setSelectedTimeseriesBandFilter, subjectId, ts]);
 
   useEffect(() => {
     if (!datasetId || !subjectId) {

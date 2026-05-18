@@ -422,9 +422,11 @@ def compute_band_power_stats_response(
         window_count = 0
         for subject in TimeseriesService.list_subjects(dataset_id):
             try:
-                subject_data = SubjectPreprocessingService.get_prepared_subject_data(model_spec, dataset_id, subject.id, source)
+                subject_data = SubjectPreprocessingService.get_prepared_subject_data(
+                    model_spec, dataset_id, subject.id, source
+                )
                 relative_power_db = compute_subject_relative_band_power_db(subject_data)
-            except (ModelServiceError, TimeseriesServiceError):
+            except ModelServiceError, TimeseriesServiceError:
                 continue
             if relative_power_db.size == 0:
                 continue
@@ -451,7 +453,10 @@ def compute_band_power_stats_response(
 
 
 def compute_subject_relative_band_power_db(subject_data: PreparedSubjectData) -> np.ndarray:
-    if subject_data.windows.size == 0:
+    relative_powers = [
+        compute_window_relative_band_powers(window, subject_data.sampling_frequency) for window in subject_data.windows
+    ]
+    if not relative_powers:
         return np.empty((0, len(MODEL_CHANNELS), len(MODEL_BANDS)), dtype=np.float64)
 
     _absolute_power, relative_power = compute_band_power_arrays(
@@ -887,7 +892,9 @@ class ModelService:
         cls._ensure_inference_available()
         model_spec = cls._get_model_spec(model_name)
         subject_data = SubjectPreprocessingService.get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
-        probabilities, penultimate_embeddings = ModelRuntime.run_inference_with_embeddings(model_spec, subject_data.windows)
+        probabilities, penultimate_embeddings = ModelRuntime.run_inference_with_embeddings(
+            model_spec, subject_data.windows
+        )
         response = build_inference_response(
             dataset_id=dataset_id,
             subject_id=subject_id,
@@ -959,7 +966,9 @@ class ModelService:
         cached_response = cls._inference_cache.get(cache_key)
         if cached_response is not None and not include_penultimate_embedding:
             cls._inference_cache.move_to_end(cache_key)
-            return ModelInferenceResult(response=cached_response, mean_penultimate_embedding=[], penultimate_embeddings=[])
+            return ModelInferenceResult(
+                response=cached_response, mean_penultimate_embedding=[], penultimate_embeddings=[]
+            )
 
         subject_data = SubjectPreprocessingService.get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
         if include_penultimate_embedding:

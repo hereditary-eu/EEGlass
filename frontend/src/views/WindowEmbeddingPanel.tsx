@@ -95,9 +95,7 @@ export function WindowEmbeddingPanel({
         const isSelected = point.window_index === selectedWindowIndex;
         const isHovered = point.window_index === hoveredWindowIndex;
         const isLegendHighlighted =
-          legendHighlightTarget?.kind === "predicted"
-            ? point.predicted_label === legendHighlightTarget.label
-            : false;
+          legendHighlightTarget?.kind === "predicted" ? point.predicted_label === legendHighlightTarget.label : false;
         const hasActiveLegendHighlight = Boolean(legendHighlightTarget);
         const keepsSelectionEmphasis = !hasActiveLegendHighlight || isLegendHighlighted;
         const hasPointEmphasis = (isSelected || isHovered) && keepsSelectionEmphasis;
@@ -124,12 +122,11 @@ export function WindowEmbeddingPanel({
     () => classLabels.filter((label) => values.some((value) => value.predictedLabel === label)),
     [classLabels, values],
   );
-  const emptyMessage =
-    !modelInfo
-      ? "Model metadata unavailable."
-      : embeddings?.reduction.status === "insufficient_data"
-        ? "Need at least two prediction windows."
-        : "Compute predictions to populate window embeddings.";
+  const emptyMessage = !modelInfo
+    ? "Model metadata unavailable."
+    : embeddings?.reduction.status === "insufficient_data"
+      ? "Need at least two prediction windows."
+      : "Compute predictions to populate window embeddings.";
   const status = getWindowEmbeddingStatus({ embeddings, error, isLoading });
 
   return (
@@ -138,9 +135,7 @@ export function WindowEmbeddingPanel({
         <div>
           <h3>Window embedding</h3>
           <p>
-            {selectedWindowIndex === null
-              ? "All prediction windows"
-              : `Window ${selectedWindowIndex + 1}`}
+            {selectedWindowIndex === null ? "All prediction windows" : `Window ${selectedWindowIndex + 1}`}
             {embeddings ? ` - ${embeddings.points.length} windows / ${embeddings.reduction.source_dimension}D` : ""}
           </p>
         </div>

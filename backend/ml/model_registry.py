@@ -42,7 +42,9 @@ class ModelSpec:
     classes: tuple[ModelClassSpec, ...]
 
 
-DEFAULT_MODEL_NAME = "xeegnet-v1"
+# DEFAULT_MODEL_NAME = "xeegnet-v1"
+# DEFAULT_MODEL_NAME = "xeegnet_model_v200"
+DEFAULT_MODEL_NAME = "xeegnet_model_v204"  # 200-204 for different train/val/test splits
 
 DEFAULT_MODEL_CLASSES = tuple(
     ModelClassSpec(

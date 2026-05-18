@@ -84,7 +84,9 @@ async def get_timeseries_preview(
         raise _http_error(exc) from exc
 
 
-@timeseries_router.get("/datasets/{dataset_id}/subjects/{subject_id}/timeseries-signal", response_model=TimeseriesSignalResponse)
+@timeseries_router.get(
+    "/datasets/{dataset_id}/subjects/{subject_id}/timeseries-signal", response_model=TimeseriesSignalResponse
+)
 async def get_timeseries_signal(
     dataset_id: str,
     subject_id: str,

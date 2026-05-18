@@ -248,12 +248,21 @@ function getConfidenceColor(confidence: number): string {
   return `rgb(${red} ${green} ${blue})`;
 }
 
-function getTimeseriesStatus(ts: TimeseriesDataController): { status: "idle" | "loading" | "loaded" | "error"; label: string } {
+function getTimeseriesStatus(ts: TimeseriesDataController): {
+  status: "idle" | "loading" | "loaded" | "error";
+  label: string;
+} {
   if (ts.error || ts.inferenceError) {
     return { status: "error", label: ts.error ?? ts.inferenceError ?? "Unable to load input signal." };
   }
 
-  if (ts.isLoadingDatasets || ts.isLoadingSubjects || ts.isRefreshingFullSignal || ts.isComputingInference || ts.isLoading) {
+  if (
+    ts.isLoadingDatasets ||
+    ts.isLoadingSubjects ||
+    ts.isRefreshingFullSignal ||
+    ts.isComputingInference ||
+    ts.isLoading
+  ) {
     return { status: "loading", label: getTimeseriesLoadingLabel(ts) };
   }
 
