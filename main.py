@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Any
 import argparse
 
-from backend.ml.model_registry import DEFAULT_MODEL_NAME, get_model_spec
+from backend.ml.model_registry import get_model_spec
+from backend.ml.model_vars import DEFAULT_MODEL_NAME
 
 DEFAULT_DATASET_ID = "ds004504"
 DEFAULT_SOURCE = "derivatives"

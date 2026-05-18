@@ -1,8 +1,9 @@
 from pathlib import Path
 
 PRETRAINED_MODEL_DIR = Path(__file__).resolve().parent / "pretrained_models"
-PRETRAINED_MODEL_FILENAME = "xeegnet_model_v1.pt"
-PRETRAINED_MODEL_PATH = PRETRAINED_MODEL_DIR / PRETRAINED_MODEL_FILENAME
+
+DEFAULT_MODEL_NAME = "xeegnet_model_v202"  # 200-204 for different train/val/test splits
+
 
 PARAMETERS_DEFAULT = {
     "nb_classes": 3,

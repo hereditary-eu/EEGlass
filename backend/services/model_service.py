@@ -10,8 +10,14 @@ from scipy.integrate import trapezoid
 
 from backend.ml.data_utils.load_data import preprocess_raw_for_xeegnet, preprocessed_raw_to_windows
 from backend.ml.model import build_xeegnet
-from backend.ml.model_registry import DEFAULT_MODEL_NAME, ModelSpec, get_model_spec
-from backend.ml.model_vars import MODEL_BANDS, MODEL_CHANNELS, MODEL_CLASS_LABELS, PARAMETERS_DEFAULT
+from backend.ml.model_registry import ModelSpec, get_model_spec
+from backend.ml.model_vars import (
+    DEFAULT_MODEL_NAME,
+    MODEL_BANDS,
+    MODEL_CHANNELS,
+    MODEL_CLASS_LABELS,
+    PARAMETERS_DEFAULT,
+)
 from backend.pydantic_models.inference import (
     ModelBandPowerResponse,
     ModelBandPowerStatsResponse,

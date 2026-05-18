@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from uvicorn.protocols.utils import ClientDisconnected
 
-from backend.ml.model_registry import DEFAULT_MODEL_NAME
+from backend.ml.model_vars import DEFAULT_MODEL_NAME
 from backend.pydantic_models.inference import (
     ModelBandPowerRequest,
     ModelBandPowerResponse,

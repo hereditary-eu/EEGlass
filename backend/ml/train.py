@@ -20,7 +20,7 @@ from backend.ml.model import build_xeegnet
 from backend.ml.model_vars import (
     PARAMETERS_DEFAULT,
     TRAINING_PARAMETERS_DEFAULT,
-    PRETRAINED_MODEL_PATH,
+    PRETRAINED_MODEL_DIR,
 )
 
 
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     participants_ids_val_debug = [3, 42, 82]
 
     train_save_model(
-        model_path=PRETRAINED_MODEL_PATH.with_name("xeegnet_model_test.pt"),
+        model_path=PRETRAINED_MODEL_DIR / "xeegnet_model_test.pt",
         dir_data=os.path.join("data", "datasets", "ds004504"),
         participant_ids_train=participants_ids_train_debug,
         participant_ids_val=participants_ids_val_debug,

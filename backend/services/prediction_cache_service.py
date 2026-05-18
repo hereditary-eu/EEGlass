@@ -15,8 +15,7 @@ from typing import Any, Literal
 import numpy as np
 
 from backend.config import CONFIG
-from backend.ml.model_registry import DEFAULT_MODEL_NAME
-from backend.ml.model_vars import MODEL_BANDS, MODEL_CHANNELS, MODEL_CLASS_LABELS
+from backend.ml.model_vars import DEFAULT_MODEL_NAME, MODEL_BANDS, MODEL_CHANNELS, MODEL_CLASS_LABELS
 from backend.pydantic_models.inference import (
     ModelBandPowerStatsResponse,
     ModelBandPowerStatsValue,

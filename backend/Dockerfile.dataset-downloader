@@ -9,12 +9,14 @@ ENV DATASET_URL=https://cloud.tugraz.at/index.php/s/kDEwkJbSggxZW2c \
 
 CMD set -eu; \
     mkdir -p "$DATASET_STORAGE_DIR"; \
-    if [ -n "$(find "$DATASET_STORAGE_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)" ]; then \
-        echo "Dataset directory already contains a top-level dataset folder; skipping download."; \
-        find "$DATASET_STORAGE_DIR" -mindepth 1 -maxdepth 1 -type d -print; \
+    dataset_dirs="$(find "$DATASET_STORAGE_DIR" -mindepth 1 -maxdepth 1 -type d ! -name '.download.*' | head -n 1)"; \
+    if [ -f "$DATASET_STORAGE_DIR/.download-complete" ] && [ -n "$dataset_dirs" ]; then \
+        echo "Dataset volume already contains a completed dataset download; skipping download."; \
+        find "$DATASET_STORAGE_DIR" -mindepth 1 -maxdepth 1 -type d ! -name '.download.*' -print; \
         exit 0; \
     fi; \
-    work_dir="$(mktemp -d)"; \
+    rm -rf "$DATASET_STORAGE_DIR"/.download.*; \
+    work_dir="$(mktemp -d "$DATASET_STORAGE_DIR/.download.XXXXXX")"; \
     trap 'rm -rf "$work_dir"' EXIT; \
     echo "Downloading dataset zip from $DATASET_URL"; \
     wget --progress=bar:force:noscroll -O "$work_dir/data.zip" "${DATASET_URL}/download" \
@@ -26,5 +28,6 @@ CMD set -eu; \
         exit 1; \
     fi; \
     cp -a "$work_dir/dataset/." "$DATASET_STORAGE_DIR/"; \
+    touch "$DATASET_STORAGE_DIR/.download-complete"; \
     echo "Dataset extracted into $DATASET_STORAGE_DIR:"; \
-    find "$DATASET_STORAGE_DIR" -mindepth 1 -maxdepth 1 -type d -print
+    find "$DATASET_STORAGE_DIR" -mindepth 1 -maxdepth 1 -type d ! -name '.download.*' -print
