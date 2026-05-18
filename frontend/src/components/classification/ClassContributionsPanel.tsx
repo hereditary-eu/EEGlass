@@ -218,7 +218,7 @@ function ClassContributionsHeatmap({ rows }: { rows: ClassContributionDatum[] })
     const yDomain = Array.from(new Set(rows.map((row) => row.classShort)));
     const chartHeight = getEvidenceChartHeight(yDomain.length);
     const spec: VisualizationSpec = {
-      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      $schema: "https://vega.github.io/schema/vega-lite/v6.json",
       width: "container",
       height: chartHeight,
       padding: { left: 0, right: 0, top: 31, bottom: 0 },
@@ -315,7 +315,7 @@ function ClassLogitPanel({ rows }: { rows: ClassLogitDatum[] }) {
     const yDomain = Array.from(new Set(rows.map((row) => row.classShort)));
     const chartHeight = getEvidenceChartHeight(yDomain.length);
     const spec: VisualizationSpec = {
-      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      $schema: "https://vega.github.io/schema/vega-lite/v6.json",
       width: "container",
       height: chartHeight,
       padding: { left: 0, right: 0, top: 31, bottom: 0 },

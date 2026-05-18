@@ -120,7 +120,7 @@ export function TotalBandPowerChart({
     }
 
     const spec: VisualizationSpec = {
-      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+      $schema: "https://vega.github.io/schema/vega-lite/v6.json",
       width: "container",
       height: plotHeight,
       autosize: {
