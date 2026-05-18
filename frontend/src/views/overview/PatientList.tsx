@@ -25,7 +25,7 @@ interface PatientListProps {
   selectedSubjectId: string | null;
   focusSubjectId: string | null;
   modelInfo: ModelInfoResponse | null;
-  onOpenWorkspace: (subject: TimeseriesSubjectInfo) => void;
+  onOpenPatientView: (subject: TimeseriesSubjectInfo) => void;
   onBackToDatasets: () => void;
   onHoveredSubjectIdChange: (subjectId: string | null) => void;
   onSelectedSubjectIdChange: (subjectId: string | null) => void;
@@ -41,7 +41,7 @@ export function PatientList({
   selectedSubjectId,
   focusSubjectId,
   modelInfo,
-  onOpenWorkspace,
+  onOpenPatientView,
   onBackToDatasets,
   onHoveredSubjectIdChange,
   onSelectedSubjectIdChange,
@@ -83,7 +83,7 @@ export function PatientList({
     }
 
     if (event.key === "ArrowRight") {
-      onOpenWorkspace(subjects[subjectIndex]);
+      onOpenPatientView(subjects[subjectIndex]);
       return;
     }
 
@@ -187,7 +187,7 @@ export function PatientList({
                 <span className="overview-patient-distribution" style={getClassDistributionStyle(summary, modelClasses)} />
               ) : null}
             </CompactGridSelectorRow>
-            <DrillButton label={`Open workspace for ${subject.id}`} onClick={() => onOpenWorkspace(subject)} />
+            <DrillButton label={`Open patient view for ${subject.id}`} onClick={() => onOpenPatientView(subject)} />
           </div>
         );
       })}

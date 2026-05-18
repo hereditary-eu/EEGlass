@@ -1,0 +1,31 @@
+.component-status-indicator {
+  flex: 0 0 auto;
+  width: 0.48rem;
+  height: 0.48rem;
+  display: inline-block;
+  border-radius: 999px;
+  border: 1px solid rgb(15 23 42 / 16%);
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 88%);
+}
+
+.component-status-indicator--idle {
+  background: #cbd5e1;
+}
+
+.component-status-indicator--loading {
+  background: #facc15;
+  box-shadow:
+    0 0 0 2px rgb(255 255 255 / 88%),
+    0 0 0 4px rgb(250 204 21 / 18%);
+}
+
+.component-status-indicator--loaded {
+  background: #22c55e;
+}
+
+.component-status-indicator--error {
+  background: #ef4444;
+  box-shadow:
+    0 0 0 2px rgb(255 255 255 / 88%),
+    0 0 0 4px rgb(239 68 68 / 14%);
+}

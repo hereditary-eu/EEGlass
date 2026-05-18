@@ -62,7 +62,7 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     setBandPowerResetSignal((current) => current + 1);
   }, []);
 
-  const resetWorkspaceState = useCallback(() => {
+  const resetPatientViewState = useCallback(() => {
     channelsClearedByUserRef.current = false;
     setSelectedChannels([]);
     setSelectedTimeRange(null);
@@ -87,8 +87,8 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     routeSubjectId,
     source,
     setSelectedTimeseriesSource,
-    onRouteChange: resetWorkspaceState,
-    onSubjectReset: resetWorkspaceState,
+    onRouteChange: resetPatientViewState,
+    onSubjectReset: resetPatientViewState,
   });
 
   const {
@@ -118,7 +118,18 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     [sourceOptions, sourceOptionsFromMetadata],
   );
 
-  const { bandPower, isLoadingBandPower, bandPowerError, clearBandPowerData } = useTimeseriesBandPower({
+  const {
+    bandPower,
+    bandPowerStats,
+    bandPowerStatsMode,
+    isInterBandPowerStatsUnavailable,
+    isLoadingBandPower,
+    isLoadingBandPowerStats,
+    bandPowerError,
+    bandPowerStatsError,
+    setBandPowerStatsMode,
+    clearBandPowerData,
+  } = useTimeseriesBandPower({
     datasetId,
     subjectId,
     source,
@@ -214,8 +225,14 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     selectedPredictionWindowIndex,
     selectedPredictionWindow,
     bandPower,
+    bandPowerStats,
+    bandPowerStatsMode,
+    isInterBandPowerStatsUnavailable,
     isLoadingBandPower,
+    isLoadingBandPowerStats,
     bandPowerError,
+    bandPowerStatsError,
+    setBandPowerStatsMode,
     resetViewSignal,
     hoveredChannel,
     setHoveredChannel,

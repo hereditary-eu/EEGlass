@@ -7,6 +7,7 @@ from backend.ml.model_registry import DEFAULT_MODEL_NAME
 from backend.pydantic_models.inference import (
     ModelBandPowerRequest,
     ModelBandPowerResponse,
+    ModelBandPowerStatsResponse,
     ModelClassEvidenceRequest,
     ModelClassEvidenceResponse,
     ModelInfoResponse,
@@ -18,6 +19,8 @@ from backend.pydantic_models.inference import (
     ModelPredictionCacheProgress,
     ModelPredictionCacheStatus,
     ModelScalpTopologyResponse,
+    ModelWindowEmbeddingsResponse,
+    ModelWindowScalpTopologyResponse,
 )
 from backend.pydantic_models.timeseries import TimeseriesSource
 from backend.services.prediction_cache_service import PredictionCacheService
@@ -101,10 +104,59 @@ async def get_model_band_power(
         raise _http_error(exc) from exc
 
 
+@model_router.get(
+    "/models/{model_name}/datasets/{dataset_id}/subjects/{subject_id}/band-power-stats",
+    response_model=ModelBandPowerStatsResponse,
+)
+async def get_model_band_power_stats(
+    dataset_id: str,
+    subject_id: str,
+    model_name: str = DEFAULT_MODEL_NAME,
+    source: TimeseriesSource = Query("derivatives"),
+    mode: str = Query("intra_patient"),
+) -> ModelBandPowerStatsResponse:
+    if mode not in ("intra_patient", "inter_patient"):
+        raise HTTPException(status_code=400, detail="mode must be either 'intra_patient' or 'inter_patient'.")
+
+    try:
+        return PredictionCacheService.get_band_power_stats(
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            model_name=model_name,
+            source=source,
+            mode=mode,
+        )
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
+
+
 @model_router.get("/models/{model_name}/scalp-topologies", response_model=ModelScalpTopologyResponse)
 async def get_model_scalp_topologies(model_name: str = DEFAULT_MODEL_NAME) -> ModelScalpTopologyResponse:
     try:
         return ModelService.get_scalp_topologies(model_name=model_name)
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@model_router.get(
+    "/models/{model_name}/datasets/{dataset_id}/subjects/{subject_id}/window-scalp-topologies",
+    response_model=ModelWindowScalpTopologyResponse,
+)
+async def get_window_scalp_topologies(
+    dataset_id: str,
+    subject_id: str,
+    model_name: str = DEFAULT_MODEL_NAME,
+    source: TimeseriesSource = Query("derivatives"),
+    window_index: int = Query(0),
+) -> ModelWindowScalpTopologyResponse:
+    try:
+        return ModelService.compute_window_scalp_topologies(
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            source=source,
+            window_index=window_index,
+            model_name=model_name,
+        )
     except ModelServiceError as exc:
         raise _http_error(exc) from exc
 
@@ -178,6 +230,27 @@ async def get_patient_embeddings(
     try:
         return PredictionCacheService.get_patient_embeddings(
             dataset_id=dataset_id,
+            model_name=model_name,
+            source=source,
+        )
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@model_router.get(
+    "/models/{model_name}/datasets/{dataset_id}/subjects/{subject_id}/window-embeddings",
+    response_model=ModelWindowEmbeddingsResponse,
+)
+async def get_window_embeddings(
+    dataset_id: str,
+    subject_id: str,
+    model_name: str = DEFAULT_MODEL_NAME,
+    source: TimeseriesSource = Query("derivatives"),
+) -> ModelWindowEmbeddingsResponse:
+    try:
+        return PredictionCacheService.get_subject_window_embeddings(
+            dataset_id=dataset_id,
+            subject_id=subject_id,
             model_name=model_name,
             source=source,
         )

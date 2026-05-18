@@ -1,0 +1,127 @@
+.window-embedding-panel {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  padding: 0.85rem;
+  background: linear-gradient(180deg, #fcfdfe 0%, #f7fafc 100%);
+}
+
+.window-embedding-header {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.window-embedding-header h3 {
+  margin: 0;
+  color: #17212b;
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.window-embedding-header p {
+  margin: 0.22rem 0 0;
+  color: #5d6b78;
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.window-embedding-header span {
+  max-width: 18rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  color: #5d6b78;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  text-align: right;
+}
+
+.window-embedding-plot-shell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid #d7e0e8;
+  border-radius: 10px;
+  background: #fbfdff;
+  overflow: hidden;
+}
+
+.window-embedding-plot {
+  width: 100%;
+  height: 100%;
+  min-height: 12rem;
+  padding: 0.35rem 0.35rem 0.15rem;
+}
+
+.window-embedding-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(255 255 255 / 78%);
+  color: #748391;
+  padding: 1rem;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.window-embedding-overlay--error {
+  color: #b91c1c;
+}
+
+.window-embedding-legend {
+  display: grid;
+  gap: 0.25rem;
+  color: #5d6b78;
+  font-size: 0.68rem;
+}
+
+.window-embedding-legend > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem 0.55rem;
+  align-items: center;
+}
+
+.window-embedding-legend > div > span:first-child {
+  min-width: 2.8rem;
+  color: #748391;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.window-embedding-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: default;
+}
+
+button.window-embedding-legend-item {
+  cursor: pointer;
+}
+
+.window-embedding-legend-item:focus-visible {
+  outline: 2px solid rgb(14 116 144 / 34%);
+  outline-offset: 2px;
+}
+
+.window-embedding-legend-item i {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+}

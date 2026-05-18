@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
 
 import numpy as np
 from scipy.integrate import trapezoid
@@ -13,8 +13,11 @@ from backend.ml.model_registry import DEFAULT_MODEL_NAME, ModelSpec, get_model_s
 from backend.ml.model_vars import MODEL_BANDS, MODEL_CHANNELS, MODEL_CLASS_LABELS, PARAMETERS_DEFAULT
 from backend.pydantic_models.inference import (
     ModelBandPowerResponse,
+    ModelBandPowerStatsResponse,
+    ModelBandPowerStatsValue,
     ModelBandPowerValue,
     ModelChannelBandPower,
+    ModelChannelBandPowerStats,
     ModelClassEvidenceBand,
     ModelClassEvidenceContribution,
     ModelClassEvidenceResponse,
@@ -24,9 +27,17 @@ from backend.pydantic_models.inference import (
     ModelScalpTopologyChannel,
     ModelScalpTopologyGrid,
     ModelScalpTopologyResponse,
+    ModelWindowScalpTopologyBand,
+    ModelWindowScalpTopologyChannel,
+    ModelWindowScalpTopologyMode,
+    ModelWindowScalpTopologyResponse,
+    ModelPatientEmbeddingReduction,
+    ModelWindowEmbeddingPoint,
+    ModelWindowEmbeddingsResponse,
     WindowPrediction,
 )
 from backend.pydantic_models.timeseries import TimeseriesSource
+from backend.services.embedding_service import cluster_embeddings_density, reduce_embeddings_pca
 from backend.services.model_errors import (
     ModelDependencyUnavailableError,
     ModelInferenceUnavailableError,
@@ -44,6 +55,7 @@ from backend.services.timeseries_service import (
 
 K = TypeVar("K")
 V = TypeVar("V")
+MIN_RELATIVE_POWER_FOR_DB = 1e-6
 
 
 def remember(cache: OrderedDict[K, V], key: K, value: V, limit: int) -> None:
@@ -73,6 +85,7 @@ class PreparedSubjectData:
 class ModelInferenceResult:
     response: ModelInferenceResponse
     mean_penultimate_embedding: list[float]
+    penultimate_embeddings: list[list[float]]
 
 
 class SubjectPreprocessingService:
@@ -237,6 +250,7 @@ def build_model_info_response(model_spec: ModelSpec) -> ModelInfoResponse:
         name=model_spec.name,
         display_name=model_spec.display_name,
         architecture=model_spec.architecture,
+        model_summary=build_model_summary(model_spec),
         classes=[
             {
                 "class_id": class_spec.class_id,
@@ -251,10 +265,6 @@ def build_model_info_response(model_spec: ModelSpec) -> ModelInfoResponse:
             }
             for class_spec in model_spec.classes
         ],
-        bands=[
-            {"name": band_name, "label": band_name, "start_hz": start_hz, "end_hz": end_hz}
-            for band_name, start_hz, end_hz in model_spec.bands
-        ],
         metadata={
             "API name": model_spec.name,
             "Architecture": model_spec.architecture,
@@ -263,9 +273,15 @@ def build_model_info_response(model_spec: ModelSpec) -> ModelInfoResponse:
             "Sampling rate": f"{model_spec.sampling_frequency:g} Hz",
             "Sample length": model_spec.sample_length,
             "Classes": [class_spec.label for class_spec in model_spec.classes],
-            "Bands": [band_name for band_name, _start_hz, _end_hz in model_spec.bands],
         },
     )
+
+
+def build_model_summary(model_spec: ModelSpec) -> str:
+    torch_module = ModelRuntime.import_torch()
+    model = ModelRuntime.get_model(torch_module, model_spec)
+
+    return str(model)
 
 
 def compute_class_evidence_response(
@@ -386,6 +402,138 @@ def compute_band_power_response(
     )
 
 
+def compute_band_power_stats_response(
+    *,
+    model_spec: ModelSpec,
+    dataset_id: str,
+    subject_id: str,
+    source: TimeseriesSource,
+    mode: Literal["intra_patient", "inter_patient"],
+) -> ModelBandPowerStatsResponse:
+    if mode == "intra_patient":
+        subject_data = SubjectPreprocessingService.get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
+        relative_power_db = compute_subject_relative_band_power_db(subject_data)
+        stats_values = relative_power_db
+        subject_count = 1
+        window_count = int(relative_power_db.shape[0])
+    else:
+        subject_means = []
+        window_count = 0
+        for subject in TimeseriesService.list_subjects(dataset_id):
+            try:
+                subject_data = SubjectPreprocessingService.get_prepared_subject_data(model_spec, dataset_id, subject.id, source)
+                relative_power_db = compute_subject_relative_band_power_db(subject_data)
+            except (ModelServiceError, TimeseriesServiceError):
+                continue
+            if relative_power_db.size == 0:
+                continue
+
+            subject_means.append(np.mean(relative_power_db, axis=0))
+            window_count += int(relative_power_db.shape[0])
+
+        if not subject_means:
+            raise ModelValidationError("No subjects are available for inter-patient band power statistics.")
+
+        stats_values = np.stack(subject_means, axis=0)
+        subject_count = len(subject_means)
+
+    return build_band_power_stats_response(
+        dataset_id=dataset_id,
+        subject_id=subject_id,
+        source=source,
+        mode=mode,
+        unit_label="dB re channel total band power",
+        subject_count=subject_count,
+        window_count=window_count,
+        stats_values=stats_values,
+    )
+
+
+def compute_subject_relative_band_power_db(subject_data: PreparedSubjectData) -> np.ndarray:
+    relative_powers = [
+        compute_window_relative_band_powers(window, subject_data.sampling_frequency)
+        for window in subject_data.windows
+    ]
+    if not relative_powers:
+        return np.empty((0, len(MODEL_CHANNELS), len(MODEL_BANDS)), dtype=np.float64)
+
+    relative_power = np.stack(relative_powers, axis=0)
+    return 10 * np.log10(np.maximum(relative_power, MIN_RELATIVE_POWER_FOR_DB))
+
+
+def compute_window_relative_band_powers(window: np.ndarray, sampling_frequency: float) -> np.ndarray:
+    window_data = window.astype(np.float64, copy=True)
+    window_data -= np.mean(window_data, axis=1, keepdims=True)
+
+    sample_count = window_data.shape[1]
+    if sample_count < 2:
+        raise ModelValidationError("Recording is too short to compute band power.")
+
+    taper = np.hanning(sample_count)
+    window_norm = np.sum(taper**2)
+    if window_norm <= 0:
+        raise ModelServiceError("Could not compute band power due to invalid window normalization.")
+
+    freqs = np.fft.rfftfreq(sample_count, d=1.0 / sampling_frequency)
+    total_mask = (freqs >= MODEL_BANDS[0][1]) & (freqs <= MODEL_BANDS[-1][2])
+    channel_band_powers = np.empty((len(MODEL_CHANNELS), len(MODEL_BANDS)), dtype=np.float64)
+
+    for channel_index, channel_signal in enumerate(window_data):
+        spectrum = np.fft.rfft(channel_signal * taper)
+        channel_psd = (np.abs(spectrum) ** 2) / (sampling_frequency * window_norm)
+        total_power = float(trapezoid(channel_psd[total_mask], freqs[total_mask])) if np.any(total_mask) else 0.0
+        safe_total_power = total_power if total_power > 0 else 1.0
+        channel_band_powers[channel_index] = [
+            band_power / safe_total_power
+            for _band_name, _start_hz, _end_hz, band_power in iterate_band_powers(freqs, channel_psd)
+        ]
+
+    return channel_band_powers
+
+
+def build_band_power_stats_response(
+    *,
+    dataset_id: str,
+    subject_id: str,
+    source: TimeseriesSource,
+    mode: Literal["intra_patient", "inter_patient"],
+    unit_label: str,
+    subject_count: int,
+    window_count: int,
+    stats_values: np.ndarray,
+) -> ModelBandPowerStatsResponse:
+    means = np.mean(stats_values, axis=0)
+    stds = np.std(stats_values, axis=0)
+
+    return ModelBandPowerStatsResponse(
+        dataset_id=dataset_id,
+        subject_id=subject_id,
+        source=source,
+        mode=mode,
+        unit_label=unit_label,
+        subject_count=subject_count,
+        window_count=window_count,
+        channels=[
+            ModelChannelBandPowerStats(
+                channel=channel_name,
+                bands=[
+                    ModelBandPowerStatsValue(
+                        band=band_name,
+                        start_hz=start_hz,
+                        end_hz=end_hz,
+                        mean_db=float(means[channel_index, band_index]),
+                        lower_2sigma_db=float(means[channel_index, band_index] - 2 * stds[channel_index, band_index]),
+                        upper_2sigma_db=float(means[channel_index, band_index] + 2 * stds[channel_index, band_index]),
+                        sample_count=int(stats_values.shape[0]),
+                    )
+                    for band_index, (band_name, start_hz, end_hz) in enumerate(MODEL_BANDS)
+                ],
+            )
+            for channel_index, channel_name in enumerate(MODEL_CHANNELS)
+        ],
+    )
+
+
 def build_scalp_topology_response(model_spec: ModelSpec) -> ModelScalpTopologyResponse:
     torch_module = ModelRuntime.import_torch()
     model = ModelRuntime.get_model(torch_module, model_spec)
@@ -429,6 +577,140 @@ def build_scalp_topology_response(model_spec: ModelSpec) -> ModelScalpTopologyRe
                 MODEL_BANDS,
                 conv2_weights,
                 interpolated_band_values,
+                strict=True,
+            )
+        ],
+    )
+
+
+def compute_window_scalp_topology_response(
+    *,
+    model_spec: ModelSpec,
+    subject_data: PreparedSubjectData,
+    dataset_id: str,
+    subject_id: str,
+    source: TimeseriesSource,
+    window_index: int,
+) -> ModelWindowScalpTopologyResponse:
+    validate_window_index(window_index, len(subject_data.prediction_ranges))
+    torch_module = ModelRuntime.import_torch()
+    model = ModelRuntime.get_model(torch_module, model_spec)
+    conv2_weights = model.encoder.conv2.weight.detach().cpu().numpy().squeeze(1).squeeze(-1)
+    band_power_response = compute_band_power_response(
+        subject_data=subject_data,
+        dataset_id=dataset_id,
+        subject_id=subject_id,
+        source=source,
+        window_index=window_index,
+    )
+    input_power_values = np.array(
+        [
+            [channel.bands[band_index].relative_power for channel in band_power_response.channels]
+            for band_index in range(len(MODEL_BANDS))
+        ],
+        dtype=float,
+    )
+    if input_power_values.shape != conv2_weights.shape:
+        raise ModelServiceError(
+            "Could not compute scalp topology because band power and model weight dimensions do not match."
+        )
+
+    weighted_contribution_values = input_power_values * conv2_weights
+    grid_resolution = 72
+    channel_positions, grid_x, grid_y, input_power_grids = compute_mne_topology_grid(
+        input_power_values,
+        grid_resolution,
+    )
+    _, _, _, weighted_contribution_grids = compute_mne_topology_grid(
+        weighted_contribution_values,
+        grid_resolution,
+    )
+    checkpoint_signature = ModelRuntime.checkpoint_signature(model_spec)
+
+    return ModelWindowScalpTopologyResponse(
+        dataset_id=dataset_id,
+        subject_id=subject_id,
+        source=source,
+        model_name=model_spec.name,
+        checkpoint_signature=checkpoint_signature,
+        window_index=window_index,
+        start_time=band_power_response.start_time,
+        end_time=band_power_response.end_time,
+        layer_name="encoder.conv2",
+        grid=ModelScalpTopologyGrid(
+            resolution=grid_resolution,
+            x=grid_x.astype(float).ravel().tolist(),
+            y=grid_y.astype(float).ravel().tolist(),
+        ),
+        modes=[
+            build_window_scalp_topology_mode(
+                mode="weighted_contribution",
+                label="Weighted contribution",
+                unit_label="rel power x W",
+                color_scale="diverging",
+                values=weighted_contribution_values,
+                interpolated_values=weighted_contribution_grids,
+                channel_positions=channel_positions,
+            ),
+            build_window_scalp_topology_mode(
+                mode="input_power",
+                label="Input power",
+                unit_label="rel power",
+                color_scale="sequential",
+                values=input_power_values,
+                interpolated_values=input_power_grids,
+                channel_positions=channel_positions,
+            ),
+        ],
+    )
+
+
+def build_window_scalp_topology_mode(
+    *,
+    mode: Literal["weighted_contribution", "input_power"],
+    label: str,
+    unit_label: str,
+    color_scale: Literal["diverging", "sequential"],
+    values: np.ndarray,
+    interpolated_values: list[np.ndarray],
+    channel_positions: dict[str, tuple[float, float]],
+) -> ModelWindowScalpTopologyMode:
+    finite_values = [values.ravel()]
+    finite_values.extend(interpolated_value.ravel() for interpolated_value in interpolated_values)
+    global_values = np.concatenate(finite_values) if finite_values else np.array([], dtype=float)
+    if color_scale == "diverging":
+        max_abs_value = float(np.max(np.abs(global_values))) if global_values.size else 0.0
+        global_min_value = -max_abs_value
+        global_max_value = max_abs_value
+    else:
+        global_min_value = 0.0
+        global_max_value = float(np.max(global_values)) if global_values.size else 0.0
+
+    return ModelWindowScalpTopologyMode(
+        mode=mode,
+        label=label,
+        unit_label=unit_label,
+        color_scale=color_scale,
+        global_min_value=global_min_value,
+        global_max_value=global_max_value,
+        bands=[
+            ModelWindowScalpTopologyBand(
+                band=band_name,
+                grid_values=interpolated_band_values.astype(float).ravel().tolist(),
+                channels=[
+                    ModelWindowScalpTopologyChannel(
+                        name=channel_name,
+                        x=float(channel_positions[channel_name][0]),
+                        y=float(channel_positions[channel_name][1]),
+                        value=float(channel_value),
+                    )
+                    for channel_name, channel_value in zip(MODEL_CHANNELS, band_values, strict=True)
+                ],
+            )
+            for (band_name, _, _), band_values, interpolated_band_values in zip(
+                MODEL_BANDS,
+                values,
+                interpolated_values,
                 strict=True,
             )
         ],
@@ -504,14 +786,24 @@ class ModelService:
     _INFERENCE_CACHE_LIMIT = 16
     _CLASS_EVIDENCE_CACHE_LIMIT = 64
     _BAND_POWER_CACHE_LIMIT = 16
+    _BAND_POWER_STATS_CACHE_LIMIT = 8
     _SCALP_TOPOLOGY_CACHE_LIMIT = 4
+    _WINDOW_SCALP_TOPOLOGY_CACHE_LIMIT = 64
     _inference_cache: OrderedDict[tuple[str, str, str, TimeseriesSource, str], ModelInferenceResponse] = OrderedDict()
     _class_evidence_cache: OrderedDict[
         tuple[str, str, str, TimeseriesSource, int, str],
         ModelClassEvidenceResponse,
     ] = OrderedDict()
     _band_power_cache: OrderedDict[tuple[str, str, str, TimeseriesSource, int], ModelBandPowerResponse] = OrderedDict()
+    _band_power_stats_cache: OrderedDict[
+        tuple[str, str, str, TimeseriesSource, Literal["intra_patient", "inter_patient"]],
+        ModelBandPowerStatsResponse,
+    ] = OrderedDict()
     _scalp_topology_cache: OrderedDict[str, ModelScalpTopologyResponse] = OrderedDict()
+    _window_scalp_topology_cache: OrderedDict[
+        tuple[str, str, str, TimeseriesSource, int, str],
+        ModelWindowScalpTopologyResponse,
+    ] = OrderedDict()
 
     @classmethod
     def get_checkpoint_signature(cls, model_name: str = DEFAULT_MODEL_NAME) -> str:
@@ -558,6 +850,72 @@ class ModelService:
         )
 
     @classmethod
+    def compute_subject_window_embeddings(
+        cls,
+        dataset_id: str,
+        subject_id: str,
+        source: TimeseriesSource = "derivatives",
+        model_name: str = DEFAULT_MODEL_NAME,
+    ) -> ModelWindowEmbeddingsResponse:
+        cls._ensure_inference_available()
+        model_spec = cls._get_model_spec(model_name)
+        subject_data = SubjectPreprocessingService.get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
+        probabilities, penultimate_embeddings = ModelRuntime.run_inference_with_embeddings(model_spec, subject_data.windows)
+        response = build_inference_response(
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            source=source,
+            sampling_frequency=subject_data.sampling_frequency,
+            prediction_ranges=subject_data.prediction_ranges,
+            probabilities=probabilities,
+        )
+        remember(
+            cls._inference_cache,
+            (model_spec.name, dataset_id, subject_id, source, ModelRuntime.checkpoint_signature(model_spec)),
+            response,
+            cls._INFERENCE_CACHE_LIMIT,
+        )
+
+        source_dimension = int(penultimate_embeddings.shape[1]) if penultimate_embeddings.ndim == 2 else 0
+        coordinates, explained_variance_ratio, reduction_status = reduce_embeddings_pca(penultimate_embeddings)
+        cluster_ids = cluster_embeddings_density(penultimate_embeddings) if reduction_status == "ok" else []
+        points = (
+            [
+                ModelWindowEmbeddingPoint(
+                    window_index=prediction.window_index,
+                    start_time=prediction.start_time,
+                    end_time=prediction.end_time,
+                    x=float(coordinate[0]),
+                    y=float(coordinate[1]),
+                    predicted_label=prediction.predicted_label,
+                    confidence=prediction.confidence,
+                    cluster_id=cluster_ids[index] if index < len(cluster_ids) else None,
+                )
+                for index, (prediction, coordinate) in enumerate(zip(response.predictions, coordinates, strict=True))
+            ]
+            if reduction_status == "ok"
+            else []
+        )
+
+        return ModelWindowEmbeddingsResponse(
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            model_name=model_spec.name,
+            source=source,
+            checkpoint_signature=ModelRuntime.checkpoint_signature(model_spec),
+            embedding_layer="encoder",
+            embedding_label="window penultimate embedding",
+            reduction=ModelPatientEmbeddingReduction(
+                method="pca",
+                status=reduction_status,
+                source_dimension=source_dimension,
+                output_dimension=2 if reduction_status == "ok" else 0,
+                explained_variance_ratio=explained_variance_ratio,
+            ),
+            points=points,
+        )
+
+    @classmethod
     def _infer_subject_result(
         cls,
         *,
@@ -574,7 +932,7 @@ class ModelService:
         cached_response = cls._inference_cache.get(cache_key)
         if cached_response is not None and not include_penultimate_embedding:
             cls._inference_cache.move_to_end(cache_key)
-            return ModelInferenceResult(response=cached_response, mean_penultimate_embedding=[])
+            return ModelInferenceResult(response=cached_response, mean_penultimate_embedding=[], penultimate_embeddings=[])
 
         subject_data = SubjectPreprocessingService.get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
         if include_penultimate_embedding:
@@ -598,7 +956,16 @@ class ModelService:
             if include_penultimate_embedding and penultimate_embeddings.size
             else []
         )
-        return ModelInferenceResult(response=response, mean_penultimate_embedding=mean_penultimate_embedding)
+        window_penultimate_embeddings = (
+            penultimate_embeddings.astype(float).tolist()
+            if include_penultimate_embedding and penultimate_embeddings.size
+            else []
+        )
+        return ModelInferenceResult(
+            response=response,
+            mean_penultimate_embedding=mean_penultimate_embedding,
+            penultimate_embeddings=window_penultimate_embeddings,
+        )
 
     @classmethod
     def compute_class_evidence(
@@ -660,6 +1027,42 @@ class ModelService:
         return response
 
     @classmethod
+    def compute_band_power_stats(
+        cls,
+        dataset_id: str,
+        subject_id: str,
+        source: TimeseriesSource = "derivatives",
+        mode: Literal["intra_patient", "inter_patient"] = "intra_patient",
+        model_name: str = DEFAULT_MODEL_NAME,
+    ) -> ModelBandPowerStatsResponse:
+        model_spec = cls._get_model_spec(model_name)
+        cache_key = (model_spec.name, dataset_id, subject_id, source, mode)
+        cached_response = cls._band_power_stats_cache.get(cache_key)
+        if cached_response is not None:
+            cls._band_power_stats_cache.move_to_end(cache_key)
+            return cached_response
+
+        try:
+            response = compute_band_power_stats_response(
+                model_spec=model_spec,
+                dataset_id=dataset_id,
+                subject_id=subject_id,
+                source=source,
+                mode=mode,
+            )
+        except TimeseriesNotFoundError as exc:
+            raise ModelNotFoundError(str(exc)) from exc
+        except TimeseriesValidationError as exc:
+            raise ModelValidationError(str(exc)) from exc
+        except TimeseriesReaderUnavailableError as exc:
+            raise ModelDependencyUnavailableError(str(exc)) from exc
+        except TimeseriesServiceError as exc:
+            raise ModelServiceError(str(exc)) from exc
+
+        remember(cls._band_power_stats_cache, cache_key, response, cls._BAND_POWER_STATS_CACHE_LIMIT)
+        return response
+
+    @classmethod
     def get_scalp_topologies(cls, model_name: str = DEFAULT_MODEL_NAME) -> ModelScalpTopologyResponse:
         model_spec = cls._get_model_spec(model_name)
         checkpoint_signature = ModelRuntime.checkpoint_signature(model_spec)
@@ -671,6 +1074,36 @@ class ModelService:
 
         response = build_scalp_topology_response(model_spec)
         remember(cls._scalp_topology_cache, cache_key, response, cls._SCALP_TOPOLOGY_CACHE_LIMIT)
+        return response
+
+    @classmethod
+    def compute_window_scalp_topologies(
+        cls,
+        dataset_id: str,
+        subject_id: str,
+        source: TimeseriesSource = "derivatives",
+        window_index: int = 0,
+        model_name: str = DEFAULT_MODEL_NAME,
+    ) -> ModelWindowScalpTopologyResponse:
+        cls._ensure_inference_available()
+        model_spec = cls._get_model_spec(model_name)
+        checkpoint_signature = ModelRuntime.checkpoint_signature(model_spec)
+        cache_key = (model_spec.name, dataset_id, subject_id, source, window_index, checkpoint_signature)
+        cached_response = cls._window_scalp_topology_cache.get(cache_key)
+        if cached_response is not None:
+            cls._window_scalp_topology_cache.move_to_end(cache_key)
+            return cached_response
+
+        subject_data = SubjectPreprocessingService.get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
+        response = compute_window_scalp_topology_response(
+            model_spec=model_spec,
+            subject_data=subject_data,
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            source=source,
+            window_index=window_index,
+        )
+        remember(cls._window_scalp_topology_cache, cache_key, response, cls._WINDOW_SCALP_TOPOLOGY_CACHE_LIMIT)
         return response
 
     @staticmethod

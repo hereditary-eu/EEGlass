@@ -4,6 +4,8 @@ import type {
   ChannelId,
   ModelBandPowerRequest,
   ModelBandPowerResponse,
+  ModelBandPowerStatsMode,
+  ModelBandPowerStatsResponse,
   ModelClassEvidenceRequest,
   ModelClassEvidenceResponse,
   ModelInfoResponse,
@@ -12,6 +14,8 @@ import type {
   ModelPredictionCacheJobResponse,
   ModelPredictionCacheProgress,
   ModelPredictionCacheStatus,
+  ModelWindowEmbeddingsResponse,
+  ModelWindowScalpTopologyResponse,
   ModelScalpTopologyResponse,
   TimeseriesDatasetInfo,
   TimeseriesBandFilter,
@@ -155,6 +159,34 @@ export class TimeseriesService {
     );
   }
 
+  static async getWindowEmbeddings(
+    datasetId: string,
+    subjectId: string,
+    source: TimeseriesSource = "derivatives",
+    modelName?: string,
+  ): Promise<ModelWindowEmbeddingsResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
+    return ApiClient.get<ModelWindowEmbeddingsResponse>(
+      `${API_ROUTES.model.windowEmbeddings(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({ source })}`,
+    );
+  }
+
+  static async getWindowScalpTopologies(
+    datasetId: string,
+    subjectId: string,
+    windowIndex: number,
+    source: TimeseriesSource = "derivatives",
+    modelName?: string,
+  ): Promise<ModelWindowScalpTopologyResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
+    return ApiClient.get<ModelWindowScalpTopologyResponse>(
+      `${API_ROUTES.model.windowScalpTopologies(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({
+        source,
+        window_index: windowIndex,
+      })}`,
+    );
+  }
+
   static async deletePredictionCache(
     datasetId: string,
     source: TimeseriesSource = "derivatives",
@@ -209,6 +241,22 @@ export class TimeseriesService {
       window_index: windowIndex,
     };
     return ApiClient.post<ModelBandPowerResponse>(API_ROUTES.model.bandPower(resolvedModelName), request);
+  }
+
+  static async getBandPowerStats(
+    datasetId: string,
+    subjectId: string,
+    source: TimeseriesSource = "derivatives",
+    mode: ModelBandPowerStatsMode = "intra_patient",
+    modelName?: string,
+  ): Promise<ModelBandPowerStatsResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
+    return ApiClient.get<ModelBandPowerStatsResponse>(
+      `${API_ROUTES.model.bandPowerStats(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({
+        source,
+        mode,
+      })}`,
+    );
   }
 
   static async computeClassEvidence(

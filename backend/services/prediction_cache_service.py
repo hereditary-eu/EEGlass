@@ -16,8 +16,11 @@ import numpy as np
 
 from backend.config import CONFIG
 from backend.ml.model_registry import DEFAULT_MODEL_NAME
-from backend.ml.model_vars import MODEL_CLASS_LABELS
+from backend.ml.model_vars import MODEL_BANDS, MODEL_CHANNELS, MODEL_CLASS_LABELS
 from backend.pydantic_models.inference import (
+    ModelBandPowerStatsResponse,
+    ModelBandPowerStatsValue,
+    ModelChannelBandPowerStats,
     ModelInferenceResponse,
     ModelPatientEmbeddingPoint,
     ModelPatientEmbeddingReduction,
@@ -27,8 +30,11 @@ from backend.pydantic_models.inference import (
     ModelPredictionCacheProgress,
     ModelPredictionCacheStatus,
     ModelPredictionSummary,
+    ModelWindowEmbeddingPoint,
+    ModelWindowEmbeddingsResponse,
 )
 from backend.pydantic_models.timeseries import TimeseriesSource
+from backend.services.embedding_service import cluster_embeddings_density, reduce_embeddings_pca
 from backend.services.model_service import (
     ModelNotFoundError,
     ModelService,
@@ -42,9 +48,10 @@ from backend.services.timeseries_service import (
     TimeseriesValidationError,
 )
 
-PREPROCESSING_VERSION = "xeegnet-preprocessing-v2-penultimate-embedding"
+PREPROCESSING_VERSION = "xeegnet-preprocessing-v3-band-power-stats"
 PENULTIMATE_EMBEDDING_LAYER = "encoder"
 PENULTIMATE_EMBEDDING_LABEL = "penultimate embedding"
+WINDOW_EMBEDDING_CLUSTERING_METHOD = "dbscan"
 
 
 def checkpoint_key(checkpoint_signature: str) -> str:
@@ -69,6 +76,16 @@ def subject_path(
     return cache_dir(dataset_id, model_name, checkpoint_key_value) / "subjects" / f"{subject_id}.{source}.predictions.json"
 
 
+def subject_clustering_path(
+    dataset_id: str,
+    model_name: str,
+    checkpoint_key_value: str,
+    subject_id: str,
+    source: TimeseriesSource,
+) -> Path:
+    return cache_dir(dataset_id, model_name, checkpoint_key_value) / "subjects" / f"{subject_id}.{source}.clusters.json"
+
+
 def read_manifest(
     dataset_id: str,
     model_name: str,
@@ -86,6 +103,16 @@ def read_prediction_artifact(
     source: TimeseriesSource,
 ) -> dict[str, Any] | None:
     return read_json(subject_path(dataset_id, model_name, checkpoint_key_value, subject_id, source))
+
+
+def read_clustering_artifact(
+    dataset_id: str,
+    model_name: str,
+    checkpoint_key_value: str,
+    subject_id: str,
+    source: TimeseriesSource,
+) -> dict[str, Any] | None:
+    return read_json(subject_clustering_path(dataset_id, model_name, checkpoint_key_value, subject_id, source))
 
 
 def read_json(path: Path) -> dict[str, Any] | None:
@@ -139,7 +166,7 @@ def is_manifest_valid(
     )
 
 
-def is_artifact_valid(
+def is_model_artifact_valid(
     artifact: dict[str, Any] | None,
     *,
     dataset_id: str,
@@ -161,6 +188,31 @@ def is_artifact_valid(
         and isinstance(artifact.get("response"), dict)
         and isinstance(artifact.get("summary"), dict)
         and is_embedding_summary_valid(artifact.get("embedding"))
+        and is_window_embedding_summary_valid(artifact.get("window_embeddings"))
+        and is_band_power_stats_summary_valid(artifact.get("band_power_stats"))
+    )
+
+
+def is_clustering_artifact_valid(
+    artifact: dict[str, Any] | None,
+    *,
+    dataset_id: str,
+    subject_id: str,
+    model_name: str,
+    source: TimeseriesSource,
+    checkpoint_signature: str,
+    checkpoint_key_value: str,
+) -> bool:
+    return bool(
+        artifact
+        and artifact.get("preprocessing_version") == PREPROCESSING_VERSION
+        and artifact.get("dataset_id") == dataset_id
+        and artifact.get("subject_id") == subject_id
+        and artifact.get("model_name") == model_name
+        and artifact.get("source") == source
+        and artifact.get("checkpoint_signature") == checkpoint_signature
+        and artifact.get("checkpoint_key") == checkpoint_key_value
+        and is_window_embedding_cluster_summary_valid(artifact.get("window_embedding_clusters"))
     )
 
 
@@ -176,34 +228,70 @@ def is_embedding_summary_valid(embedding: Any) -> bool:
     )
 
 
-def reduce_embeddings_pca(vectors: np.ndarray) -> tuple[np.ndarray, list[float], str]:
-    if vectors.ndim != 2 or vectors.shape[0] < 2:
-        return np.empty((0, 2), dtype=float), [], "insufficient_data"
+def is_window_embedding_summary_valid(window_embeddings: Any) -> bool:
+    if not (
+        isinstance(window_embeddings, dict)
+        and window_embeddings.get("layer_name") == PENULTIMATE_EMBEDDING_LAYER
+        and window_embeddings.get("label") == PENULTIMATE_EMBEDDING_LABEL
+        and isinstance(window_embeddings.get("values"), list)
+        and isinstance(window_embeddings.get("dimension"), int)
+        and window_embeddings.get("dimension") > 0
+    ):
+        return False
 
-    vectors = vectors.astype(float, copy=False)
-    source_dimension = vectors.shape[1]
-    centered = vectors - np.mean(vectors, axis=0, keepdims=True)
+    dimension = window_embeddings["dimension"]
+    return all(
+        isinstance(row, list)
+        and len(row) == dimension
+        and all(isinstance(value, (int, float)) and np.isfinite(value) for value in row)
+        for row in window_embeddings["values"]
+    )
 
-    if source_dimension == 1:
-        coordinates = np.column_stack([centered[:, 0], np.zeros(centered.shape[0], dtype=float)])
-        variance = float(np.var(centered[:, 0], ddof=1)) if centered.shape[0] > 1 else 0.0
-        ratio = [1.0 if variance > 0 else 0.0, 0.0]
-        return coordinates, ratio, "ok"
 
-    _u, singular_values, components = np.linalg.svd(centered, full_matrices=False)
-    output_components = components[:2]
-    coordinates = centered @ output_components.T
-    if coordinates.shape[1] == 1:
-        coordinates = np.column_stack([coordinates[:, 0], np.zeros(coordinates.shape[0], dtype=float)])
+def is_window_embedding_cluster_summary_valid(window_embedding_clusters: Any) -> bool:
+    return bool(
+        isinstance(window_embedding_clusters, dict)
+        and window_embedding_clusters.get("method") == WINDOW_EMBEDDING_CLUSTERING_METHOD
+        and isinstance(window_embedding_clusters.get("labels"), list)
+        and all(
+            label is None or (isinstance(label, int) and label >= 0)
+            for label in window_embedding_clusters["labels"]
+        )
+    )
 
-    variances = (singular_values**2) / max(vectors.shape[0] - 1, 1)
-    total_variance = float(np.sum(variances))
-    if total_variance > 0:
-        explained = (variances[:2] / total_variance).astype(float).tolist()
-    else:
-        explained = []
-    explained = (explained + [0.0, 0.0])[:2]
-    return coordinates[:, :2].astype(float, copy=False), explained, "ok"
+
+def is_band_power_stats_summary_valid(band_power_stats: Any) -> bool:
+    if not (
+        isinstance(band_power_stats, dict)
+        and band_power_stats.get("mode") == "intra_patient"
+        and band_power_stats.get("unit_label") == "dB re channel total band power"
+        and isinstance(band_power_stats.get("channels"), list)
+        and len(band_power_stats["channels"]) == len(MODEL_CHANNELS)
+    ):
+        return False
+
+    for channel, expected_channel_name in zip(band_power_stats["channels"], MODEL_CHANNELS, strict=True):
+        if not (
+            isinstance(channel, dict)
+            and channel.get("channel") == expected_channel_name
+            and isinstance(channel.get("bands"), list)
+            and len(channel["bands"]) == len(MODEL_BANDS)
+        ):
+            return False
+        for band, (expected_band_name, _start_hz, _end_hz) in zip(channel["bands"], MODEL_BANDS, strict=True):
+            if not (
+                isinstance(band, dict)
+                and band.get("band") == expected_band_name
+                and all(
+                    isinstance(band.get(key), (int, float)) and np.isfinite(band.get(key))
+                    for key in ("mean_db", "lower_2sigma_db", "upper_2sigma_db")
+                )
+                and isinstance(band.get("sample_count"), int)
+                and band["sample_count"] >= 0
+            ):
+                return False
+
+    return True
 
 
 def build_prediction_summary(*, response: ModelInferenceResponse, true_label: str | None) -> ModelPredictionSummary:
@@ -244,6 +332,59 @@ def aggregate_patient_prediction(class_counts: dict[int, int], total_windows: in
         return MODEL_CLASS_LABELS[predicted_class_id]
 
     raise ModelServiceError(f"Unsupported patient aggregation strategy '{strategy}'.")
+
+
+def extract_band_power_mean_values(band_power_stats: dict[str, Any]) -> np.ndarray:
+    return np.asarray(
+        [
+            [float(band["mean_db"]) for band in channel["bands"]]
+            for channel in band_power_stats["channels"]
+        ],
+        dtype=np.float64,
+    )
+
+
+def build_inter_patient_band_power_stats_response(
+    *,
+    dataset_id: str,
+    subject_id: str,
+    source: TimeseriesSource,
+    patient_mean_values: list[np.ndarray],
+) -> ModelBandPowerStatsResponse:
+    if not patient_mean_values:
+        raise ModelNotFoundError("Inter-patient band-power statistics require a completed dataset compute job.")
+
+    stats_values = np.stack(patient_mean_values, axis=0)
+    means = np.mean(stats_values, axis=0)
+    stds = np.std(stats_values, axis=0)
+
+    return ModelBandPowerStatsResponse(
+        dataset_id=dataset_id,
+        subject_id=subject_id,
+        source=source,
+        mode="inter_patient",
+        unit_label="dB re channel total band power",
+        subject_count=len(patient_mean_values),
+        window_count=0,
+        channels=[
+            ModelChannelBandPowerStats(
+                channel=channel_name,
+                bands=[
+                    ModelBandPowerStatsValue(
+                        band=band_name,
+                        start_hz=start_hz,
+                        end_hz=end_hz,
+                        mean_db=float(means[channel_index, band_index]),
+                        lower_2sigma_db=float(means[channel_index, band_index] - 2 * stds[channel_index, band_index]),
+                        upper_2sigma_db=float(means[channel_index, band_index] + 2 * stds[channel_index, band_index]),
+                        sample_count=len(patient_mean_values),
+                    )
+                    for band_index, (band_name, start_hz, end_hz) in enumerate(MODEL_BANDS)
+                ],
+            )
+            for channel_index, channel_name in enumerate(MODEL_CHANNELS)
+        ],
+    )
 
 
 @dataclass
@@ -360,7 +501,7 @@ class PredictionCacheService:
         subject_summaries = []
         for subject in subjects:
             artifact = cls._read_prediction_artifact(dataset_id, model_name, checkpoint_key, subject.id, source)
-            if not cls._is_artifact_valid(
+            if not cls._is_model_artifact_valid(
                 artifact,
                 dataset_id=dataset_id,
                 subject_id=subject.id,
@@ -413,7 +554,7 @@ class PredictionCacheService:
 
         for subject in subjects:
             artifact = cls._read_prediction_artifact(dataset_id, model_name, checkpoint_key, subject.id, source)
-            if not cls._is_artifact_valid(
+            if not cls._is_model_artifact_valid(
                 artifact,
                 dataset_id=dataset_id,
                 subject_id=subject.id,
@@ -495,6 +636,8 @@ class PredictionCacheService:
         if subjects_dir.is_dir():
             for prediction_path in subjects_dir.glob(f"*.{source}.predictions.json"):
                 prediction_path.unlink()
+            for clustering_path in subjects_dir.glob(f"*.{source}.clusters.json"):
+                clustering_path.unlink()
 
         return cls.get_cache_status(dataset_id=dataset_id, model_name=model_name, source=source)
 
@@ -513,7 +656,7 @@ class PredictionCacheService:
             raise ModelNotFoundError(f"Subject '{subject_id}' was not found in dataset '{dataset_id}'.")
 
         artifact = cls._read_prediction_artifact(dataset_id, model_name, checkpoint_key, subject_id, source)
-        if not cls._is_artifact_valid(
+        if not cls._is_model_artifact_valid(
             artifact,
             dataset_id=dataset_id,
             subject_id=subject_id,
@@ -527,6 +670,127 @@ class PredictionCacheService:
             )
 
         return ModelInferenceResponse(**artifact["response"])
+
+    @classmethod
+    def get_band_power_stats(
+        cls,
+        dataset_id: str,
+        subject_id: str,
+        model_name: str = DEFAULT_MODEL_NAME,
+        source: TimeseriesSource = "derivatives",
+        mode: Literal["intra_patient", "inter_patient"] = "intra_patient",
+    ) -> ModelBandPowerStatsResponse:
+        checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
+        checkpoint_key = cls._checkpoint_key(checkpoint_signature)
+        subjects = cls._list_subjects(dataset_id)
+        subject = next((candidate for candidate in subjects if candidate.id == subject_id), None)
+        if subject is None:
+            raise ModelNotFoundError(f"Subject '{subject_id}' was not found in dataset '{dataset_id}'.")
+
+        if mode == "intra_patient":
+            artifact = cls._read_prediction_artifact(dataset_id, model_name, checkpoint_key, subject_id, source)
+            if not cls._is_model_artifact_valid(
+                artifact,
+                dataset_id=dataset_id,
+                subject_id=subject_id,
+                model_name=model_name,
+                source=source,
+                checkpoint_signature=checkpoint_signature,
+                checkpoint_key=checkpoint_key,
+            ):
+                raise ModelNotFoundError(
+                    f"Band-power statistics for {dataset_id}/{subject_id} with model '{model_name}' were not found."
+                )
+            return ModelBandPowerStatsResponse(**artifact["band_power_stats"])
+
+        manifest = cls._read_manifest(dataset_id, model_name, checkpoint_key, source)
+        if not cls._is_manifest_valid(
+            manifest,
+            dataset_id,
+            model_name,
+            source,
+            checkpoint_signature,
+            checkpoint_key,
+        ):
+            raise ModelNotFoundError("Inter-patient band-power statistics require a completed dataset compute job.")
+
+        completed_subjects = set(manifest.get("completed_subjects", []))
+        available_subject_ids = [subject.id for subject in subjects if source in subject.sources]
+        if not available_subject_ids or not set(available_subject_ids).issubset(completed_subjects):
+            raise ModelNotFoundError("Inter-patient band-power statistics require a completed dataset compute job.")
+
+        patient_mean_values: list[np.ndarray] = []
+        for cohort_subject_id in available_subject_ids:
+            artifact = cls._read_prediction_artifact(dataset_id, model_name, checkpoint_key, cohort_subject_id, source)
+            if not cls._is_model_artifact_valid(
+                artifact,
+                dataset_id=dataset_id,
+                subject_id=cohort_subject_id,
+                model_name=model_name,
+                source=source,
+                checkpoint_signature=checkpoint_signature,
+                checkpoint_key=checkpoint_key,
+            ):
+                raise ModelNotFoundError("Inter-patient band-power statistics require a completed dataset compute job.")
+            patient_mean_values.append(extract_band_power_mean_values(artifact["band_power_stats"]))
+
+        return build_inter_patient_band_power_stats_response(
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            source=source,
+            patient_mean_values=patient_mean_values,
+        )
+
+    @classmethod
+    def get_subject_window_embeddings(
+        cls,
+        dataset_id: str,
+        subject_id: str,
+        model_name: str = DEFAULT_MODEL_NAME,
+        source: TimeseriesSource = "derivatives",
+    ) -> ModelWindowEmbeddingsResponse:
+        checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
+        checkpoint_key = cls._checkpoint_key(checkpoint_signature)
+        artifact = cls._read_prediction_artifact(dataset_id, model_name, checkpoint_key, subject_id, source)
+        if not cls._is_model_artifact_valid(
+            artifact,
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            model_name=model_name,
+            source=source,
+            checkpoint_signature=checkpoint_signature,
+            checkpoint_key=checkpoint_key,
+        ):
+            inference_result = ModelService.infer_subject_with_embedding(
+                dataset_id=dataset_id,
+                subject_id=subject_id,
+                source=source,
+                model_name=model_name,
+            )
+            cls._write_prediction_artifact(
+                dataset_id=dataset_id,
+                subject_id=subject_id,
+                model_name=model_name,
+                source=source,
+                checkpoint_signature=checkpoint_signature,
+                checkpoint_key=checkpoint_key,
+                response=inference_result.response,
+                mean_penultimate_embedding=inference_result.mean_penultimate_embedding,
+                penultimate_embeddings=inference_result.penultimate_embeddings,
+            )
+            artifact = cls._read_prediction_artifact(dataset_id, model_name, checkpoint_key, subject_id, source)
+
+        clustering_artifact = cls._read_clustering_artifact(dataset_id, model_name, checkpoint_key, subject_id, source)
+        return cls._subject_window_embeddings_response(
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            model_name=model_name,
+            source=source,
+            checkpoint_signature=checkpoint_signature,
+            checkpoint_key=checkpoint_key,
+            artifact=artifact,
+            clustering_artifact=clustering_artifact,
+        )
 
     @classmethod
     async def compute_subject_predictions(
@@ -568,6 +832,7 @@ class PredictionCacheService:
             checkpoint_key=checkpoint_key,
             response=response,
             mean_penultimate_embedding=inference_result.mean_penultimate_embedding,
+            penultimate_embeddings=inference_result.penultimate_embeddings,
         )
         cls._mark_subject_completed(
             dataset_id=dataset_id,
@@ -618,7 +883,7 @@ class PredictionCacheService:
                     continue
 
                 cached = cls._read_prediction_artifact(job.dataset_id, job.model_name, checkpoint_key, subject.id, job.source)
-                if cls._is_artifact_valid(
+                if cls._is_model_artifact_valid(
                     cached,
                     dataset_id=job.dataset_id,
                     subject_id=subject.id,
@@ -658,6 +923,7 @@ class PredictionCacheService:
                         checkpoint_key=checkpoint_key,
                         response=response,
                         mean_penultimate_embedding=inference_result.mean_penultimate_embedding,
+                        penultimate_embeddings=inference_result.penultimate_embeddings,
                     )
                     completed_subjects.add(subject.id)
                     failed_subjects.pop(subject.id, None)
@@ -752,6 +1018,17 @@ class PredictionCacheService:
         return subject_path(dataset_id, model_name, checkpoint_key, subject_id, source)
 
     @classmethod
+    def _subject_clustering_path(
+        cls,
+        dataset_id: str,
+        model_name: str,
+        checkpoint_key: str,
+        subject_id: str,
+        source: TimeseriesSource,
+    ):
+        return subject_clustering_path(dataset_id, model_name, checkpoint_key, subject_id, source)
+
+    @classmethod
     def _read_manifest(
         cls,
         dataset_id: str,
@@ -772,6 +1049,17 @@ class PredictionCacheService:
     ) -> dict[str, Any] | None:
         return read_prediction_artifact(dataset_id, model_name, checkpoint_key, subject_id, source)
 
+    @classmethod
+    def _read_clustering_artifact(
+        cls,
+        dataset_id: str,
+        model_name: str,
+        checkpoint_key: str,
+        subject_id: str,
+        source: TimeseriesSource,
+    ) -> dict[str, Any] | None:
+        return read_clustering_artifact(dataset_id, model_name, checkpoint_key, subject_id, source)
+
     @staticmethod
     def _read_json(path):
         return read_json(path)
@@ -788,9 +1076,24 @@ class PredictionCacheService:
         checkpoint_key: str,
         response: ModelInferenceResponse,
         mean_penultimate_embedding: list[float],
+        penultimate_embeddings: list[list[float]],
     ) -> None:
         embedding_values = [float(value) for value in mean_penultimate_embedding]
-        artifact = {
+        window_embedding_values = [[float(value) for value in row] for row in penultimate_embeddings]
+        window_embedding_dimension = len(window_embedding_values[0]) if window_embedding_values else 0
+        window_embedding_cluster_labels = (
+            cluster_embeddings_density(np.asarray(window_embedding_values, dtype=float))
+            if len(window_embedding_values) >= 2
+            else []
+        )
+        band_power_stats = ModelService.compute_band_power_stats(
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            source=source,
+            mode="intra_patient",
+            model_name=model_name,
+        )
+        prediction_artifact = {
             "preprocessing_version": PREPROCESSING_VERSION,
             "model_name": model_name,
             "checkpoint_signature": checkpoint_signature,
@@ -809,9 +1112,59 @@ class PredictionCacheService:
                 "dimension": len(embedding_values),
                 "values": embedding_values,
             },
+            "window_embeddings": {
+                "layer_name": PENULTIMATE_EMBEDDING_LAYER,
+                "label": PENULTIMATE_EMBEDDING_LABEL,
+                "dimension": window_embedding_dimension,
+                "values": window_embedding_values,
+            },
+            "band_power_stats": band_power_stats.model_dump(mode="json"),
             "response": response.model_dump(mode="json"),
         }
-        cls._write_json_atomic(cls._subject_path(dataset_id, model_name, checkpoint_key, subject_id, source), artifact)
+        cls._write_json_atomic(
+            cls._subject_path(dataset_id, model_name, checkpoint_key, subject_id, source),
+            prediction_artifact,
+        )
+        cls._write_clustering_artifact(
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            model_name=model_name,
+            source=source,
+            checkpoint_signature=checkpoint_signature,
+            checkpoint_key=checkpoint_key,
+            cluster_labels=window_embedding_cluster_labels,
+        )
+
+    @classmethod
+    def _write_clustering_artifact(
+        cls,
+        *,
+        dataset_id: str,
+        subject_id: str,
+        model_name: str,
+        source: TimeseriesSource,
+        checkpoint_signature: str,
+        checkpoint_key: str,
+        cluster_labels: list[int | None],
+    ) -> None:
+        clustering_artifact = {
+            "preprocessing_version": PREPROCESSING_VERSION,
+            "model_name": model_name,
+            "checkpoint_signature": checkpoint_signature,
+            "checkpoint_key": checkpoint_key,
+            "dataset_id": dataset_id,
+            "subject_id": subject_id,
+            "source": source,
+            "created_at": cls._now(),
+            "window_embedding_clusters": {
+                "method": WINDOW_EMBEDDING_CLUSTERING_METHOD,
+                "labels": cluster_labels,
+            },
+        }
+        cls._write_json_atomic(
+            cls._subject_clustering_path(dataset_id, model_name, checkpoint_key, subject_id, source),
+            clustering_artifact,
+        )
 
     @classmethod
     def _build_prediction_summary(
@@ -849,6 +1202,128 @@ class PredictionCacheService:
             checkpoint_signature=checkpoint_signature,
             checkpoint_key=checkpoint_key,
             preprocessing_version=PREPROCESSING_VERSION,
+            embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
+            embedding_label=PENULTIMATE_EMBEDDING_LABEL,
+            reduction=ModelPatientEmbeddingReduction(
+                method="pca",
+                status=reduction_status,
+                source_dimension=source_dimension,
+                output_dimension=2 if reduction_status == "ok" else 0,
+                explained_variance_ratio=explained_variance_ratio,
+            ),
+            points=points,
+        )
+
+    @classmethod
+    def _subject_window_embeddings_response(
+        cls,
+        *,
+        dataset_id: str,
+        subject_id: str,
+        model_name: str,
+        source: TimeseriesSource,
+        checkpoint_signature: str,
+        checkpoint_key: str,
+        artifact: dict[str, Any] | None,
+        clustering_artifact: dict[str, Any] | None,
+    ) -> ModelWindowEmbeddingsResponse:
+        if not artifact or not isinstance(artifact.get("response"), dict):
+            return ModelWindowEmbeddingsResponse(
+                dataset_id=dataset_id,
+                subject_id=subject_id,
+                model_name=model_name,
+                source=source,
+                checkpoint_signature=checkpoint_signature,
+                embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
+                embedding_label=PENULTIMATE_EMBEDDING_LABEL,
+                reduction=ModelPatientEmbeddingReduction(
+                    method="pca",
+                    status="insufficient_data",
+                    source_dimension=0,
+                    output_dimension=0,
+                    explained_variance_ratio=[],
+                ),
+                points=[],
+            )
+
+        response = ModelInferenceResponse(**artifact["response"])
+        embedding_rows = [
+            [float(value) for value in row]
+            for row in (artifact.get("window_embeddings", {}).get("values", []) or [])
+        ]
+        source_dimension = int(artifact.get("window_embeddings", {}).get("dimension", 0) or 0)
+        cached_cluster_ids = (
+            clustering_artifact.get("window_embedding_clusters", {}).get("labels", [])
+            if is_clustering_artifact_valid(
+                clustering_artifact,
+                dataset_id=dataset_id,
+                subject_id=subject_id,
+                model_name=model_name,
+                source=source,
+                checkpoint_signature=checkpoint_signature,
+                checkpoint_key_value=checkpoint_key,
+            )
+            else []
+        )
+
+        if len(embedding_rows) < 2 or len(embedding_rows) != len(response.predictions):
+            return ModelWindowEmbeddingsResponse(
+                dataset_id=dataset_id,
+                subject_id=subject_id,
+                model_name=model_name,
+                source=source,
+                checkpoint_signature=checkpoint_signature,
+                embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
+                embedding_label=PENULTIMATE_EMBEDDING_LABEL,
+                reduction=ModelPatientEmbeddingReduction(
+                    method="pca",
+                    status="insufficient_data",
+                    source_dimension=source_dimension,
+                    output_dimension=0,
+                    explained_variance_ratio=[],
+                ),
+                points=[],
+            )
+
+        vectors = np.asarray(embedding_rows, dtype=float)
+        coordinates, explained_variance_ratio, reduction_status = reduce_embeddings_pca(vectors)
+        if len(cached_cluster_ids) == len(embedding_rows):
+            cluster_ids = cached_cluster_ids
+        else:
+            cluster_ids = cluster_embeddings_density(vectors)
+            cls._write_clustering_artifact(
+                dataset_id=dataset_id,
+                subject_id=subject_id,
+                model_name=model_name,
+                source=source,
+                checkpoint_signature=checkpoint_signature,
+                checkpoint_key=checkpoint_key,
+                cluster_labels=cluster_ids,
+            )
+        points = (
+            [
+                ModelWindowEmbeddingPoint(
+                    window_index=prediction.window_index,
+                    start_time=prediction.start_time,
+                    end_time=prediction.end_time,
+                    x=float(coordinate[0]),
+                    y=float(coordinate[1]),
+                    predicted_label=prediction.predicted_label,
+                    confidence=prediction.confidence,
+                    cluster_id=cluster_ids[index] if index < len(cluster_ids) else None,
+                )
+                for index, (prediction, coordinate) in enumerate(zip(response.predictions, coordinates, strict=True))
+            ]
+            if reduction_status == "ok"
+            else []
+        )
+
+        return ModelWindowEmbeddingsResponse(
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            model_name=model_name,
+            source=source,
+            checkpoint_signature=checkpoint_signature,
             embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
             embedding_label=PENULTIMATE_EMBEDDING_LABEL,
             reduction=ModelPatientEmbeddingReduction(
@@ -952,7 +1427,7 @@ class PredictionCacheService:
         return is_manifest_valid(manifest, dataset_id, model_name, source, checkpoint_signature, checkpoint_key)
 
     @staticmethod
-    def _is_artifact_valid(
+    def _is_model_artifact_valid(
         artifact: dict[str, Any] | None,
         *,
         dataset_id: str,
@@ -962,7 +1437,28 @@ class PredictionCacheService:
         checkpoint_signature: str,
         checkpoint_key: str,
     ) -> bool:
-        return is_artifact_valid(
+        return is_model_artifact_valid(
+            artifact,
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            model_name=model_name,
+            source=source,
+            checkpoint_signature=checkpoint_signature,
+            checkpoint_key_value=checkpoint_key,
+        )
+
+    @staticmethod
+    def _is_clustering_artifact_valid(
+        artifact: dict[str, Any] | None,
+        *,
+        dataset_id: str,
+        subject_id: str,
+        model_name: str,
+        source: TimeseriesSource,
+        checkpoint_signature: str,
+        checkpoint_key: str,
+    ) -> bool:
+        return is_clustering_artifact_valid(
             artifact,
             dataset_id=dataset_id,
             subject_id=subject_id,

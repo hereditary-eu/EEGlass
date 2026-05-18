@@ -25,7 +25,7 @@ interface DatasetDirectoryProps {
   onSelectDataset: (datasetId: string) => void;
   onEnterPatientSelection: (datasetId: string) => void;
   onBackToDatasets: () => void;
-  onOpenWorkspace: (subject: TimeseriesSubjectInfo) => void;
+  onOpenPatientView: (subject: TimeseriesSubjectInfo) => void;
   onHoveredSubjectIdChange: (subjectId: string | null) => void;
   onSelectedSubjectIdChange: (subjectId: string | null) => void;
   onFocusSubjectHandled: () => void;
@@ -48,7 +48,7 @@ export function DatasetDirectory({
   onSelectDataset,
   onEnterPatientSelection,
   onBackToDatasets,
-  onOpenWorkspace,
+  onOpenPatientView,
   onHoveredSubjectIdChange,
   onSelectedSubjectIdChange,
   onFocusSubjectHandled,
@@ -170,7 +170,7 @@ export function DatasetDirectory({
             selectedSubjectId={selectedSubjectId}
             focusSubjectId={focusSubjectId}
             modelInfo={modelInfo}
-            onOpenWorkspace={onOpenWorkspace}
+            onOpenPatientView={onOpenPatientView}
             onBackToDatasets={onBackToDatasets}
             onHoveredSubjectIdChange={onHoveredSubjectIdChange}
             onSelectedSubjectIdChange={onSelectedSubjectIdChange}

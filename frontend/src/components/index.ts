@@ -12,8 +12,23 @@ export { DataTable, DataTableMock } from "./data-table";
 export type { DataTableMockProps, DataTableProps } from "./data-table";
 export { EegTimeseries } from "./timeseries";
 export type { EegTimeseriesProps, TimeseriesWindowAnnotationRow, TimeseriesWindowAnnotationValue } from "./timeseries";
-export { TopologyAttributionPanel, TotalBandPowerChart } from "./topology";
-export type { TopologyAttributionPanelProps, TotalBandPowerChartProps } from "./topology";
-export { ClassificationEvidencePanel } from "./classification";
-export type { ClassificationEvidencePanelProps } from "./classification";
-export { ClassLabelCountCell, CompactGridSelectorRow, DrillButton, PanelHeader, StatusOverlay } from "./ui";
+export { EmbeddingScatterplot } from "./embedding";
+export type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from "./embedding";
+export { EegScalpTopologyPanel, ModelScalpTopologyPanel, ScalpTopologyPlot, TotalBandPowerChart } from "./topology";
+export type {
+  EegScalpTopologyPanelProps,
+  ModelScalpTopologyPanelProps,
+  ScalpTopologyPlotProps,
+  TotalBandPowerChartProps,
+} from "./topology";
+export { ClassContributionsPanel } from "./classification";
+export type { ClassContributionsPanelProps } from "./classification";
+export {
+  ClassLabelCountCell,
+  CompactGridSelectorRow,
+  ComponentStatusIndicator,
+  DrillButton,
+  PanelHeader,
+  StatusOverlay,
+} from "./ui";
+export { MathFormula } from "./ui";

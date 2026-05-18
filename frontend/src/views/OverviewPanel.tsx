@@ -43,6 +43,7 @@ export function OverviewPanel() {
   const [modelInfo, setModelInfo] = useState<ModelInfoResponse | null>(null);
   const [modelInfoError, setModelInfoError] = useState<string | null>(null);
   const [patientEmbeddings, setPatientEmbeddings] = useState<ModelPatientEmbeddingsResponse | null>(null);
+  const [embeddingSelectedSubjectIds, setEmbeddingSelectedSubjectIds] = useState<string[] | null>(null);
   const [isLoadingEmbeddings, setIsLoadingEmbeddings] = useState(false);
   const [embeddingError, setEmbeddingError] = useState<string | null>(null);
   const [hoveredSubjectId, setHoveredSubjectId] = useState<string | null>(null);
@@ -61,6 +62,17 @@ export function OverviewPanel() {
   const predictionSummariesBySubject = useMemo(
     () => new Map((cacheStatus?.subject_summaries ?? []).map((summary) => [summary.subject_id, summary])),
     [cacheStatus],
+  );
+  const embeddingSelectedSubjectIdSet = useMemo(
+    () => (embeddingSelectedSubjectIds ? new Set(embeddingSelectedSubjectIds) : null),
+    [embeddingSelectedSubjectIds],
+  );
+  const directorySubjects = useMemo(
+    () =>
+      embeddingSelectedSubjectIdSet
+        ? subjects.filter((subject) => embeddingSelectedSubjectIdSet.has(subject.id))
+        : subjects,
+    [embeddingSelectedSubjectIdSet, subjects],
   );
   const embeddingRefreshKey = useMemo(
     () =>
@@ -331,6 +343,7 @@ export function OverviewPanel() {
     setDirectoryLevel("datasets");
     setHoveredSubjectId(null);
     setSelectedSubjectId(null);
+    setEmbeddingSelectedSubjectIds(null);
     setFocusSubjectId(null);
     setFocusDatasetId(datasetId);
     setShouldFocusFirstPatient(false);
@@ -349,26 +362,38 @@ export function OverviewPanel() {
   const backToDatasets = () => {
     setDirectoryLevel("datasets");
     setHoveredSubjectId(null);
+    setEmbeddingSelectedSubjectIds(null);
     setFocusSubjectId(null);
     setShouldFocusFirstPatient(false);
     setFocusDatasetId(selectedDatasetId);
   };
 
-  const openWorkspace = (subject: TimeseriesSubjectInfo) => {
+  const openPatientView = (subject: TimeseriesSubjectInfo) => {
     if (!selectedDatasetId) {
       return;
     }
 
-    navigate(`/workspace/${encodeURIComponent(selectedDatasetId)}/${encodeURIComponent(subject.id)}`);
+    navigate(`/datasets/${encodeURIComponent(selectedDatasetId)}/patients/${encodeURIComponent(subject.id)}`);
   };
 
-  const openWorkspaceBySubjectId = (subjectId: string) => {
+  const openPatientViewBySubjectId = (subjectId: string) => {
     if (!selectedDatasetId) {
       return;
     }
 
-    navigate(`/workspace/${encodeURIComponent(selectedDatasetId)}/${encodeURIComponent(subjectId)}`);
+    navigate(`/datasets/${encodeURIComponent(selectedDatasetId)}/patients/${encodeURIComponent(subjectId)}`);
   };
+
+  const selectEmbeddingSubjects = useCallback((subjectIds: string[] | null) => {
+    setEmbeddingSelectedSubjectIds(subjectIds);
+    setHoveredSubjectId(null);
+    if (subjectIds) {
+      setDirectoryLevel("patients");
+      setSelectedSubjectId((currentSubjectId) =>
+        currentSubjectId && subjectIds.includes(currentSubjectId) ? currentSubjectId : null,
+      );
+    }
+  }, []);
 
   const startPredictionCacheJob = async () => {
     if (!selectedDatasetId || !activeModelName || isStartingCacheJob || isCacheJobRunning(cacheProgress)) {
@@ -428,7 +453,7 @@ export function OverviewPanel() {
     <section className="overview-panel" aria-label="Dataset and patient overview">
       <DatasetDirectory
         datasets={datasets}
-        subjects={subjects}
+        subjects={directorySubjects}
         selectedDatasetId={selectedDatasetId}
         directoryLevel={directoryLevel}
         isLoadingDatasets={isLoadingDatasets}
@@ -442,7 +467,7 @@ export function OverviewPanel() {
         onSelectDataset={selectDataset}
         onEnterPatientSelection={enterPatientSelection}
         onBackToDatasets={backToDatasets}
-        onOpenWorkspace={openWorkspace}
+        onOpenPatientView={openPatientView}
         onHoveredSubjectIdChange={setHoveredSubjectId}
         onSelectedSubjectIdChange={setSelectedSubjectId}
         onFocusSubjectHandled={() => setFocusSubjectId(null)}
@@ -467,7 +492,9 @@ export function OverviewPanel() {
             error={embeddingError}
             highlightedSubjectId={highlightedSubjectId}
             modelInfo={modelInfo}
-            onOpenSubject={openWorkspaceBySubjectId}
+            selectedSubjectIds={embeddingSelectedSubjectIds}
+            onOpenSubject={openPatientViewBySubjectId}
+            onSelectedSubjectIdsChange={selectEmbeddingSubjects}
           />
 
           <ModelCard

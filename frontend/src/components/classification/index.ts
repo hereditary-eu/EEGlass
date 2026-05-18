@@ -1,2 +1,2 @@
-export { ClassificationEvidencePanel } from "./ClassificationEvidencePanel";
-export type { ClassificationEvidencePanelProps } from "./ClassificationEvidencePanel";
+export { ClassContributionsPanel } from "./ClassContributionsPanel";
+export type { ClassContributionsPanelProps } from "./ClassContributionsPanel";

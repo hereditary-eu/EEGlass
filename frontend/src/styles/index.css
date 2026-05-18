@@ -41,6 +41,16 @@ body {
   color: #17212b;
 }
 
+.math-formula {
+  display: inline-block;
+  vertical-align: -0.08em;
+}
+
+.math-formula .katex {
+  font-size: 1em;
+  line-height: 1;
+}
+
 button,
 input,
 select {
@@ -52,7 +62,7 @@ select {
   padding: 0.75rem;
 }
 
-.app-shell--tool {
+.app-shell--patient-view {
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
@@ -65,7 +75,7 @@ select {
   gap: 0.75rem;
 }
 
-.app-layout--tool {
+.app-layout--patient-view {
   height: 100%;
   min-height: 0;
   grid-template-rows: auto minmax(0, 1fr);
@@ -92,6 +102,58 @@ select {
   margin: 0;
   font-size: 1.25rem;
   line-height: 1.1;
+}
+
+.app-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.app-patient-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  min-height: 1.55rem;
+  padding: 0.18rem;
+  border: 1px solid #d7e0e8;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 82%);
+  box-shadow: 0 6px 16px rgb(15 23 42 / 6%);
+}
+
+.app-patient-dataset {
+  color: #748391;
+  padding: 0 0.34rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.app-patient-subject {
+  flex: 0 0 auto;
+  border-radius: 5px;
+  background: #0f5f76;
+  color: #ffffff;
+  padding: 0.24rem 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.app-patient-label {
+  border-radius: 5px;
+  background: rgb(14 116 144 / 10%);
+  color: #0f5f76;
+  padding: 0.24rem 0.5rem;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .app-subtitle {
@@ -146,23 +208,17 @@ select {
   color: #17212b;
 }
 
-.tool-panel {
+.patient-view-panel {
   height: 100%;
   min-height: 0;
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.45rem;
   overflow: hidden;
 }
 
-.tool-panel-top {
-  min-height: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.tool-slot {
+.patient-view-slot {
   min-width: 0;
   min-height: 0;
   display: grid;
@@ -174,19 +230,26 @@ select {
   overflow: hidden;
 }
 
-.tool-slot > .topology-bandpower,
-.tool-slot > .topology-panel,
-.tool-slot > .classification-evidence {
+.patient-view-slot > .topology-bandpower,
+.patient-view-slot > .topology-panel,
+.patient-view-slot > .classification-evidence,
+.patient-view-slot > .window-embedding-panel {
   border: 0;
   border-radius: 0;
   box-shadow: none;
 }
 
-.tool-slot--timeseries {
+.patient-view-slot--timeseries {
+  grid-column: span 2;
   min-height: 0;
 }
 
-.tool-slot-placeholder {
+.patient-view-slot--placeholder {
+  background:
+    linear-gradient(135deg, rgb(248 251 253 / 92%), rgb(255 255 255 / 96%));
+}
+
+.patient-view-slot-placeholder {
   min-height: 0;
   display: grid;
   place-items: center;
@@ -201,7 +264,7 @@ select {
     padding: 0.75rem;
   }
 
-  .app-layout--tool {
+  .app-layout--patient-view {
     height: 100%;
     min-height: 0;
   }
@@ -215,15 +278,17 @@ select {
     align-self: flex-start;
   }
 
-  .tool-panel {
-    grid-template-rows: auto minmax(180px, 1fr);
-  }
-
-  .tool-panel-top {
+  .patient-view-panel {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+    overflow: auto;
   }
 
-  .tool-slot {
+  .patient-view-slot {
     min-height: 180px;
+  }
+
+  .patient-view-slot--timeseries {
+    grid-column: auto;
   }
 }

@@ -20,7 +20,7 @@ from backend.services.timeseries_service import (
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
-timeseries_router = APIRouter(prefix="/timeseries", tags=["timeseries"])
+timeseries_router = APIRouter(prefix="/data", tags=["data"])
 
 
 @timeseries_router.get("/datasets", response_model=TimeseriesDatasetListResponse)
@@ -84,7 +84,7 @@ async def get_timeseries_preview(
         raise _http_error(exc) from exc
 
 
-@timeseries_router.get("/datasets/{dataset_id}/subjects/{subject_id}/signal", response_model=TimeseriesSignalResponse)
+@timeseries_router.get("/datasets/{dataset_id}/subjects/{subject_id}/timeseries-signal", response_model=TimeseriesSignalResponse)
 async def get_timeseries_signal(
     dataset_id: str,
     subject_id: str,

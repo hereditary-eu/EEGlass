@@ -49,19 +49,12 @@ class ModelClassPresentation(BaseModel):
     colors: ModelClassColors
 
 
-class ModelBandPresentation(BaseModel):
-    name: str
-    label: str
-    start_hz: float
-    end_hz: float
-
-
 class ModelInfoResponse(BaseModel):
     name: str
     display_name: str
     architecture: str
+    model_summary: str
     classes: List[ModelClassPresentation]
-    bands: List[ModelBandPresentation]
     metadata: Dict[str, ModelMetadataValue]
 
 
@@ -152,6 +145,29 @@ class ModelPatientEmbeddingsResponse(BaseModel):
     points: List[ModelPatientEmbeddingPoint]
 
 
+class ModelWindowEmbeddingPoint(BaseModel):
+    window_index: int
+    start_time: float
+    end_time: float
+    x: float
+    y: float
+    predicted_label: str
+    confidence: float
+    cluster_id: int | None = None
+
+
+class ModelWindowEmbeddingsResponse(BaseModel):
+    dataset_id: str
+    subject_id: str
+    model_name: str
+    source: TimeseriesSource
+    checkpoint_signature: str
+    embedding_layer: str
+    embedding_label: str
+    reduction: ModelPatientEmbeddingReduction
+    points: List[ModelWindowEmbeddingPoint]
+
+
 class ModelClassEvidenceRequest(BaseModel):
     dataset_id: str
     subject_id: str
@@ -219,6 +235,32 @@ class ModelBandPowerResponse(BaseModel):
     channels: List[ModelChannelBandPower]
 
 
+class ModelBandPowerStatsValue(BaseModel):
+    band: str
+    start_hz: float
+    end_hz: float
+    mean_db: float
+    lower_2sigma_db: float
+    upper_2sigma_db: float
+    sample_count: int
+
+
+class ModelChannelBandPowerStats(BaseModel):
+    channel: str
+    bands: List[ModelBandPowerStatsValue]
+
+
+class ModelBandPowerStatsResponse(BaseModel):
+    dataset_id: str
+    subject_id: str
+    source: TimeseriesSource
+    mode: Literal["intra_patient", "inter_patient"]
+    unit_label: str
+    subject_count: int
+    window_count: int
+    channels: List[ModelChannelBandPowerStats]
+
+
 class ModelScalpTopologyChannel(BaseModel):
     name: str
     x: float
@@ -245,3 +287,40 @@ class ModelScalpTopologyResponse(BaseModel):
     global_max_weight: float
     grid: ModelScalpTopologyGrid
     bands: List[ModelScalpTopologyBand]
+
+
+class ModelWindowScalpTopologyChannel(BaseModel):
+    name: str
+    x: float
+    y: float
+    value: float
+
+
+class ModelWindowScalpTopologyBand(BaseModel):
+    band: str
+    channels: List[ModelWindowScalpTopologyChannel]
+    grid_values: List[float]
+
+
+class ModelWindowScalpTopologyMode(BaseModel):
+    mode: Literal["weighted_contribution", "input_power"]
+    label: str
+    unit_label: str
+    color_scale: Literal["diverging", "sequential"]
+    global_min_value: float
+    global_max_value: float
+    bands: List[ModelWindowScalpTopologyBand]
+
+
+class ModelWindowScalpTopologyResponse(BaseModel):
+    dataset_id: str
+    subject_id: str
+    source: TimeseriesSource
+    model_name: str
+    checkpoint_signature: str
+    window_index: int
+    start_time: float
+    end_time: float
+    layer_name: str
+    grid: ModelScalpTopologyGrid
+    modes: List[ModelWindowScalpTopologyMode]

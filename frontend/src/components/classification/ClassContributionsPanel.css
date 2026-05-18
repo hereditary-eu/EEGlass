@@ -52,7 +52,20 @@
 .classification-evidence-header-side {
   display: grid;
   justify-items: end;
+  gap: 0.25rem;
+  max-width: 18rem;
+}
+
+.classification-evidence-stage {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 0.35rem;
+  color: #5d6b78;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  text-align: right;
 }
 
 .classification-evidence-mode-toggle {
@@ -105,81 +118,83 @@
   overflow: hidden;
 }
 
-.classification-evidence-grid {
-  --band-count: 7;
+.classification-evidence-chart-grid {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: 3.8rem repeat(var(--band-count), minmax(0, 1fr));
-  grid-template-rows: 1.6rem repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) 4.6rem;
+  gap: 0.35rem;
+  align-items: start;
+  overflow: auto hidden;
+}
+
+.classification-evidence-heatmap,
+.classification-evidence-logits-chart {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
   border: 1px solid #d7e0e8;
   border-radius: 10px;
+  background: #ffffff;
   overflow: hidden;
 }
 
-.classification-evidence-corner,
-.classification-evidence-class,
-.classification-evidence-band,
-.classification-evidence-cell {
-  min-width: 0;
-  min-height: 0;
-  display: grid;
-  place-items: center;
-  border-right: 1px solid #d7e0e8;
-  border-bottom: 1px solid #d7e0e8;
+.classification-evidence-logits-chart {
+  border-color: rgb(14 116 144 / 32%);
+  background: rgb(248 251 252 / 92%);
 }
 
-.classification-evidence-corner,
-.classification-evidence-class,
-.classification-evidence-band {
-  background: #f8fafc;
-  color: #334155;
-  font-size: 0.66rem;
-  font-weight: 800;
-}
-
-.classification-evidence-class--predicted {
-  color: #0f5f76;
-  background: rgb(14 116 144 / 10%);
-}
-
-.classification-evidence-band {
-  padding: 0 0.22rem;
-  text-transform: lowercase;
-}
-
-.classification-evidence-class {
-  justify-items: start;
-  padding: 0 0.45rem;
-}
-
-.classification-evidence-cell {
-  color: #17212b;
-  font-size: 0.68rem;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.classification-evidence-grid > :nth-child(8n) {
-  border-right: 0;
-}
-
-.classification-evidence-grid > :nth-last-child(-n + 8) {
-  border-bottom: 0;
-}
-
-.classification-evidence-cell--predicted {
-  box-shadow: inset 0 0 0 2px rgb(15 95 118 / 28%);
+.classification-evidence-logits-chart > div {
+  width: 100%;
+  height: 100%;
 }
 
 .classification-evidence-footer {
   min-width: 0;
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
   color: #5d6b78;
   font-size: 0.68rem;
   font-weight: 700;
+}
+
+.classification-evidence-mode-note {
+  min-width: 0;
+  overflow: hidden;
+  color: #748391;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.classification-evidence-decision {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgb(14 116 144 / 28%);
+  border-radius: 999px;
+  background: rgb(14 116 144 / 8%);
+  color: #0f5f76;
+  padding: 0.18rem 0.45rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.classification-evidence-decision-kicker {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.14rem;
+  color: #5d6b78;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.classification-evidence-decision strong {
+  color: #0f5f76;
+  font-size: 0.74rem;
 }
 
 .classification-evidence-empty {

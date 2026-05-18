@@ -46,6 +46,10 @@ export const API_ROUTES = {
       buildApiUrl(`/models/${encodeURIComponent(modelName)}/class-evidence`),
     bandPower: (modelName: string) =>
       buildApiUrl(`/models/${encodeURIComponent(modelName)}/band-power`),
+    bandPowerStats: (datasetId: string, subjectId: string, modelName: string) =>
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/band-power-stats`,
+      ),
     scalpTopologies: (modelName: string) =>
       buildApiUrl(`/models/${encodeURIComponent(modelName)}/scalp-topologies`),
     startPredictionCacheJob: (datasetId: string, modelName: string) =>
@@ -56,6 +60,14 @@ export const API_ROUTES = {
       buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/prediction-cache`),
     patientEmbeddings: (datasetId: string, modelName: string) =>
       buildApiUrl(`/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/patient-embeddings`),
+    windowEmbeddings: (datasetId: string, subjectId: string, modelName: string) =>
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/window-embeddings`,
+      ),
+    windowScalpTopologies: (datasetId: string, subjectId: string, modelName: string) =>
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/window-scalp-topologies`,
+      ),
     subjectPredictions: (datasetId: string, subjectId: string, modelName: string) =>
       buildApiUrl(
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/predictions`,
@@ -65,19 +77,19 @@ export const API_ROUTES = {
   },
 
   timeseries: {
-    datasets: buildApiUrl("/timeseries/datasets"),
-    subjects: (datasetId: string) => buildApiUrl(`/timeseries/datasets/${encodeURIComponent(datasetId)}/subjects`),
+    datasets: buildApiUrl("/data/datasets"),
+    subjects: (datasetId: string) => buildApiUrl(`/data/datasets/${encodeURIComponent(datasetId)}/subjects`),
     metadata: (datasetId: string, subjectId: string) =>
       buildApiUrl(
-        `/timeseries/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/metadata`,
+        `/data/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/metadata`,
       ),
     preview: (datasetId: string, subjectId: string) =>
       buildApiUrl(
-        `/timeseries/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/preview`,
+        `/data/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/preview`,
       ),
     signal: (datasetId: string, subjectId: string) =>
       buildApiUrl(
-        `/timeseries/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/signal`,
+        `/data/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/timeseries-signal`,
       ),
   },
 };

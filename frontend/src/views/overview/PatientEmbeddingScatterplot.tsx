@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import embed from "vega-embed";
-import type { VisualizationSpec } from "vega-embed";
+import { useEffect, useMemo, useState } from "react";
 
-import { getEmbeddingClassColors, getModelClassLabels } from "../../constants/eegModel";
+import { EmbeddingScatterplot } from "../../components";
+import type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from "../../components";
+import { getAnnotationClassColor, getEmbeddingClassColors, getModelClassLabels } from "../../constants/eegModel";
 import type { ModelInfoResponse, ModelPatientEmbeddingsResponse } from "../../types";
 
-type LegendHighlightTarget = { kind: "true" | "predicted"; label: string };
+type LegendHighlightTarget =
+  | { kind: "true" | "predicted"; label: string }
+  | { kind: "misclassified" };
 
 interface PatientEmbeddingScatterplotProps {
   embeddings: ModelPatientEmbeddingsResponse | null;
@@ -13,24 +15,27 @@ interface PatientEmbeddingScatterplotProps {
   error: string | null;
   highlightedSubjectId: string | null;
   modelInfo: ModelInfoResponse | null;
+  selectedSubjectIds: string[] | null;
   onOpenSubject: (subjectId: string) => void;
+  onSelectedSubjectIdsChange: (subjectIds: string[] | null) => void;
 }
 
-interface PatientEmbeddingDatum {
+type PatientEmbeddingDatum = EmbeddingScatterplotPoint & {
   subjectId: string;
-  x: number;
-  y: number;
   trueLabel: string;
   predictedLabel: string;
-  trueColor: string;
-  predictedColor: string;
-  pointSize: number;
-  opacity: number;
-  strokeWidth: number;
   meanConfidence: number | null;
   meanConfidencePercent: number | null;
   totalWindows: number;
-}
+};
+
+const PATIENT_EMBEDDING_TOOLTIP_FIELDS: EmbeddingScatterplotTooltipField[] = [
+  { field: "subjectId", type: "nominal", title: "Patient" },
+  { field: "trueLabel", type: "nominal", title: "True label" },
+  { field: "predictedLabel", type: "nominal", title: "Predicted label" },
+  { field: "meanConfidencePercent", type: "quantitative", title: "Confidence (%)", format: ".1f" },
+  { field: "totalWindows", type: "quantitative", title: "Windows" },
+];
 
 export function PatientEmbeddingScatterplot({
   embeddings,
@@ -38,41 +43,48 @@ export function PatientEmbeddingScatterplot({
   error,
   highlightedSubjectId,
   modelInfo,
+  selectedSubjectIds,
   onOpenSubject,
+  onSelectedSubjectIdsChange,
 }: PatientEmbeddingScatterplotProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [plotHeight, setPlotHeight] = useState(280);
   const [legendHighlightTarget, setLegendHighlightTarget] = useState<LegendHighlightTarget | null>(null);
+  const [isMisclassifiedHighlightActive, setIsMisclassifiedHighlightActive] = useState(false);
+  const [brushSelectedSubjectIds, setBrushSelectedSubjectIds] = useState<string[] | null>(null);
   const modelClasses = modelInfo?.classes ?? [];
   const modelClassLabels = useMemo(() => getModelClassLabels(modelClasses), [modelClasses]);
 
   const values = useMemo<PatientEmbeddingDatum[]>(
     () =>
       (embeddings?.points ?? []).map((point) => {
-        const trueColors = getEmbeddingClassColors(point.true_label, modelClasses);
+        const trueLabel = point.true_label ?? "Unknown";
+        const predictedLabel = point.predicted_label ?? "Unknown";
+        const isMisclassified = trueLabel !== predictedLabel;
         const predictedColors = getEmbeddingClassColors(point.predicted_label, modelClasses);
         const isSubjectHighlighted = point.subject_id === highlightedSubjectId;
-        const isLegendHighlighted =
+        const isClassLegendHighlighted =
           legendHighlightTarget?.kind === "true"
-            ? point.true_label === legendHighlightTarget.label
+            ? trueLabel === legendHighlightTarget.label
             : legendHighlightTarget?.kind === "predicted"
-              ? point.predicted_label === legendHighlightTarget.label
+              ? predictedLabel === legendHighlightTarget.label
               : false;
+        const isLegendHighlighted =
+          isClassLegendHighlighted || (legendHighlightTarget?.kind === "misclassified" && isMisclassified);
         const hasActiveHighlight = Boolean(highlightedSubjectId || legendHighlightTarget);
         const isHighlighted = isSubjectHighlighted || isLegendHighlighted;
         const isMuted = hasActiveHighlight && !isHighlighted;
 
         return {
+          id: point.subject_id,
           subjectId: point.subject_id,
           x: point.x,
           y: point.y,
-          trueLabel: point.true_label ?? "Unknown",
-          predictedLabel: point.predicted_label ?? "Unknown",
-          trueColor: trueColors.fill,
-          predictedColor: predictedColors.stroke,
-          pointSize: isSubjectHighlighted ? 210 : isLegendHighlighted ? 132 : 88,
+          trueLabel,
+          predictedLabel,
+          fillColor: getAnnotationClassColor(point.true_label, modelClasses),
+          strokeColor: predictedColors.stroke,
+          pointSize: isSubjectHighlighted ? 210 : 88,
           opacity: isMuted ? 0.18 : isHighlighted ? 1 : 0.72,
-          strokeWidth: isSubjectHighlighted ? 3.5 : isLegendHighlighted ? 2.8 : point.true_label !== point.predicted_label ? 2.2 : 1.4,
+          strokeWidth: isSubjectHighlighted ? 3.5 : isMisclassified ? 2.2 : 1.4,
           meanConfidence: point.mean_confidence ?? null,
           meanConfidencePercent: point.mean_confidence == null ? null : point.mean_confidence * 100,
           totalWindows: point.total_windows,
@@ -87,123 +99,41 @@ export function PatientEmbeddingScatterplot({
       ),
     [modelClassLabels, values],
   );
+  const misclassifiedCount = useMemo(
+    () => values.filter((value) => value.trueLabel !== value.predictedLabel).length,
+    [values],
+  );
+  const misclassifiedSubjectIds = useMemo(
+    () =>
+      values
+        .filter((value) => value.trueLabel !== value.predictedLabel)
+        .map((value) => value.subjectId),
+    [values],
+  );
+  const effectiveSelectedSubjectIds = useMemo(() => {
+    if (isMisclassifiedHighlightActive && brushSelectedSubjectIds) {
+      const misclassifiedSubjectIdSet = new Set(misclassifiedSubjectIds);
+      return brushSelectedSubjectIds.filter((subjectId) => misclassifiedSubjectIdSet.has(subjectId));
+    }
+
+    if (isMisclassifiedHighlightActive) {
+      return misclassifiedSubjectIds;
+    }
+
+    return brushSelectedSubjectIds;
+  }, [brushSelectedSubjectIds, isMisclassifiedHighlightActive, misclassifiedSubjectIds]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
-      return;
+    if (!areSubjectSelectionsEqual(selectedSubjectIds, effectiveSelectedSubjectIds)) {
+      onSelectedSubjectIdsChange(effectiveSelectedSubjectIds);
     }
-
-    const resizeObserver = new ResizeObserver(([entry]) => {
-      const nextHeight = Math.max(220, Math.floor(entry.contentRect.height));
-      setPlotHeight((current) => (current !== nextHeight ? nextHeight : current));
-    });
-
-    resizeObserver.observe(container);
-    return () => resizeObserver.disconnect();
-  }, []);
+  }, [effectiveSelectedSubjectIds, onSelectedSubjectIdsChange, selectedSubjectIds]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
-      return;
-    }
-
-    container.innerHTML = "";
-    if (!values.length || isLoading || error || plotHeight <= 0) {
-      return;
-    }
-
-    const spec: VisualizationSpec = {
-      $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-      width: "container",
-      height: plotHeight,
-      autosize: {
-        type: "fit",
-        contains: "padding",
-        resize: true,
-      },
-      background: "transparent",
-      data: { values },
-      mark: {
-        type: "circle",
-        filled: true,
-        cursor: "pointer",
-      },
-      encoding: {
-        x: {
-          field: "x",
-          type: "quantitative",
-          axis: {
-            title: "PC1",
-            titleColor: "#5d6b78",
-            titleFontSize: 11,
-            labelColor: "#5d6b78",
-            labelFontSize: 11,
-            tickColor: "#d7e0e8",
-            domainColor: "#d7e0e8",
-            gridColor: "#e8eef3",
-          },
-        },
-        y: {
-          field: "y",
-          type: "quantitative",
-          axis: {
-            title: "PC2",
-            titleColor: "#5d6b78",
-            titleFontSize: 11,
-            labelColor: "#5d6b78",
-            labelFontSize: 11,
-            tickColor: "#d7e0e8",
-            domainColor: "#d7e0e8",
-            gridColor: "#e8eef3",
-          },
-        },
-        fill: { field: "trueColor", type: "nominal", scale: null, legend: null },
-        stroke: { field: "predictedColor", type: "nominal", scale: null, legend: null },
-        size: { field: "pointSize", type: "quantitative", scale: null, legend: null },
-        opacity: { field: "opacity", type: "quantitative", scale: null, legend: null },
-        strokeWidth: { field: "strokeWidth", type: "quantitative", scale: null, legend: null },
-        tooltip: [
-          { field: "subjectId", type: "nominal", title: "Patient" },
-          { field: "trueLabel", type: "nominal", title: "True label" },
-          { field: "predictedLabel", type: "nominal", title: "Predicted label" },
-          { field: "meanConfidencePercent", type: "quantitative", title: "Confidence (%)", format: ".1f" },
-          { field: "totalWindows", type: "quantitative", title: "Windows" },
-        ],
-      },
-      config: {
-        view: { stroke: null },
-      },
-    };
-
-    let finalized = false;
-    const resultPromise = embed(container, spec, {
-      actions: false,
-      renderer: "svg",
-    });
-
-    resultPromise.catch(() => undefined);
-    resultPromise
-      .then((result) => {
-        result.view.addEventListener("click", (_event, item) => {
-          const datum = item?.datum as PatientEmbeddingDatum | undefined;
-          if (datum?.subjectId) {
-            onOpenSubject(datum.subjectId);
-          }
-        });
-      })
-      .catch(() => undefined);
-
-    return () => {
-      if (finalized) {
-        return;
-      }
-
-      finalized = true;
-      resultPromise.then((result) => result.finalize()).catch(() => undefined);
-    };
-  }, [error, isLoading, onOpenSubject, plotHeight, values]);
+    setBrushSelectedSubjectIds(null);
+    setIsMisclassifiedHighlightActive(false);
+    setLegendHighlightTarget(null);
+  }, [embeddings?.dataset_id, embeddings?.checkpoint_key]);
 
   const emptyMessage =
     !modelInfo
@@ -212,9 +142,31 @@ export function PatientEmbeddingScatterplot({
       ? "Need at least two cached patient embeddings."
       : "Compute prediction cache to populate patient embeddings.";
   const highlightLegendLabel = (kind: LegendHighlightTarget["kind"], label: string) => {
+    if (kind === "misclassified") {
+      setLegendHighlightTarget({ kind });
+      return;
+    }
+
     setLegendHighlightTarget({ kind, label });
   };
-  const clearLegendHighlight = () => setLegendHighlightTarget(null);
+  const highlightMisclassified = () => setLegendHighlightTarget({ kind: "misclassified" });
+  const clearLegendHighlight = () =>
+    setLegendHighlightTarget(isMisclassifiedHighlightActive ? { kind: "misclassified" } : null);
+  const toggleMisclassifiedHighlight = () => {
+    setIsMisclassifiedHighlightActive((current) => {
+      const next = !current;
+      setLegendHighlightTarget(next ? { kind: "misclassified" } : null);
+      return next;
+    });
+  };
+  const clearSelectedSubjects = () => {
+    setBrushSelectedSubjectIds(null);
+    setIsMisclassifiedHighlightActive(false);
+    setLegendHighlightTarget(null);
+  };
+  const selectBrushSubjects = (subjectIds: string[] | null) => {
+    setBrushSelectedSubjectIds(subjectIds);
+  };
 
   return (
     <section className="overview-placeholder-card overview-placeholder-card--wide overview-embedding-card">
@@ -224,63 +176,119 @@ export function PatientEmbeddingScatterplot({
           <h3>{embeddings?.embedding_label ?? (modelInfo ? "Patient embedding" : "Model unavailable")}</h3>
         </div>
         {embeddings ? (
-          <span className="overview-embedding-meta">
-            {embeddings.points.length} patients / {embeddings.reduction.source_dimension}D
-          </span>
+          <div className="overview-embedding-meta-group">
+            {selectedSubjectIds ? (
+              <button
+                type="button"
+                className="overview-embedding-selection-clear"
+                onClick={clearSelectedSubjects}
+              >
+                {selectedSubjectIds.length} selected
+              </button>
+            ) : null}
+            <span className="overview-embedding-meta">
+              {embeddings.points.length} patients / {embeddings.reduction.source_dimension}D
+            </span>
+          </div>
         ) : null}
       </div>
 
       <div className="overview-embedding-plot-shell">
-        <div className="overview-embedding-plot" ref={containerRef} />
-        {isLoading ? <div className="overview-embedding-overlay">Loading embeddings...</div> : null}
-        {error ? <div className="overview-embedding-overlay overview-embedding-overlay--error">{error}</div> : null}
-        {!isLoading && !error && !values.length ? <div className="overview-embedding-overlay">{emptyMessage}</div> : null}
+        <EmbeddingScatterplot
+          points={values}
+          isLoading={isLoading}
+          error={error}
+          emptyMessage={emptyMessage}
+          tooltipFields={PATIENT_EMBEDDING_TOOLTIP_FIELDS}
+          className="overview-embedding-plot"
+          overlayClassName="overview-embedding-overlay"
+          onPointClick={(point) => {
+            if (typeof point.subjectId === "string") {
+              onOpenSubject(point.subjectId);
+            }
+          }}
+          onSelectionChange={selectBrushSubjects}
+        />
       </div>
 
       {legendClassLabels.length ? (
         <div className="overview-embedding-legend" aria-label="Embedding color legend">
-          <div>
-            <span>True</span>
-            {legendClassLabels.map((label) => (
+          <div className="overview-embedding-legend-main">
+            <div>
+              <span>True</span>
+              {legendClassLabels.map((label) => (
+                <button
+                  key={`true-${label}`}
+                  type="button"
+                  className="overview-embedding-legend-item"
+                  onBlur={clearLegendHighlight}
+                  onFocus={() => highlightLegendLabel("true", label)}
+                  onMouseEnter={() => highlightLegendLabel("true", label)}
+                  onMouseLeave={clearLegendHighlight}
+                >
+                  <i
+                    className="overview-embedding-legend-fill"
+                    style={{ backgroundColor: getAnnotationClassColor(label, modelClasses) }}
+                  />
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div>
+              <span>Pred</span>
+              {legendClassLabels.map((label) => (
+                <button
+                  key={`predicted-${label}`}
+                  type="button"
+                  className="overview-embedding-legend-item"
+                  onBlur={clearLegendHighlight}
+                  onFocus={() => highlightLegendLabel("predicted", label)}
+                  onMouseEnter={() => highlightLegendLabel("predicted", label)}
+                  onMouseLeave={clearLegendHighlight}
+                >
+                  <i
+                    className="overview-embedding-legend-stroke"
+                    style={{ borderColor: getEmbeddingClassColors(label, modelClasses).stroke }}
+                  />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {misclassifiedCount ? (
+            <div className="overview-embedding-legend-flag">
+              <span>Flag</span>
               <button
-                key={`true-${label}`}
                 type="button"
-                className="overview-embedding-legend-item"
+                className={`overview-embedding-legend-item overview-embedding-legend-item--option${
+                  isMisclassifiedHighlightActive ? " overview-embedding-legend-item--active" : ""
+                }`}
+                aria-pressed={isMisclassifiedHighlightActive}
                 onBlur={clearLegendHighlight}
-                onFocus={() => highlightLegendLabel("true", label)}
-                onMouseEnter={() => highlightLegendLabel("true", label)}
+                onClick={toggleMisclassifiedHighlight}
+                onFocus={highlightMisclassified}
+                onMouseEnter={highlightMisclassified}
                 onMouseLeave={clearLegendHighlight}
               >
-                <i
-                  className="overview-embedding-legend-fill"
-                  style={{ backgroundColor: getEmbeddingClassColors(label, modelClasses).fill }}
-                />
-                {label}
+                <i className="overview-embedding-legend-misclassified" />
+                Misclassified ({misclassifiedCount})
               </button>
-            ))}
-          </div>
-          <div>
-            <span>Pred</span>
-            {legendClassLabels.map((label) => (
-              <button
-                key={`predicted-${label}`}
-                type="button"
-                className="overview-embedding-legend-item"
-                onBlur={clearLegendHighlight}
-                onFocus={() => highlightLegendLabel("predicted", label)}
-                onMouseEnter={() => highlightLegendLabel("predicted", label)}
-                onMouseLeave={clearLegendHighlight}
-              >
-                <i
-                  className="overview-embedding-legend-stroke"
-                  style={{ borderColor: getEmbeddingClassColors(label, modelClasses).stroke }}
-                />
-                {label}
-              </button>
-            ))}
-          </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>
   );
+}
+
+function areSubjectSelectionsEqual(first: string[] | null, second: string[] | null): boolean {
+  if (first === second) {
+    return true;
+  }
+
+  if (!first || !second || first.length !== second.length) {
+    return false;
+  }
+
+  return first.every((subjectId, index) => subjectId === second[index]);
 }

@@ -111,19 +111,12 @@ export interface ModelClassPresentation {
   colors: ModelClassColors;
 }
 
-export interface ModelBandPresentation {
-  name: string;
-  label: string;
-  start_hz: number;
-  end_hz: number;
-}
-
 export interface ModelInfoResponse {
   name: string;
   display_name: string;
   architecture: string;
+  model_summary: string;
   classes: ModelClassPresentation[];
-  bands: ModelBandPresentation[];
   metadata: Record<string, ModelMetadataValue>;
 }
 
@@ -210,6 +203,29 @@ export interface ModelPatientEmbeddingsResponse {
   points: ModelPatientEmbeddingPoint[];
 }
 
+export interface ModelWindowEmbeddingPoint {
+  window_index: number;
+  start_time: number;
+  end_time: number;
+  x: number;
+  y: number;
+  predicted_label: string;
+  confidence: number;
+  cluster_id?: number | null;
+}
+
+export interface ModelWindowEmbeddingsResponse {
+  dataset_id: string;
+  subject_id: string;
+  model_name: string;
+  source: TimeseriesSource;
+  checkpoint_signature: string;
+  embedding_layer: string;
+  embedding_label: string;
+  reduction: ModelPatientEmbeddingReduction;
+  points: ModelWindowEmbeddingPoint[];
+}
+
 export interface ModelClassEvidenceRequest {
   dataset_id: string;
   subject_id: string;
@@ -277,6 +293,34 @@ export interface ModelBandPowerResponse {
   channels: ModelChannelBandPower[];
 }
 
+export type ModelBandPowerStatsMode = "intra_patient" | "inter_patient";
+
+export interface ModelBandPowerStatsValue {
+  band: string;
+  start_hz: number;
+  end_hz: number;
+  mean_db: number;
+  lower_2sigma_db: number;
+  upper_2sigma_db: number;
+  sample_count: number;
+}
+
+export interface ModelChannelBandPowerStats {
+  channel: ChannelId;
+  bands: ModelBandPowerStatsValue[];
+}
+
+export interface ModelBandPowerStatsResponse {
+  dataset_id: string;
+  subject_id: string;
+  source: TimeseriesSource;
+  mode: ModelBandPowerStatsMode;
+  unit_label: string;
+  subject_count: number;
+  window_count: number;
+  channels: ModelChannelBandPowerStats[];
+}
+
 export interface ModelScalpTopologyChannel {
   name: ChannelId;
   x: number;
@@ -303,4 +347,41 @@ export interface ModelScalpTopologyResponse {
   global_max_weight: number;
   grid: ModelScalpTopologyGrid;
   bands: ModelScalpTopologyBand[];
+}
+
+export interface ModelWindowScalpTopologyChannel {
+  name: ChannelId;
+  x: number;
+  y: number;
+  value: number;
+}
+
+export interface ModelWindowScalpTopologyBand {
+  band: TimeseriesBandFilter;
+  channels: ModelWindowScalpTopologyChannel[];
+  grid_values: number[];
+}
+
+export interface ModelWindowScalpTopologyMode {
+  mode: "weighted_contribution" | "input_power";
+  label: string;
+  unit_label: string;
+  color_scale: "diverging" | "sequential";
+  global_min_value: number;
+  global_max_value: number;
+  bands: ModelWindowScalpTopologyBand[];
+}
+
+export interface ModelWindowScalpTopologyResponse {
+  dataset_id: string;
+  subject_id: string;
+  source: TimeseriesSource;
+  model_name: string;
+  checkpoint_signature: string;
+  window_index: number;
+  start_time: number;
+  end_time: number;
+  layer_name: string;
+  grid: ModelScalpTopologyGrid;
+  modes: ModelWindowScalpTopologyMode[];
 }

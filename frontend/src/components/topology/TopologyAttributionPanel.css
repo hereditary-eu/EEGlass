@@ -12,6 +12,15 @@
   border: 1px solid #d7e0e8;
 }
 
+.topology-panel--compact {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 0.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
 .topology-panel-filter-toggle {
   width: max-content;
   max-width: 100%;
@@ -62,6 +71,40 @@
   line-height: 1.1;
 }
 
+.topology-panel-subtitle {
+  min-height: 0.78rem;
+  margin: 0.14rem 0 0;
+  color: #5d6b78;
+  font-size: 0.7rem;
+  line-height: 1.1;
+}
+
+.topology-panel-stage {
+  max-width: 20rem;
+  margin: 0.04rem 0 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  color: #748391;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  text-align: right;
+}
+
+.topology-panel-stage-text {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.topology-panel-controls {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
 .topology-panel-band-selector {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -71,6 +114,10 @@
   border-radius: 8px;
   overflow: hidden;
   background: rgb(255 255 255 / 86%);
+}
+
+.topology-panel-band-selector--compact {
+  width: 100%;
 }
 
 .topology-panel-band-button {
@@ -99,6 +146,44 @@
   color: #0f5f76;
 }
 
+.topology-panel-mode-selector {
+  flex: 0 0 auto;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 7.1rem;
+  border: 1px solid #d7e0e8;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 86%);
+}
+
+.topology-panel-mode-button {
+  min-height: 1.35rem;
+  border: 0;
+  border-right: 1px solid #d7e0e8;
+  border-radius: 0;
+  background: transparent;
+  color: #5d6b78;
+  padding: 0 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.topology-panel-mode-button:last-child {
+  border-right: 0;
+}
+
+.topology-panel-mode-button:hover {
+  background: #f8fbfd;
+}
+
+.topology-panel-mode-button--active {
+  background: rgb(14 116 144 / 10%);
+  color: #0f5f76;
+}
+
 .topology-panel-plot-shell {
   min-width: 0;
   min-height: 0;
@@ -109,8 +194,17 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 3.5rem;
+  grid-template-columns: minmax(0, 1fr) minmax(5.8rem, max-content);
   gap: 0.55rem;
+}
+
+.topology-panel-plot-layout--compact {
+  grid-template-columns: minmax(0, 1fr) 2.65rem;
+  gap: 0.35rem;
+}
+
+.topology-panel-plot-layout--compact .topology-panel-colormap {
+  min-width: 0;
 }
 
 .topology-panel-plot {
@@ -127,7 +221,7 @@
 }
 
 .topology-panel-colormap {
-  min-width: 0;
+  min-width: 5.8rem;
   min-height: 0;
   display: grid;
   justify-items: center;
@@ -167,6 +261,14 @@
   border-radius: 999px;
   background: linear-gradient(180deg, rgb(225 29 72) 0%, #e4eef1 50%, rgb(14 116 144) 100%);
   box-shadow: inset 0 0 0 1px rgb(215 224 232 / 90%);
+}
+
+.topology-panel-colormap-bar--sequential {
+  background: linear-gradient(180deg, rgb(8 106 136) 0%, #e8f1f4 100%);
+}
+
+.topology-panel-colormap-bar--diverging {
+  background: linear-gradient(180deg, rgb(225 29 72) 0%, #e4eef1 50%, rgb(14 116 144) 100%);
 }
 
 .topology-panel-colormap-zero {
@@ -230,11 +332,15 @@
   stroke: rgb(255 255 255 / 92%);
   stroke-width: 0.026px;
   user-select: none;
+  pointer-events: none;
+}
+
+.topology-panel-electrode-label--interactive {
   cursor: pointer;
   pointer-events: auto;
 }
 
-.topology-panel-electrode-label:hover {
+.topology-panel-electrode-label--interactive:hover {
   fill: #0e7490;
 }
 
@@ -271,9 +377,9 @@
 
 .topology-bandpower-header {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .topology-bandpower-title {
@@ -289,9 +395,27 @@
   font-size: 0.72rem;
 }
 
-.topology-bandpower-meta {
+.topology-bandpower-header-static {
+  display: grid;
+  justify-items: end;
+  gap: 0.12rem;
   color: #748391;
   font-size: 0.72rem;
+  line-height: 1.15;
+  text-align: right;
+}
+
+.topology-bandpower-header-stage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.topology-bandpower-header-static strong {
+  color: #748391;
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .topology-bandpower-body {
@@ -349,10 +473,64 @@
 .topology-bandpower-plot-shell {
   min-width: 0;
   min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.25rem;
   border: 1px solid #e3ebf1;
   border-radius: 10px;
   background: linear-gradient(180deg, #fbfdff 0%, #f7fafc 100%);
   padding: 0.4rem 0.55rem 0.2rem 0.35rem;
+}
+
+.topology-bandpower-range-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: #64748b;
+  font-size: 0.68rem;
+}
+
+.topology-bandpower-range-controls > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topology-bandpower-range-controls > div {
+  display: inline-flex;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid #c8d4de;
+  border-radius: 5px;
+  background: #ffffff;
+}
+
+.topology-bandpower-range-controls button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #5d6b78;
+  padding: 0.18rem 0.42rem;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.topology-bandpower-range-controls button:hover {
+  background: #f8fbfd;
+}
+
+.topology-bandpower-range-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.topology-bandpower-range-controls .topology-bandpower-range-mode--active {
+  background: rgb(14 116 144 / 10%);
+  color: #0f5f76;
 }
 
 .topology-bandpower-plot {
@@ -385,6 +563,14 @@
 }
 
 @media (max-width: 720px) {
+  .topology-panel-controls {
+    flex-direction: column;
+  }
+
+  .topology-panel-mode-selector {
+    width: max-content;
+  }
+
   .topology-panel-band-selector {
     grid-template-columns: repeat(auto-fit, minmax(4rem, 1fr));
     width: 100%;

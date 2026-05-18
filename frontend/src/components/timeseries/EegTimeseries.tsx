@@ -63,6 +63,7 @@ export interface EegTimeseriesProps {
   isPreview?: boolean;
   isLoading?: boolean;
   error?: string | null;
+  showStatusOverlay?: boolean;
   onResetView?: () => void;
 }
 
@@ -74,7 +75,6 @@ const PADDING = {
 };
 
 const X_AXIS_HEIGHT = 24;
-const WINDOW_ANNOTATION_ROW_COUNT = 3;
 const WINDOW_ANNOTATION_ROW_HEIGHT = 14;
 const WINDOW_ANNOTATION_ROW_GAP = 3;
 const WINDOW_ANNOTATION_TOP_GAP = 8;
@@ -83,11 +83,7 @@ const WINDOW_ANNOTATION_FONT = "10px Inter, Segoe UI, sans-serif";
 const WINDOW_ANNOTATION_TEXT_PADDING = 14;
 const WINDOW_ANNOTATION_MIN_LABEL_WIDTH = 42;
 const CHANNEL_COLORS = ["#0f6ea8", "#be185d", "#15803d", "#b45309", "#6d28d9"];
-const DEFAULT_WINDOW_ANNOTATION_ROWS: TimeseriesWindowAnnotationRow[] = [
-  { id: "annotation-row-1" },
-  { id: "annotation-row-2" },
-  { id: "annotation-row-3" },
-];
+const DEFAULT_WINDOW_ANNOTATION_ROWS: TimeseriesWindowAnnotationRow[] = [];
 
 export function EegTimeseries({
   samples,
@@ -109,6 +105,7 @@ export function EegTimeseries({
   resetViewSignal = 0,
   isLoading = false,
   error,
+  showStatusOverlay = true,
   onResetView,
 }: EegTimeseriesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -465,8 +462,10 @@ export function EegTimeseries({
         onContextMenu={(event) => event.preventDefault()}
       />
 
-      {isLoading ? <div className="eeg-timeseries-overlay">Loading signal...</div> : null}
-      {error ? <div className="eeg-timeseries-overlay eeg-timeseries-overlay--error">{error}</div> : null}
+      {showStatusOverlay && isLoading ? <div className="eeg-timeseries-overlay">Loading signal...</div> : null}
+      {showStatusOverlay && error ? (
+        <div className="eeg-timeseries-overlay eeg-timeseries-overlay--error">{error}</div>
+      ) : null}
       {!isLoading && !error && sampleCount === 0 && channels.length > 0 ? (
         <div className="eeg-timeseries-overlay">No signal selected</div>
       ) : null}
@@ -587,19 +586,13 @@ function createPlotGeometry(width: number, height: number, annotationRowCount: n
 }
 
 function getAnnotationRowCount(_windowAnnotationRows: TimeseriesWindowAnnotationRow[]): number {
-  return WINDOW_ANNOTATION_ROW_COUNT;
+  return _windowAnnotationRows.length;
 }
 
 function normalizeAnnotationRows(
   windowAnnotationRows: TimeseriesWindowAnnotationRow[],
 ): TimeseriesWindowAnnotationRow[] {
-  const rows = windowAnnotationRows.slice(0, WINDOW_ANNOTATION_ROW_COUNT);
-
-  while (rows.length < WINDOW_ANNOTATION_ROW_COUNT) {
-    rows.push(DEFAULT_WINDOW_ANNOTATION_ROWS[rows.length] ?? { id: `annotation-row-${rows.length + 1}` });
-  }
-
-  return rows;
+  return windowAnnotationRows;
 }
 
 function drawWindowAnnotationRows(
