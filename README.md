@@ -18,7 +18,7 @@ uv sync
 To start a development server:
 
 ```bash
-uv run fastapi dev backend/app.py
+uv run fastapi dev backend/app.py --reload-dir backend/
 bun dev
 ```
 
