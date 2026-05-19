@@ -10,7 +10,7 @@ FROM deps AS build
 WORKDIR /app
 
 COPY frontend ./frontend
-RUN BUN_PUBLIC_API_BASE_URL="" bun run build
+RUN BUN_PUBLIC_API_BASE_URL="." bun run build
 
 FROM nginx:1.27-alpine
 
