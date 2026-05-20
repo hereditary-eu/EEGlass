@@ -2,6 +2,7 @@ from typing import cast
 
 from fastapi import APIRouter, HTTPException, Query
 
+from backend.ml.model_vars import DEFAULT_MODEL_NAME
 from backend.pydantic_models.timeseries import (
     TimeseriesBandFilter,
     TimeseriesDatasetListResponse,
@@ -29,11 +30,14 @@ async def list_timeseries_datasets() -> TimeseriesDatasetListResponse:
 
 
 @timeseries_router.get("/datasets/{dataset_id}/subjects", response_model=TimeseriesSubjectListResponse)
-async def list_timeseries_subjects(dataset_id: str) -> TimeseriesSubjectListResponse:
+async def list_timeseries_subjects(
+    dataset_id: str,
+    model_name: str = Query(DEFAULT_MODEL_NAME),
+) -> TimeseriesSubjectListResponse:
     try:
         return TimeseriesSubjectListResponse(
             dataset_id=dataset_id,
-            subjects=TimeseriesService.list_subjects(dataset_id),
+            subjects=TimeseriesService.list_subjects(dataset_id, model_name=model_name),
         )
     except TimeseriesServiceError as exc:
         raise _http_error(exc) from exc

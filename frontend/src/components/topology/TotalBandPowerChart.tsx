@@ -305,7 +305,7 @@ export function TotalBandPowerChart({
         <div className="topology-bandpower-plot-shell">
           <div className="topology-bandpower-range-controls" aria-label="Band power reference range">
             <span>{getStatsModeLabel(bandPowerStatsMode)}</span>
-            <div>
+            <div className="topology-bandpower-range-switch">
               <button
                 type="button"
                 className={bandPowerStatsMode === "intra_patient" ? "topology-bandpower-range-mode--active" : ""}
@@ -324,7 +324,23 @@ export function TotalBandPowerChart({
               </button>
             </div>
           </div>
-          <div className="topology-bandpower-plot" ref={containerRef} />
+          <div className="topology-bandpower-plot-frame">
+            <div className="topology-bandpower-plot" ref={containerRef} />
+            <div className="topology-bandpower-legend" aria-label="Band power chart legend">
+              <span className="topology-bandpower-legend-item">
+                <span className="topology-bandpower-legend-mark topology-bandpower-legend-mark--value" />
+                Selected window value
+              </span>
+              <span className="topology-bandpower-legend-item">
+                <span className="topology-bandpower-legend-mark topology-bandpower-legend-mark--mean" />
+                Reference mean
+              </span>
+              <span className="topology-bandpower-legend-item">
+                <span className="topology-bandpower-legend-mark topology-bandpower-legend-mark--range" />
+                +/-2sigma range
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -367,6 +383,7 @@ function createPowerAxis() {
 function createPowerScale() {
   return {
     domainMin: MIN_DB_DOMAIN,
+    domainMax: 0,
     nice: false,
     zero: false,
   };

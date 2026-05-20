@@ -65,7 +65,7 @@ def sanitize_and_parse_dataset(data: List[Dict[str, Any]]) -> pd.DataFrame:
                     numeric_cols.append(col)
                 else:
                     string_cols.append(col)
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 string_cols.append(col)
 
         # Handle numeric columns - convert to float and fill NaN

@@ -59,6 +59,7 @@ export interface RequestOptions {
   method?: HttpMethod;
   body?: unknown;
   headers?: Record<string, string>;
+  signal?: AbortSignal;
 }
 
 export interface ApiClientError extends Error {

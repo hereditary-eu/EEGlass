@@ -31,7 +31,7 @@ export class ApiClient {
   }
 
   static async request<T>(url: string, options: RequestOptions = {}): Promise<T> {
-    const { method = "GET", body, headers = {} } = options;
+    const { method = "GET", body, headers = {}, signal } = options;
 
     const sanitizedBody = body ? this.sanitizeRequestData(body) : undefined;
 
@@ -44,6 +44,7 @@ export class ApiClient {
       method,
       headers: requestHeaders,
       body: sanitizedBody ? JSON.stringify(sanitizedBody) : undefined,
+      signal,
     };
 
     try {
@@ -67,23 +68,23 @@ export class ApiClient {
     }
   }
 
-  static get<T>(url: string, headers?: Record<string, string>): Promise<T> {
-    return this.request<T>(url, { method: "GET", headers });
+  static get<T>(url: string, headers?: Record<string, string>, signal?: AbortSignal): Promise<T> {
+    return this.request<T>(url, { method: "GET", headers, signal });
   }
 
-  static post<T>(url: string, body: unknown, headers?: Record<string, string>): Promise<T> {
-    return this.request<T>(url, { method: "POST", body, headers });
+  static post<T>(url: string, body: unknown, headers?: Record<string, string>, signal?: AbortSignal): Promise<T> {
+    return this.request<T>(url, { method: "POST", body, headers, signal });
   }
 
-  static put<T>(url: string, body: unknown, headers?: Record<string, string>): Promise<T> {
-    return this.request<T>(url, { method: "PUT", body, headers });
+  static put<T>(url: string, body: unknown, headers?: Record<string, string>, signal?: AbortSignal): Promise<T> {
+    return this.request<T>(url, { method: "PUT", body, headers, signal });
   }
 
-  static delete<T>(url: string, headers?: Record<string, string>): Promise<T> {
-    return this.request<T>(url, { method: "DELETE", headers });
+  static delete<T>(url: string, headers?: Record<string, string>, signal?: AbortSignal): Promise<T> {
+    return this.request<T>(url, { method: "DELETE", headers, signal });
   }
 
-  static patch<T>(url: string, body: unknown, headers?: Record<string, string>): Promise<T> {
-    return this.request<T>(url, { method: "PATCH", body, headers });
+  static patch<T>(url: string, body: unknown, headers?: Record<string, string>, signal?: AbortSignal): Promise<T> {
+    return this.request<T>(url, { method: "PATCH", body, headers, signal });
   }
 }

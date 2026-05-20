@@ -274,12 +274,6 @@ def build_model_info_response(model_spec: ModelSpec) -> ModelInfoResponse:
                 "class_id": class_spec.class_id,
                 "label": class_spec.label,
                 "compact_label": class_spec.compact_label,
-                "colors": {
-                    "annotation": class_spec.colors.annotation,
-                    "distribution": class_spec.colors.distribution,
-                    "embedding_fill": class_spec.colors.embedding_fill,
-                    "embedding_stroke": class_spec.colors.embedding_stroke,
-                },
             }
             for class_spec in model_spec.classes
         ],
@@ -432,7 +426,7 @@ def compute_band_power_stats_response(
                     model_spec, dataset_id, subject.id, source
                 )
                 relative_power_db = compute_subject_relative_band_power_db(subject_data)
-            except ModelServiceError, TimeseriesServiceError:
+            except (ModelServiceError, TimeseriesServiceError):
                 continue
             if relative_power_db.size == 0:
                 continue
@@ -459,10 +453,7 @@ def compute_band_power_stats_response(
 
 
 def compute_subject_relative_band_power_db(subject_data: PreparedSubjectData) -> np.ndarray:
-    relative_powers = [
-        compute_window_relative_band_powers(window, subject_data.sampling_frequency) for window in subject_data.windows
-    ]
-    if not relative_powers:
+    if subject_data.windows.shape[0] == 0:
         return np.empty((0, len(MODEL_CHANNELS), len(MODEL_BANDS)), dtype=np.float64)
 
     _absolute_power, relative_power = compute_band_power_arrays(

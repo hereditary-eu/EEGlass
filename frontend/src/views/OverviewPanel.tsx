@@ -221,7 +221,7 @@ export function OverviewPanel() {
       setError(null);
 
       try {
-        const nextSubjects = await TimeseriesService.getSubjects(selectedDatasetId);
+        const nextSubjects = await TimeseriesService.getSubjects(selectedDatasetId, activeModelName);
         if (isCurrent) {
           setSubjects(nextSubjects);
         }
@@ -242,7 +242,7 @@ export function OverviewPanel() {
     return () => {
       isCurrent = false;
     };
-  }, [selectedDatasetId]);
+  }, [activeModelName, selectedDatasetId]);
 
   useEffect(() => {
     setSelectedSubjectId((currentSubjectId) =>

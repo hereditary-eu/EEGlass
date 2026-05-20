@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 TimeseriesSource = Literal["raw", "derivatives"]
 TimeseriesBandFilter = Literal["delta", "theta", "alpha", "beta1", "beta2", "beta3", "gamma"]
+TimeseriesSubjectSplit = Literal["train", "val", "test"]
 
 
 class TimeseriesDatasetInfo(BaseModel):
@@ -22,6 +23,7 @@ class TimeseriesSubjectInfo(BaseModel):
     id: str
     sources: List[TimeseriesSource]
     subject_label: Optional[str] = None
+    subject_split: Optional[TimeseriesSubjectSplit] = None
 
 
 class TimeseriesSubjectListResponse(BaseModel):

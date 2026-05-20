@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
+import type { TimeseriesSubjectSplit } from "../types";
+
 export interface PatientViewHeaderDetails {
   datasetId: string;
   subjectId: string;
   trueLabel?: string | null;
+  subjectSplit?: TimeseriesSubjectSplit | null;
 }
 
 export interface PatientViewOutletContext {
@@ -55,6 +58,9 @@ export function AppLayout() {
                     {patientViewHeaderDetails.datasetId}
                   </button>
                   <span className="app-patient-subject">{patientViewHeaderDetails.subjectId}</span>
+                  {patientViewHeaderDetails.subjectSplit ? (
+                    <span className="app-patient-split">{patientViewHeaderDetails.subjectSplit}</span>
+                  ) : null}
                   {patientViewHeaderDetails.trueLabel ? (
                     <span className="app-patient-label">{patientViewHeaderDetails.trueLabel}</span>
                   ) : null}

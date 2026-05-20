@@ -161,6 +161,18 @@ select {
   white-space: nowrap;
 }
 
+.app-patient-split {
+  border-radius: 5px;
+  background: rgb(100 116 139 / 12%);
+  color: #475569;
+  padding: 0.24rem 0.44rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .app-patient-label {
   border-radius: 5px;
   background: rgb(14 116 144 / 10%);

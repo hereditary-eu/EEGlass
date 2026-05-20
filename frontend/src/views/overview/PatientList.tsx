@@ -111,6 +111,7 @@ export function PatientList({
     <div className="overview-patient-list">
       <div className="overview-patient-list-header" style={classGridStyle} aria-hidden="true">
         <span>id</span>
+        <span>split</span>
         {modelClasses.map((modelClass) => (
           <span key={modelClass.label}>{formatCompactClassLabel(modelClass.label, modelClasses)}</span>
         ))}
@@ -165,6 +166,7 @@ export function PatientList({
               }}
             >
               <span className="overview-patient-id">{subject.id}</span>
+              <span className="overview-patient-split">{formatSubjectSplit(subject.subject_split)}</span>
               {modelClasses.map((modelClass) => (
                 <span key={modelClass.label} className="overview-patient-count">
                   {getClassWindowCount(summary, modelClass.label)}
@@ -203,6 +205,10 @@ export function PatientList({
 
 function getPatientRowId(subjectId: string): string {
   return `overview-patient-row-${encodeURIComponent(subjectId)}`;
+}
+
+function formatSubjectSplit(split: TimeseriesSubjectInfo["subject_split"]): string {
+  return split ?? "--";
 }
 
 function isPatientNavigationKey(key: string): key is PatientNavigationKey {

@@ -150,7 +150,7 @@ export function useTimeseriesSubjectSource({
     return () => {
       isCurrent = false;
     };
-  }, [datasetId, datasets, isLoadingDatasets, onSubjectReset, routeSubjectId, setSelectedTimeseriesSource]);
+  }, [datasetId, datasets, isLoadingDatasets, onSubjectReset, routeSubjectId, setSelectedTimeseriesSource, source]);
 
   return {
     datasets,

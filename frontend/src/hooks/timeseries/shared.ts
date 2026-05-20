@@ -94,8 +94,28 @@ export function getErrorStatusCode(error: unknown): unknown {
     : undefined;
 }
 
-export function wait(delayMs: number): Promise<void> {
+export function isAbortError(error: unknown): boolean {
+  return (
+    error instanceof DOMException ||
+    (typeof error === "object" && error !== null && "name" in error)
+  ) && (error as { name?: unknown }).name === "AbortError";
+}
+
+export function wait(delayMs: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
-    window.setTimeout(resolve, delayMs);
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
+
+    const timeoutId = window.setTimeout(resolve, delayMs);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        window.clearTimeout(timeoutId);
+        resolve();
+      },
+      { once: true },
+    );
   });
 }

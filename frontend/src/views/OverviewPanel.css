@@ -155,7 +155,7 @@
 .overview-patient-list-header,
 .overview-patient-select {
   display: grid;
-  grid-template-columns: minmax(4.6rem, 1.05fr) repeat(
+  grid-template-columns: minmax(4.6rem, 1.05fr) 2.55rem repeat(
       var(--model-class-count, 0),
       minmax(2.75rem, 0.55fr)
     ) 2.7rem 2.7rem 2.75rem;
@@ -315,6 +315,14 @@
   white-space: nowrap;
 }
 
+.overview-patient-split {
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .overview-patient-confidence {
   color: #0f5f76;
   font-size: 0.7rem;
@@ -371,7 +379,7 @@
 }
 
 .overview-patient-distribution {
-  grid-column: 2 / 5;
+  grid-column: 3 / 6;
   align-self: end;
   height: 3px;
   margin: 0.18rem 0.18rem -0.26rem;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { TimeseriesService } from "../../services/TimeseriesService";
 import type {
@@ -12,6 +12,7 @@ import {
   areSameChannels,
   DEFAULT_PREVIEW_MAX_POINTS,
   getErrorMessage,
+  isAbortError,
   orderSources,
   resolveChannelsForLoad,
 } from "./shared";
@@ -42,6 +43,7 @@ export function useTimeseriesSignal({
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingFullSignal, setIsRefreshingFullSignal] = useState(false);
   const [signalError, setSignalError] = useState<string | null>(null);
+  const signalRequestIdRef = useRef(0);
 
   const availableChannels = useMemo(() => metadata?.channels.map((channel) => channel.name) ?? [], [metadata]);
   const activeChannels = useMemo(
@@ -61,6 +63,11 @@ export function useTimeseriesSignal({
 
   useEffect(() => {
     let isCurrent = true;
+    const requestId = signalRequestIdRef.current + 1;
+    signalRequestIdRef.current = requestId;
+    const abortController = new AbortController();
+    const isActiveRequest = () =>
+      isCurrent && signalRequestIdRef.current === requestId && !abortController.signal.aborted;
 
     async function loadSignal() {
       if (!datasetId || !subjectId) {
@@ -77,8 +84,10 @@ export function useTimeseriesSignal({
       setSignal(null);
 
       try {
-        const nextMetadata = await TimeseriesService.getMetadata(datasetId, subjectId, source);
-        if (!isCurrent) {
+        const nextMetadata = await TimeseriesService.getMetadata(datasetId, subjectId, source, {
+          signal: abortController.signal,
+        });
+        if (!isActiveRequest()) {
           return;
         }
 
@@ -109,8 +118,10 @@ export function useTimeseriesSignal({
           source,
           maxPoints: DEFAULT_PREVIEW_MAX_POINTS,
           bandFilter: selectedTimeseriesBandFilter,
+        }, {
+          signal: abortController.signal,
         });
-        if (!isCurrent) {
+        if (!isActiveRequest()) {
           return;
         }
 
@@ -123,21 +134,31 @@ export function useTimeseriesSignal({
             channels: nextChannels,
             source,
             bandFilter: selectedTimeseriesBandFilter,
+          }, {
+            signal: abortController.signal,
           });
-          if (isCurrent) {
+          if (isActiveRequest()) {
             setSignal(fullSignal);
           }
-        } catch {
-          if (isCurrent) {
+        } catch (fullSignalError) {
+          if (isAbortError(fullSignalError) || !isActiveRequest()) {
+            return;
+          }
+
+          if (isActiveRequest()) {
             setSignalError("Preview loaded, but the full-resolution signal could not be loaded.");
           }
         }
       } catch (loadError) {
-        if (isCurrent) {
+        if (isAbortError(loadError) || !isActiveRequest()) {
+          return;
+        }
+
+        if (isActiveRequest()) {
           setSignalError(getErrorMessage(loadError));
         }
       } finally {
-        if (isCurrent) {
+        if (isActiveRequest()) {
           setIsLoading(false);
           setIsRefreshingFullSignal(false);
         }
@@ -148,6 +169,7 @@ export function useTimeseriesSignal({
 
     return () => {
       isCurrent = false;
+      abortController.abort();
     };
   }, [
     channelsClearedByUser,

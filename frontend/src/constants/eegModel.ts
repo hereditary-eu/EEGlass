@@ -20,12 +20,40 @@ export const MODEL_BAND_LABELS: Record<TimeseriesBandFilter, string> = {
   gamma: "gamma",
 };
 
-const EMPTY_CLASS_COLORS = {
+export interface ModelClassColors {
+  annotation: string;
+  distribution: string;
+  embedding_fill: string;
+  embedding_stroke: string;
+}
+
+const EMPTY_CLASS_COLORS: ModelClassColors = {
   annotation: "rgb(23 33 43 / 8%)",
   distribution: "rgb(148 163 184 / 22%)",
   embedding_fill: "rgb(148 163 184 / 22%)",
   embedding_stroke: "#64748b",
 };
+
+export const MODEL_CLASS_COLORS = {
+  Healthy: {
+    annotation: "rgb(21 128 61 / 22%)",
+    distribution: "rgb(21 128 61 / 32%)",
+    embedding_fill: "rgb(21 128 61 / 22%)",
+    embedding_stroke: "#15803d",
+  },
+  Alzheimer: {
+    annotation: "rgb(225 29 72 / 28%)",
+    distribution: "rgb(225 29 72 / 34%)",
+    embedding_fill: "rgb(225 29 72 / 22%)",
+    embedding_stroke: "#be123c",
+  },
+  "Frontotemporal Dementia": {
+    annotation: "#c2ddfc",
+    distribution: "#c2ddfc",
+    embedding_fill: "rgb(37 99 235 / 20%)",
+    embedding_stroke: "#2563eb",
+  },
+} satisfies Record<string, ModelClassColors>;
 
 export function getModelClassLabels(classes: ModelClassPresentation[] | null | undefined): string[] {
   return classes?.map((modelClass) => modelClass.label) ?? [];
@@ -53,20 +81,33 @@ export function getAnnotationClassColor(
   label: string | null | undefined,
   classes: ModelClassPresentation[] | null | undefined,
 ): string {
-  return getClassPresentation(classes, label)?.colors.annotation ?? EMPTY_CLASS_COLORS.annotation;
+  return getClassColors(label, classes).annotation;
 }
 
 export function getDistributionClassColor(
   label: string | null | undefined,
   classes: ModelClassPresentation[] | null | undefined,
 ): string {
-  return getClassPresentation(classes, label)?.colors.distribution ?? EMPTY_CLASS_COLORS.distribution;
+  return getClassColors(label, classes).distribution;
 }
 
 export function getEmbeddingClassColors(
   label: string | null | undefined,
   classes: ModelClassPresentation[] | null | undefined,
 ): { fill: string; stroke: string } {
-  const colors = getClassPresentation(classes, label)?.colors ?? EMPTY_CLASS_COLORS;
+  const colors = getClassColors(label, classes);
   return { fill: colors.embedding_fill, stroke: colors.embedding_stroke };
+}
+
+function getClassColors(
+  label: string | null | undefined,
+  classes: ModelClassPresentation[] | null | undefined,
+): ModelClassColors {
+  const classLabel = getClassPresentation(classes, label)?.label ?? label;
+
+  if (!classLabel) {
+    return EMPTY_CLASS_COLORS;
+  }
+
+  return MODEL_CLASS_COLORS[classLabel] ?? EMPTY_CLASS_COLORS;
 }

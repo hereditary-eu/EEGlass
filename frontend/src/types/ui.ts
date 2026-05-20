@@ -21,6 +21,7 @@ export type SimilarityReorderMethod = "none" | "optimal" | "average";
 
 export type TimeseriesSource = "raw" | "derivatives";
 export type TimeseriesBandFilter = "delta" | "theta" | "alpha" | "beta1" | "beta2" | "beta3" | "gamma";
+export type TimeseriesSubjectSplit = "train" | "val" | "test";
 
 export interface TimeseriesDatasetInfo {
   id: string;
@@ -33,6 +34,7 @@ export interface TimeseriesSubjectInfo {
   id: string;
   sources: TimeseriesSource[];
   subject_label?: string | null;
+  subject_split?: TimeseriesSubjectSplit | null;
 }
 
 export interface TimeseriesChannelMetadata {
@@ -97,18 +99,10 @@ export interface ModelInferenceResponse {
 
 export type ModelMetadataValue = string | number | boolean | string[] | number[];
 
-export interface ModelClassColors {
-  annotation: string;
-  distribution: string;
-  embedding_fill: string;
-  embedding_stroke: string;
-}
-
 export interface ModelClassPresentation {
   class_id: number;
   label: string;
   compact_label: string;
-  colors: ModelClassColors;
 }
 
 export interface ModelInfoResponse {

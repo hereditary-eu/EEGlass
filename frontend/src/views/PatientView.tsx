@@ -95,10 +95,11 @@ export function PatientView() {
       datasetId,
       subjectId,
       trueLabel: ts.metadata?.subject_label ?? null,
+      subjectSplit: ts.selectedSubject?.subject_split ?? null,
     });
 
     return () => setPatientViewHeaderDetails(null);
-  }, [datasetId, setPatientViewHeaderDetails, subjectId, ts.metadata?.subject_label]);
+  }, [datasetId, setPatientViewHeaderDetails, subjectId, ts.metadata?.subject_label, ts.selectedSubject?.subject_split]);
 
   if (!datasetId || !subjectId) {
     return (

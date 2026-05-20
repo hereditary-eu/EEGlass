@@ -4,11 +4,13 @@ import csv
 import json
 import math
 import re
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
+from backend.ml.model_registry import get_model_spec
 from backend.config import CONFIG
 from backend.ml.model_vars import MODEL_BANDS
 from backend.pydantic_models.timeseries import (
@@ -76,17 +78,22 @@ class TimeseriesService:
         return datasets
 
     @classmethod
-    def list_subjects(cls, dataset_id: str) -> list[TimeseriesSubjectInfo]:
+    def list_subjects(cls, dataset_id: str, model_name: str | None = None) -> list[TimeseriesSubjectInfo]:
         dataset_dir = cls._dataset_dir(dataset_id)
+        participant_rows = cls._read_participant_rows(dataset_dir)
+        subject_splits = cls._read_model_subject_splits(model_name)
         subjects = []
         for subject_dir in cls._list_subject_dirs(dataset_dir):
             sources = cls._available_subject_sources(dataset_dir, subject_dir.name)
             if sources:
+                participant_row = participant_rows.get(subject_dir.name)
+                subject_group = participant_row.get("Group") if participant_row else None
                 subjects.append(
                     TimeseriesSubjectInfo(
                         id=subject_dir.name,
                         sources=sources,
-                        subject_label=cls.get_subject_label(dataset_id, subject_dir.name),
+                        subject_label=cls._resolve_subject_label(subject_group),
+                        subject_split=subject_splits.get(subject_dir.name),
                     )
                 )
 
@@ -95,7 +102,7 @@ class TimeseriesService:
     @classmethod
     def get_subject_label(cls, dataset_id: str, subject_id: str) -> str | None:
         dataset_dir = cls._dataset_dir(dataset_id)
-        participant_row = cls._read_participant_row(dataset_dir, subject_id)
+        participant_row = cls._read_participant_rows(dataset_dir).get(subject_id)
         subject_group = participant_row.get("Group") if participant_row else None
         return cls._resolve_subject_label(subject_group)
 
@@ -111,7 +118,7 @@ class TimeseriesService:
         eeg_file = cls._find_eeg_file(dataset_dir, subject_id, source)
         sidecar = cls._read_json(cls._find_json_sidecar(eeg_file, dataset_id, subject_id, source))
         channels_by_name = cls._read_channels(cls._find_channels_sidecar(eeg_file, dataset_id, subject_id, source))
-        participant_row = cls._read_participant_row(dataset_dir, subject_id)
+        participant_row = cls._read_participant_rows(dataset_dir).get(subject_id)
         subject_group = participant_row.get("Group") if participant_row else None
 
         sampling_frequency = float(sidecar.get("SamplingFrequency") or raw.info["sfreq"])
@@ -366,19 +373,54 @@ class TimeseriesService:
             return {row["name"]: row for row in csv.DictReader(file, delimiter="\t") if row.get("name")}
 
     @staticmethod
-    def _read_participant_row(dataset_dir: Path, subject_id: str) -> dict[str, str] | None:
+    @lru_cache(maxsize=16)
+    def _read_participant_rows(dataset_dir: Path) -> dict[str, dict[str, str]]:
         participants_path = dataset_dir / "participants.tsv"
         if not participants_path.is_file():
-            return None
+            return {}
 
         try:
             with participants_path.open("r", encoding="utf-8") as file:
-                return next(
-                    (row for row in csv.DictReader(file, delimiter="\t") if row.get("participant_id") == subject_id),
-                    None,
-                )
-        except Exception:
-            return None
+                return {
+                    participant_id: row
+                    for row in csv.DictReader(file, delimiter="\t")
+                    if (participant_id := row.get("participant_id"))
+                }
+        except (OSError, csv.Error) as exc:
+            raise TimeseriesServiceError(f"Could not read participant metadata from '{participants_path}': {exc}") from exc
+
+    @staticmethod
+    @lru_cache(maxsize=16)
+    def _read_model_subject_splits(model_name: str | None) -> dict[str, str]:
+        if not model_name:
+            return {}
+
+        try:
+            model_spec = get_model_spec(model_name)
+        except KeyError as exc:
+            raise TimeseriesValidationError(str(exc)) from exc
+
+        metadata_path = model_spec.checkpoint_path.with_name(f"{model_spec.checkpoint_path.stem}_metadata.csv")
+        if not metadata_path.is_file():
+            return {}
+
+        try:
+            with metadata_path.open("r", encoding="utf-8") as file:
+                reader = csv.DictReader(file)
+                required_columns = {"participant_id", "datasplit"}
+                if not reader.fieldnames or not required_columns.issubset(reader.fieldnames):
+                    raise TimeseriesValidationError(
+                        f"Model metadata '{metadata_path}' must contain participant_id and datasplit columns."
+                    )
+
+                return {
+                    participant_id: split
+                    for row in reader
+                    if (participant_id := row.get("participant_id"))
+                    if (split := row.get("datasplit")) in {"train", "val", "test"}
+                }
+        except (OSError, csv.Error) as exc:
+            raise TimeseriesServiceError(f"Could not read model metadata from '{metadata_path}': {exc}") from exc
 
     @staticmethod
     def _resolve_subject_label(subject_group: str | None) -> str | None:

@@ -49,6 +49,10 @@ interface ModelInferenceRequest {
   source: TimeseriesSource;
 }
 
+interface RequestControlOptions {
+  signal?: AbortSignal;
+}
+
 export class TimeseriesService {
   private static defaultModelInfoPromise: Promise<ModelInfoResponse> | null = null;
 
@@ -57,8 +61,10 @@ export class TimeseriesService {
     return response.datasets;
   }
 
-  static async getSubjects(datasetId: string): Promise<TimeseriesSubjectInfo[]> {
-    const response = await ApiClient.get<TimeseriesSubjectListResponse>(API_ROUTES.timeseries.subjects(datasetId));
+  static async getSubjects(datasetId: string, modelName?: string | null): Promise<TimeseriesSubjectInfo[]> {
+    const response = await ApiClient.get<TimeseriesSubjectListResponse>(
+      `${API_ROUTES.timeseries.subjects(datasetId)}?${this.toQueryString({ model_name: modelName ?? undefined })}`,
+    );
     return response.subjects;
   }
 
@@ -66,9 +72,12 @@ export class TimeseriesService {
     datasetId: string,
     subjectId: string,
     source: TimeseriesSource = "derivatives",
+    options: RequestControlOptions = {},
   ): Promise<TimeseriesSubjectMetadata> {
     return ApiClient.get<TimeseriesSubjectMetadata>(
       `${API_ROUTES.timeseries.metadata(datasetId, subjectId)}?${this.toQueryString({ source })}`,
+      undefined,
+      options.signal,
     );
   }
 
@@ -76,9 +85,12 @@ export class TimeseriesService {
     datasetId: string,
     subjectId: string,
     request: TimeseriesSignalRequest,
+    options: RequestControlOptions = {},
   ): Promise<TimeseriesSignalResponse> {
     return ApiClient.get<TimeseriesSignalResponse>(
       `${API_ROUTES.timeseries.preview(datasetId, subjectId)}?${this.toSignalQueryString(request)}`,
+      undefined,
+      options.signal,
     );
   }
 
@@ -86,9 +98,12 @@ export class TimeseriesService {
     datasetId: string,
     subjectId: string,
     request: TimeseriesSignalRequest,
+    options: RequestControlOptions = {},
   ): Promise<TimeseriesSignalResponse> {
     return ApiClient.get<TimeseriesSignalResponse>(
       `${API_ROUTES.timeseries.signal(datasetId, subjectId)}?${this.toSignalQueryString(request)}`,
+      undefined,
+      options.signal,
     );
   }
 
@@ -144,10 +159,13 @@ export class TimeseriesService {
     datasetId: string,
     source: TimeseriesSource = "derivatives",
     modelName?: string,
+    options: RequestControlOptions = {},
   ): Promise<ModelPredictionCacheProgress | null> {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelPredictionCacheProgress | null>(
       `${API_ROUTES.model.activePredictionCacheJob(datasetId, resolvedModelName)}?${this.toQueryString({ source })}`,
+      undefined,
+      options.signal,
     );
   }
 
@@ -206,10 +224,13 @@ export class TimeseriesService {
     subjectId: string,
     source: TimeseriesSource = "derivatives",
     modelName?: string,
+    options: RequestControlOptions = {},
   ): Promise<ModelInferenceResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelInferenceResponse>(
       `${API_ROUTES.model.subjectPredictions(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({ source })}`,
+      undefined,
+      options.signal,
     );
   }
 
@@ -218,6 +239,7 @@ export class TimeseriesService {
     subjectId: string,
     source: TimeseriesSource = "derivatives",
     modelName?: string,
+    options: RequestControlOptions = {},
   ): Promise<ModelInferenceResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.post<ModelInferenceResponse>(
@@ -225,6 +247,8 @@ export class TimeseriesService {
       {
         source,
       },
+      undefined,
+      options.signal,
     );
   }
 

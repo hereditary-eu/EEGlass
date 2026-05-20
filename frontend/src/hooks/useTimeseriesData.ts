@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import { useAppStore } from "../stores/useAppStore";
-import { TimeseriesService } from "../services/TimeseriesService";
-import type { ChannelId, ModelInfoResponse, TimeseriesSource } from "../types";
+import type { TimeseriesSource } from "../types";
 import { DEFAULT_DATASET_ID, DEFAULT_SOURCE, DEFAULT_SUBJECT_ID } from "./timeseries/shared";
 import { useSelectedTimeseriesWindow } from "./timeseries/useSelectedTimeseriesWindow";
 import { useTimeseriesBandPower } from "./timeseries/useTimeseriesBandPower";
+import { useTimeseriesChannelInteractions } from "./timeseries/useTimeseriesChannelInteractions";
+import { useTimeseriesModelInfo } from "./timeseries/useTimeseriesModelInfo";
 import { useTimeseriesPredictions } from "./timeseries/useTimeseriesPredictions";
 import { useTimeseriesSignal } from "./timeseries/useTimeseriesSignal";
 import { useTimeseriesSubjectSource } from "./timeseries/useTimeseriesSubjectSource";
@@ -32,44 +33,27 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
   const setLockedPredictionWindowIndex = useAppStore((state) => state.setLockedPredictionWindowIndex);
   const clearSelectedPredictionWindow = useAppStore((state) => state.clearSelectedPredictionWindow);
 
-  const [resetViewSignal, setResetViewSignal] = useState(0);
-  const [hoveredChannel, setHoveredChannel] = useState<ChannelId | null>(null);
-  const [modelInfo, setModelInfo] = useState<ModelInfoResponse | null>(null);
-  const channelsClearedByUserRef = useRef(false);
-  const [bandPowerResetSignal, setBandPowerResetSignal] = useState(0);
-
-  useEffect(() => {
-    let isCurrent = true;
-
-    TimeseriesService.getModelInfo()
-      .then((nextModelInfo) => {
-        if (isCurrent) {
-          setModelInfo(nextModelInfo);
-        }
-      })
-      .catch(() => {
-        if (isCurrent) {
-          setModelInfo(null);
-        }
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, []);
-
-  const clearBandPowerFromCoordinator = useCallback(() => {
-    setBandPowerResetSignal((current) => current + 1);
-  }, []);
+  const modelInfo = useTimeseriesModelInfo();
+  const {
+    resetViewSignal,
+    hoveredChannel,
+    setHoveredChannel,
+    channelsClearedByUserRef,
+    resetLocalPatientViewState,
+    handleChannelToggle,
+    handleSingleChannelSelect,
+    handleResetView,
+  } = useTimeseriesChannelInteractions({
+    selectedChannels,
+    setSelectedChannels,
+    selectSingleTimeseriesChannel,
+    setSelectedTimeRange,
+  });
 
   const resetPatientViewState = useCallback(() => {
-    channelsClearedByUserRef.current = false;
-    setSelectedChannels([]);
-    setSelectedTimeRange(null);
-    setHoveredChannel(null);
+    resetLocalPatientViewState();
     clearSelectedPredictionWindow();
-    clearBandPowerFromCoordinator();
-  }, [clearBandPowerFromCoordinator, clearSelectedPredictionWindow, setSelectedChannels, setSelectedTimeRange]);
+  }, [clearSelectedPredictionWindow, resetLocalPatientViewState]);
 
   const {
     datasets,
@@ -136,10 +120,6 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     lockedPredictionWindowIndex,
   });
 
-  useEffect(() => {
-    clearBandPowerData();
-  }, [bandPowerResetSignal, clearBandPowerData]);
-
   const resetBandPower = useCallback(() => {
     clearBandPowerData();
   }, [clearBandPowerData]);
@@ -170,36 +150,13 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     lockedPredictionWindowIndex,
   });
 
-  const handleChannelToggle = (channel: ChannelId) => {
-    const nextChannels = selectedChannels.includes(channel)
-      ? selectedChannels.filter((selectedChannel) => selectedChannel !== channel)
-      : [...selectedChannels, channel];
-
-    channelsClearedByUserRef.current = nextChannels.length === 0;
-    setSelectedChannels(nextChannels);
-    setSelectedTimeRange(null);
-    setHoveredChannel((currentHoveredChannel) =>
-      currentHoveredChannel && nextChannels.includes(currentHoveredChannel) ? currentHoveredChannel : null,
-    );
-  };
-
-  const handleSingleChannelSelect = (channel: ChannelId) => {
-    channelsClearedByUserRef.current = false;
-    selectSingleTimeseriesChannel(channel);
-    setHoveredChannel(channel);
-  };
-
-  const handleSourceChange = (nextSource: TimeseriesSource) => {
+  const handleSourceChange = useCallback((nextSource: TimeseriesSource) => {
     setSelectedTimeseriesSource(nextSource);
     setSelectedTimeRange(null);
     resetSignal();
     resetPredictions();
     clearBandPowerData();
-  };
-
-  const handleResetView = () => {
-    setResetViewSignal((current) => current + 1);
-  };
+  }, [clearBandPowerData, resetPredictions, resetSignal, setSelectedTimeRange, setSelectedTimeseriesSource]);
 
   return {
     datasets,
