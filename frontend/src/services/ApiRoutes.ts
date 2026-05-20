@@ -11,23 +11,16 @@ const API_BASE_URL = getApiBaseUrl();
 function getApiBaseUrl(): string {
   const configuredBaseUrl =
     (typeof window !== "undefined" ? window.__ALL_IN_ON_EEG_CONFIG__?.apiBaseUrl : undefined) ??
-    getProcessEnvValue("BUN_PUBLIC_API_BASE_URL") ??
+    (typeof process !== "undefined" ? process.env.BUN_PUBLIC_API_BASE_URL : undefined) ??
     "http://localhost:8000";
 
   return configuredBaseUrl.replace(/\/$/, "");
 }
 
-function getProcessEnvValue(key: string): string | undefined {
-  const runtime = globalThis as typeof globalThis & {
-    process?: {
-      env?: Record<string, string | undefined>;
-    };
-  };
-
-  return runtime.process?.env?.[key];
-}
-
 function buildApiUrl(path: string): string {
+  if (!API_BASE_URL || API_BASE_URL === ".") {
+    return path.startsWith("/") ? path : `/${path}`;
+  }
   return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
