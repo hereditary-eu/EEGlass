@@ -176,10 +176,9 @@
 .overview-patient-list-header,
 .overview-patient-select {
   display: grid;
-  grid-template-columns: minmax(4.6rem, 1.05fr) 2.55rem repeat(
-      var(--model-class-count, 0),
-      minmax(2.75rem, 0.55fr)
-    ) 2.7rem 2.7rem 2.75rem;
+  grid-template-columns:
+    minmax(4.6rem, 1.05fr) 2.55rem repeat(var(--model-class-count, 0), minmax(2.75rem, 0.55fr))
+    2.7rem 2.7rem 2.75rem;
   align-items: center;
 }
 

@@ -59,7 +59,12 @@ export function useTimeseriesPredictions({
   activeContextRef.current = { datasetId, subjectId, source, modelName };
 
   const isCurrentContext = useCallback(
-    (context: { datasetId: string; subjectId: string; source: TimeseriesSource; modelName: string | null | undefined }) => {
+    (context: {
+      datasetId: string;
+      subjectId: string;
+      source: TimeseriesSource;
+      modelName: string | null | undefined;
+    }) => {
       const activeContext = activeContextRef.current;
       return (
         activeContext.datasetId === context.datasetId &&

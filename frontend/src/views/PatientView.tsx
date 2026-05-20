@@ -99,7 +99,13 @@ export function PatientView() {
     });
 
     return () => setPatientViewHeaderDetails(null);
-  }, [datasetId, setPatientViewHeaderDetails, subjectId, ts.metadata?.subject_label, ts.selectedSubject?.subject_split]);
+  }, [
+    datasetId,
+    setPatientViewHeaderDetails,
+    subjectId,
+    ts.metadata?.subject_label,
+    ts.selectedSubject?.subject_split,
+  ]);
 
   if (!datasetId || !subjectId) {
     return (

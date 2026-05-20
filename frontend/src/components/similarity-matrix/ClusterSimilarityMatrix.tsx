@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { VariableSizeGrid as Grid } from "react-window";
+import { Grid, type CellComponentProps } from "react-window";
 
 import "./ClusterSimilarityMatrix.css";
 import type {
@@ -90,17 +90,19 @@ const CELL_SIZE = 16;
 const ROW_HEADER_WIDTH = 120;
 const COLUMN_HEADER_HEIGHT = 80;
 
-const MatrixCell = React.memo<{
-  columnIndex: number;
-  rowIndex: number;
-  style: React.CSSProperties;
-  data: CellData;
-}>(({ columnIndex, rowIndex, style, data }) => {
-  const { featurePairMatrixData, onCellHover, onCellLeave, colorRangeMode } = data;
-
+function MatrixCell({
+  ariaAttributes,
+  columnIndex,
+  rowIndex,
+  style,
+  featurePairMatrixData,
+  onCellHover,
+  onCellLeave,
+  colorRangeMode,
+}: CellComponentProps<CellData>): React.ReactElement | null {
   if (rowIndex === 0 && columnIndex === 0) {
     return (
-      <div style={style} className={`${styles.headerCell} ${styles.cornerCell}`}>
+      <div {...ariaAttributes} style={style} className={`${styles.headerCell} ${styles.cornerCell}`}>
         Features
       </div>
     );
@@ -109,7 +111,7 @@ const MatrixCell = React.memo<{
   if (rowIndex === 0) {
     const feature = featurePairMatrixData.features[columnIndex - 1];
     return (
-      <div style={style} className={`${styles.headerCell} ${styles.columnHeader}`} title={feature}>
+      <div {...ariaAttributes} style={style} className={`${styles.headerCell} ${styles.columnHeader}`} title={feature}>
         {feature}
       </div>
     );
@@ -118,7 +120,7 @@ const MatrixCell = React.memo<{
   if (columnIndex === 0) {
     const feature = featurePairMatrixData.features[rowIndex - 1];
     return (
-      <div style={style} className={`${styles.headerCell} ${styles.rowHeader}`} title={feature}>
+      <div {...ariaAttributes} style={style} className={`${styles.headerCell} ${styles.rowHeader}`} title={feature}>
         {feature}
       </div>
     );
@@ -144,6 +146,7 @@ const MatrixCell = React.memo<{
 
   return (
     <div
+      {...ariaAttributes}
       style={cellStyle}
       className={`${styles.cell} ${isDiagonal ? styles.diagonal : ""}`}
       onMouseEnter={(event) => !isDiagonal && onCellHover(dataRowIndex, dataColIndex, event)}
@@ -152,9 +155,7 @@ const MatrixCell = React.memo<{
       {!isDiagonal ? <div className={styles.heatmapCell} /> : null}
     </div>
   );
-});
-
-MatrixCell.displayName = "MatrixCell";
+}
 
 function reorderFeatures(
   features: string[],
@@ -166,11 +167,14 @@ function reorderFeatures(
     return { features, similarities };
   }
 
-  const averageScores = features.map((_, index) => ({
-    index,
-    score: similarities[index].reduce((sum, value) => sum + value, 0) / similarities[index].length,
-    selected: selectedFeaturePair.includes(features[index]),
-  }));
+  const averageScores = features.map((feature, index) => {
+    const row = similarities[index] ?? [];
+    return {
+      index,
+      score: row.length > 0 ? row.reduce((sum, value) => sum + value, 0) / row.length : 0,
+      selected: selectedFeaturePair.includes(feature),
+    };
+  });
 
   const sortedIndexes =
     reorderMethod === "average"
@@ -178,8 +182,11 @@ function reorderFeatures(
       : averageScores.sort((left, right) => Number(right.selected) - Number(left.selected) || right.score - left.score);
 
   const order = sortedIndexes.map((entry) => entry.index);
-  const orderedFeatures = order.map((index) => features[index]);
-  const orderedSimilarities = order.map((rowIndex) => order.map((colIndex) => similarities[rowIndex][colIndex]));
+  const orderedFeatures = order.map((index) => features[index] ?? "");
+  const orderedSimilarities = order.map((rowIndex) => {
+    const row = similarities[rowIndex] ?? [];
+    return order.map((colIndex) => row[colIndex] ?? 0);
+  });
 
   return { features: orderedFeatures, similarities: orderedSimilarities };
 }
@@ -231,13 +238,14 @@ function createMockFeaturePairSimilarityMatrix(
   const nonDiagonalValues = reordered.similarities.flatMap((row, rowIndex) =>
     row.filter((_, colIndex) => colIndex !== rowIndex),
   );
+  const similarityExtentValues = nonDiagonalValues.length > 0 ? nonDiagonalValues : [0];
 
   return {
     features: reordered.features,
     similarities: reordered.similarities,
     stats: {
-      min_similarity: Math.min(...nonDiagonalValues),
-      max_similarity: Math.max(...nonDiagonalValues),
+      min_similarity: Math.min(...similarityExtentValues),
+      max_similarity: Math.max(...similarityExtentValues),
       size: reordered.features.length,
     },
   };
@@ -439,12 +447,10 @@ export function ClusterSimilarityMatrix({
           rowCount={gridSize}
           columnWidth={getColumnWidth}
           rowHeight={getRowHeight}
-          width={gridWidth}
-          height={gridHeight}
-          itemData={cellData}
-        >
-          {MatrixCell}
-        </Grid>
+          style={{ width: gridWidth, height: gridHeight }}
+          cellProps={cellData}
+          cellComponent={MatrixCell}
+        />
       </div>
 
       {tooltip.visible && tooltip.content ? (

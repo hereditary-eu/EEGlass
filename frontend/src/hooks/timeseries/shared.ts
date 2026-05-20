@@ -96,9 +96,9 @@ export function getErrorStatusCode(error: unknown): unknown {
 
 export function isAbortError(error: unknown): boolean {
   return (
-    error instanceof DOMException ||
-    (typeof error === "object" && error !== null && "name" in error)
-  ) && (error as { name?: unknown }).name === "AbortError";
+    (error instanceof DOMException || (typeof error === "object" && error !== null && "name" in error)) &&
+    (error as { name?: unknown }).name === "AbortError"
+  );
 }
 
 export function wait(delayMs: number, signal?: AbortSignal): Promise<void> {

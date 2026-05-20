@@ -113,14 +113,19 @@ export function useTimeseriesSignal({
           return;
         }
 
-        const preview = await TimeseriesService.getPreview(datasetId, subjectId, {
-          channels: nextChannels,
-          source,
-          maxPoints: DEFAULT_PREVIEW_MAX_POINTS,
-          bandFilter: selectedTimeseriesBandFilter,
-        }, {
-          signal: abortController.signal,
-        });
+        const preview = await TimeseriesService.getPreview(
+          datasetId,
+          subjectId,
+          {
+            channels: nextChannels,
+            source,
+            maxPoints: DEFAULT_PREVIEW_MAX_POINTS,
+            bandFilter: selectedTimeseriesBandFilter,
+          },
+          {
+            signal: abortController.signal,
+          },
+        );
         if (!isActiveRequest()) {
           return;
         }
@@ -130,13 +135,18 @@ export function useTimeseriesSignal({
         setIsRefreshingFullSignal(true);
 
         try {
-          const fullSignal = await TimeseriesService.getSignal(datasetId, subjectId, {
-            channels: nextChannels,
-            source,
-            bandFilter: selectedTimeseriesBandFilter,
-          }, {
-            signal: abortController.signal,
-          });
+          const fullSignal = await TimeseriesService.getSignal(
+            datasetId,
+            subjectId,
+            {
+              channels: nextChannels,
+              source,
+              bandFilter: selectedTimeseriesBandFilter,
+            },
+            {
+              signal: abortController.signal,
+            },
+          );
           if (isActiveRequest()) {
             setSignal(fullSignal);
           }

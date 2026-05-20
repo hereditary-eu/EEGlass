@@ -188,14 +188,14 @@ export function PatientEmbeddingScatterplot({
         <div className="overview-embedding-meta-group">
           {embeddings ? (
             <>
-            {selectedSubjectIds ? (
-              <button type="button" className="overview-embedding-selection-clear" onClick={clearSelectedSubjects}>
-                {selectedSubjectIds.length} selected
-              </button>
-            ) : null}
-            <span className="overview-embedding-meta">
-              {embeddings.points.length} patients / {embeddings.reduction.source_dimension}D
-            </span>
+              {selectedSubjectIds ? (
+                <button type="button" className="overview-embedding-selection-clear" onClick={clearSelectedSubjects}>
+                  {selectedSubjectIds.length} selected
+                </button>
+              ) : null}
+              <span className="overview-embedding-meta">
+                {embeddings.points.length} patients / {embeddings.reduction.source_dimension}D
+              </span>
             </>
           ) : null}
           <ComponentStatusIndicator status={status.status} label={status.label} />

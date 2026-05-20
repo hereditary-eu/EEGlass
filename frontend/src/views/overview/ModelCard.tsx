@@ -109,7 +109,7 @@ export function ModelCard({
               <span>
                 {isCacheRunning
                   ? "Model switching is disabled while prediction cache is running."
-                  : modelInfo?.architecture ?? "No model loaded."}
+                  : (modelInfo?.architecture ?? "No model loaded.")}
               </span>
             </div>
           ) : null}

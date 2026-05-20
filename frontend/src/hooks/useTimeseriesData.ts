@@ -154,13 +154,16 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     lockedPredictionWindowIndex,
   });
 
-  const handleSourceChange = useCallback((nextSource: TimeseriesSource) => {
-    setSelectedTimeseriesSource(nextSource);
-    setSelectedTimeRange(null);
-    resetSignal();
-    resetPredictions();
-    clearBandPowerData();
-  }, [clearBandPowerData, resetPredictions, resetSignal, setSelectedTimeRange, setSelectedTimeseriesSource]);
+  const handleSourceChange = useCallback(
+    (nextSource: TimeseriesSource) => {
+      setSelectedTimeseriesSource(nextSource);
+      setSelectedTimeRange(null);
+      resetSignal();
+      resetPredictions();
+      clearBandPowerData();
+    },
+    [clearBandPowerData, resetPredictions, resetSignal, setSelectedTimeRange, setSelectedTimeseriesSource],
+  );
 
   return {
     datasets,
