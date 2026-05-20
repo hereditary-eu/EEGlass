@@ -10,7 +10,7 @@ from scipy.integrate import trapezoid
 
 from backend.ml.data_utils.load_data import preprocess_raw_for_xeegnet, preprocessed_raw_to_windows
 from backend.ml.model import build_xeegnet
-from backend.ml.model_registry import ModelSpec, get_model_spec
+from backend.ml.model_registry import ModelSpec, get_model_spec, list_model_specs
 from backend.ml.model_vars import (
     DEFAULT_MODEL_NAME,
     MODEL_BANDS,
@@ -30,6 +30,8 @@ from backend.pydantic_models.inference import (
     ModelClassEvidenceResponse,
     ModelInfoResponse,
     ModelInferenceResponse,
+    ModelListItem,
+    ModelListResponse,
     ModelScalpTopologyBand,
     ModelScalpTopologyChannel,
     ModelScalpTopologyGrid,
@@ -807,6 +809,7 @@ __all__ = [
 
 
 class ModelService:
+    _current_model_name = DEFAULT_MODEL_NAME
     _CHECKPOINT_READY_FOR_INFERENCE = True
     _CHECKPOINT_UNAVAILABLE_MESSAGE = (
         "Inference is temporarily unavailable. The current pretrained checkpoint is incompatible with the corrected "
@@ -845,6 +848,35 @@ class ModelService:
     @classmethod
     def get_model_info(cls, model_name: str = DEFAULT_MODEL_NAME) -> ModelInfoResponse:
         return build_model_info_response(cls._get_model_spec(model_name))
+
+    @classmethod
+    def get_current_model_info(cls) -> ModelInfoResponse:
+        return cls.get_model_info(cls._current_model_name)
+
+    @classmethod
+    def list_models(cls) -> ModelListResponse:
+        model_specs = list_model_specs()
+        if not any(model_spec.name == cls._current_model_name for model_spec in model_specs):
+            cls._current_model_name = DEFAULT_MODEL_NAME
+
+        return ModelListResponse(
+            current_model_name=cls._current_model_name,
+            models=[
+                ModelListItem(
+                    name=model_spec.name,
+                    display_name=model_spec.display_name,
+                    architecture=model_spec.architecture,
+                    is_current=model_spec.name == cls._current_model_name,
+                )
+                for model_spec in model_specs
+            ],
+        )
+
+    @classmethod
+    def set_current_model(cls, model_name: str) -> ModelInfoResponse:
+        model_spec = cls._get_model_spec(model_name)
+        cls._current_model_name = model_spec.name
+        return build_model_info_response(model_spec)
 
     @classmethod
     def infer_subject(

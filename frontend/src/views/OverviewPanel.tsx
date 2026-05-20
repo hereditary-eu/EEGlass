@@ -3,9 +3,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { StatusOverlay } from "../components/ui";
 import { TimeseriesService } from "../services/TimeseriesService";
+import { useAppStore } from "../stores/useAppStore";
 import type {
   ModelPatientEmbeddingsResponse,
-  ModelInfoResponse,
   ModelPredictionCacheProgress,
   ModelPredictionCacheStatus,
   TimeseriesDatasetInfo,
@@ -40,8 +40,6 @@ export function OverviewPanel() {
   const [cacheStatus, setCacheStatus] = useState<ModelPredictionCacheStatus | null>(null);
   const [cacheProgress, setCacheProgress] = useState<ModelPredictionCacheProgress | null>(null);
   const [cacheError, setCacheError] = useState<string | null>(null);
-  const [modelInfo, setModelInfo] = useState<ModelInfoResponse | null>(null);
-  const [modelInfoError, setModelInfoError] = useState<string | null>(null);
   const [patientEmbeddings, setPatientEmbeddings] = useState<ModelPatientEmbeddingsResponse | null>(null);
   const [embeddingSelectedSubjectIds, setEmbeddingSelectedSubjectIds] = useState<string[] | null>(null);
   const [embeddingSelectionResetKey, setEmbeddingSelectionResetKey] = useState(0);
@@ -55,6 +53,13 @@ export function OverviewPanel() {
   const [isStartingCacheJob, setIsStartingCacheJob] = useState(false);
   const [isDeletingCache, setIsDeletingCache] = useState(false);
   const progressSocketRef = useRef<WebSocket | null>(null);
+  const modelInfo = useAppStore((state) => state.modelInfo);
+  const availableModels = useAppStore((state) => state.availableModels);
+  const isLoadingModels = useAppStore((state) => state.isLoadingModels);
+  const isSwitchingModel = useAppStore((state) => state.isSwitchingModel);
+  const modelInfoError = useAppStore((state) => state.modelError);
+  const initializeModelState = useAppStore((state) => state.initializeModelState);
+  const setCurrentModel = useAppStore((state) => state.setCurrentModel);
 
   const selectedDataset = useMemo(
     () => datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null,
@@ -133,26 +138,8 @@ export function OverviewPanel() {
   );
 
   useEffect(() => {
-    let isCurrent = true;
-
-    TimeseriesService.getModelInfo()
-      .then((nextModelInfo) => {
-        if (isCurrent) {
-          setModelInfo(nextModelInfo);
-          setModelInfoError(null);
-        }
-      })
-      .catch((loadError) => {
-        if (isCurrent) {
-          setModelInfo(null);
-          setModelInfoError(getOverviewError(loadError, "Unable to load model metadata."));
-        }
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, []);
+    void initializeModelState();
+  }, [initializeModelState]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -212,8 +199,9 @@ export function OverviewPanel() {
     let isCurrent = true;
 
     async function loadSubjects() {
-      if (!selectedDatasetId) {
+      if (!selectedDatasetId || !activeModelName) {
         setSubjects([]);
+        setIsLoadingSubjects(false);
         return;
       }
 
@@ -337,6 +325,38 @@ export function OverviewPanel() {
       progressSocketRef.current?.close();
     },
     [],
+  );
+
+  const clearOverviewModelData = useCallback(() => {
+    progressSocketRef.current?.close();
+    progressSocketRef.current = null;
+    setCacheStatus(null);
+    setCacheProgress(null);
+    setCacheError(null);
+    setSubjects([]);
+    setIsLoadingSubjects(false);
+    setError(null);
+    setPatientEmbeddings(null);
+    setEmbeddingError(null);
+    setEmbeddingSelectedSubjectIds(null);
+    setEmbeddingSelectionResetKey((current) => current + 1);
+    setHoveredSubjectId(null);
+    setSelectedSubjectId(null);
+    setFocusSubjectId(null);
+    setIsStartingCacheJob(false);
+    setIsDeletingCache(false);
+  }, []);
+
+  const handleModelChange = useCallback(
+    (modelName: string) => {
+      if (!modelName || modelName === activeModelName || isSwitchingModel || isCacheJobRunning(cacheProgress)) {
+        return;
+      }
+
+      clearOverviewModelData();
+      void setCurrentModel(modelName);
+    },
+    [activeModelName, cacheProgress, clearOverviewModelData, isSwitchingModel, setCurrentModel],
   );
 
   const selectDataset = (datasetId: string) => {
@@ -490,6 +510,7 @@ export function OverviewPanel() {
             subjects={subjects}
             cacheStatus={cacheStatus}
             isLoadingSubjects={isLoadingSubjects}
+            error={error}
             modelInfo={modelInfo}
           />
 
@@ -508,12 +529,16 @@ export function OverviewPanel() {
           <ModelCard
             modelInfo={modelInfo}
             modelInfoError={modelInfoError}
+            availableModels={availableModels}
+            isLoadingModels={isLoadingModels}
+            isSwitchingModel={isSwitchingModel}
             selectedDatasetId={selectedDatasetId}
             cacheStatus={cacheStatus}
             cacheProgress={cacheProgress}
             cacheError={cacheError}
             isStartingCacheJob={isStartingCacheJob}
             isDeletingCache={isDeletingCache}
+            onModelChange={handleModelChange}
             onStartPredictionCacheJob={startPredictionCacheJob}
             onDeletePredictionCache={deletePredictionCache}
           />

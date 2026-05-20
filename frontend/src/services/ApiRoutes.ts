@@ -36,6 +36,8 @@ function getBrowserOrigin(): string {
 
 export const API_ROUTES = {
   model: {
+    list: buildApiUrl("/models"),
+    current: buildApiUrl("/models/current"),
     defaultInfo: buildApiUrl("/models/default"),
     info: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}`),
     infer: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/infer`),

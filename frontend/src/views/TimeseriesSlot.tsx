@@ -117,6 +117,7 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
               onClick={ts.handleComputeInference}
               disabled={
                 !ts.subjectId ||
+                !ts.modelInfo ||
                 !ts.signal ||
                 ts.activeChannels.length === 0 ||
                 ts.isComputingInference ||

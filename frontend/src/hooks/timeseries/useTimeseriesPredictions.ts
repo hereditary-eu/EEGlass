@@ -22,6 +22,7 @@ interface UseTimeseriesPredictionsOptions {
   datasetId: string;
   subjectId: string;
   source: TimeseriesSource;
+  modelName: string | null | undefined;
   signal: TimeseriesSignalResponse | null;
   activeChannels: ChannelId[];
   isLoadingSubjects: boolean;
@@ -35,6 +36,7 @@ export function useTimeseriesPredictions({
   datasetId,
   subjectId,
   source,
+  modelName,
   signal,
   activeChannels,
   isLoadingSubjects,
@@ -48,21 +50,22 @@ export function useTimeseriesPredictions({
   const [activePredictionCacheProgress, setActivePredictionCacheProgress] =
     useState<ModelPredictionCacheProgress | null>(null);
   const [inferenceError, setInferenceError] = useState<string | null>(null);
-  const activeContextRef = useRef({ datasetId, subjectId, source });
+  const activeContextRef = useRef({ datasetId, subjectId, source, modelName });
   const cachedPredictionRequestIdRef = useRef(0);
   const computePredictionRequestIdRef = useRef(0);
   const computeAbortControllerRef = useRef<AbortController | null>(null);
   const isDatasetPredictionJobRunning = isPredictionCacheJobRunning(activePredictionCacheProgress);
 
-  activeContextRef.current = { datasetId, subjectId, source };
+  activeContextRef.current = { datasetId, subjectId, source, modelName };
 
   const isCurrentContext = useCallback(
-    (context: { datasetId: string; subjectId: string; source: TimeseriesSource }) => {
+    (context: { datasetId: string; subjectId: string; source: TimeseriesSource; modelName: string | null | undefined }) => {
       const activeContext = activeContextRef.current;
       return (
         activeContext.datasetId === context.datasetId &&
         activeContext.subjectId === context.subjectId &&
-        activeContext.source === context.source
+        activeContext.source === context.source &&
+        activeContext.modelName === context.modelName
       );
     },
     [],
@@ -91,6 +94,7 @@ export function useTimeseriesPredictions({
     if (
       !datasetId ||
       !subjectId ||
+      !modelName ||
       !signal ||
       activeChannels.length === 0 ||
       isComputingInference ||
@@ -100,7 +104,7 @@ export function useTimeseriesPredictions({
     }
 
     computeAbortControllerRef.current?.abort();
-    const requestContext = { datasetId, subjectId, source };
+    const requestContext = { datasetId, subjectId, source, modelName };
     const requestId = computePredictionRequestIdRef.current + 1;
     computePredictionRequestIdRef.current = requestId;
     const abortController = new AbortController();
@@ -117,7 +121,7 @@ export function useTimeseriesPredictions({
     onPredictionReset();
 
     try {
-      const response = await TimeseriesService.computeAndCachePredictions(datasetId, subjectId, source, undefined, {
+      const response = await TimeseriesService.computeAndCachePredictions(datasetId, subjectId, source, modelName, {
         signal: abortController.signal,
       });
       if (!isActiveRequest()) {
@@ -150,13 +154,14 @@ export function useTimeseriesPredictions({
     isDatasetPredictionJobRunning,
     onPredictionReset,
     setLockedPredictionWindowIndex,
+    modelName,
     signal,
     source,
     subjectId,
   ]);
 
   useEffect(() => {
-    if (!datasetId) {
+    if (!datasetId || !modelName) {
       setActivePredictionCacheProgress(null);
       return;
     }
@@ -165,7 +170,7 @@ export function useTimeseriesPredictions({
     let socket: WebSocket | null = null;
     const abortController = new AbortController();
 
-    TimeseriesService.getActivePredictionCacheJob(datasetId, source, undefined, {
+    TimeseriesService.getActivePredictionCacheJob(datasetId, source, modelName, {
       signal: abortController.signal,
     })
       .then((progress) => {
@@ -188,7 +193,7 @@ export function useTimeseriesPredictions({
             return;
           }
 
-          if (!isCurrent || nextProgress.dataset_id !== datasetId) {
+          if (!isCurrent || nextProgress.dataset_id !== datasetId || nextProgress.model_name !== modelName) {
             return;
           }
 
@@ -213,10 +218,10 @@ export function useTimeseriesPredictions({
       abortController.abort();
       socket?.close();
     };
-  }, [datasetId, source]);
+  }, [datasetId, modelName, source]);
 
   useEffect(() => {
-    if (!datasetId || !subjectId) {
+    if (!datasetId || !subjectId || !modelName) {
       cachedPredictionRequestIdRef.current += 1;
       setInferenceResult(null);
       setInferenceError(null);
@@ -233,7 +238,7 @@ export function useTimeseriesPredictions({
     }
 
     let isCurrent = true;
-    const requestContext = { datasetId, subjectId, source };
+    const requestContext = { datasetId, subjectId, source, modelName };
     const requestId = cachedPredictionRequestIdRef.current + 1;
     cachedPredictionRequestIdRef.current = requestId;
     const abortController = new AbortController();
@@ -249,7 +254,7 @@ export function useTimeseriesPredictions({
     clearSelectedPredictionWindow();
     onPredictionReset();
 
-    getCachedPredictionsWithRetry(datasetId, subjectId, source, abortController.signal)
+    getCachedPredictionsWithRetry(datasetId, subjectId, source, modelName, abortController.signal)
       .then((response) => {
         if (isActiveRequest()) {
           setInferenceResult(response);
@@ -280,6 +285,7 @@ export function useTimeseriesPredictions({
     isLoadingSubjects,
     isSelectedSubjectReady,
     isCurrentContext,
+    modelName,
     onPredictionReset,
     setLockedPredictionWindowIndex,
     source,
@@ -304,6 +310,7 @@ async function getCachedPredictionsWithRetry(
   datasetId: string,
   subjectId: string,
   source: TimeseriesSource,
+  modelName: string,
   signal?: AbortSignal,
 ): Promise<ModelInferenceResponse> {
   let lastError: unknown = null;
@@ -314,7 +321,7 @@ async function getCachedPredictionsWithRetry(
     }
 
     try {
-      return await TimeseriesService.getCachedPredictions(datasetId, subjectId, source, undefined, { signal });
+      return await TimeseriesService.getCachedPredictions(datasetId, subjectId, source, modelName, { signal });
     } catch (error) {
       lastError = error;
       if (isAbortError(error) || signal?.aborted) {

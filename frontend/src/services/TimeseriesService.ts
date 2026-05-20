@@ -10,6 +10,7 @@ import type {
   ModelClassEvidenceResponse,
   ModelInfoResponse,
   ModelInferenceResponse,
+  ModelListResponse,
   ModelPatientEmbeddingsResponse,
   ModelPredictionCacheJobResponse,
   ModelPredictionCacheProgress,
@@ -54,7 +55,7 @@ interface RequestControlOptions {
 }
 
 export class TimeseriesService {
-  private static defaultModelInfoPromise: Promise<ModelInfoResponse> | null = null;
+  private static modelListPromise: Promise<ModelListResponse> | null = null;
 
   static async getDatasets(): Promise<TimeseriesDatasetInfo[]> {
     const response = await ApiClient.get<TimeseriesDatasetListResponse>(API_ROUTES.timeseries.datasets);
@@ -123,11 +124,22 @@ export class TimeseriesService {
   }
 
   static async getModelInfo(modelName?: string): Promise<ModelInfoResponse> {
-    if (modelName) {
-      return ApiClient.get<ModelInfoResponse>(API_ROUTES.model.info(modelName));
-    }
+    const resolvedModelName = modelName ?? (await this.getModelList()).current_model_name;
+    return ApiClient.get<ModelInfoResponse>(API_ROUTES.model.info(resolvedModelName));
+  }
 
-    return this.getDefaultModelInfo();
+  static async getModelList(): Promise<ModelListResponse> {
+    this.modelListPromise ??= ApiClient.get<ModelListResponse>(API_ROUTES.model.list).catch((error) => {
+      this.modelListPromise = null;
+      throw error;
+    });
+    return this.modelListPromise;
+  }
+
+  static async setCurrentModel(modelName: string): Promise<ModelInfoResponse> {
+    const response = await ApiClient.put<ModelInfoResponse>(API_ROUTES.model.current, { model_name: modelName });
+    this.modelListPromise = null;
+    return response;
   }
 
   static async startPredictionCacheJob(
@@ -311,16 +323,8 @@ export class TimeseriesService {
     return ApiClient.get<ModelScalpTopologyResponse>(API_ROUTES.model.scalpTopologies(resolvedModelName));
   }
 
-  private static getDefaultModelInfo(): Promise<ModelInfoResponse> {
-    this.defaultModelInfoPromise ??= ApiClient.get<ModelInfoResponse>(API_ROUTES.model.defaultInfo).catch((error) => {
-      this.defaultModelInfoPromise = null;
-      throw error;
-    });
-    return this.defaultModelInfoPromise;
-  }
-
   private static async resolveModelName(modelName?: string): Promise<string> {
-    return modelName ?? (await this.getDefaultModelInfo()).name;
+    return modelName ?? (await this.getModelList()).current_model_name;
   }
 
   private static toSignalQueryString(request: TimeseriesSignalRequest): string {

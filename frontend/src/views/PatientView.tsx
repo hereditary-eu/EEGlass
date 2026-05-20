@@ -162,6 +162,7 @@ export function PatientView() {
           datasetId={ts.datasetId}
           subjectId={ts.subjectId}
           source={ts.source}
+          modelInfo={ts.modelInfo}
           windowIndex={ts.lockedPredictionWindowIndex}
         />
       </article>

@@ -4,14 +4,15 @@ import type { VisualizationSpec } from "vega-embed";
 
 import { formatCompactClassLabel } from "../../constants/eegModel";
 import { TimeseriesService } from "../../services/TimeseriesService";
-import type { ModelClassEvidenceResponse, TimeseriesSource } from "../../types";
+import type { ModelClassEvidenceResponse, ModelInfoResponse, TimeseriesSource } from "../../types";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
 import "./ClassContributionsPanel.css";
 
-interface ClassContributionsPanelProps {
+export interface ClassContributionsPanelProps {
   datasetId: string;
   subjectId: string;
   source: TimeseriesSource;
+  modelInfo: ModelInfoResponse | null;
   windowIndex: number | null;
 }
 
@@ -50,7 +51,13 @@ interface ClassLogitDatum {
   tooltipValue: string;
 }
 
-export function ClassContributionsPanel({ datasetId, subjectId, source, windowIndex }: ClassContributionsPanelProps) {
+export function ClassContributionsPanel({
+  datasetId,
+  subjectId,
+  source,
+  modelInfo,
+  windowIndex,
+}: ClassContributionsPanelProps) {
   const cacheRef = useRef(new Map<string, ModelClassEvidenceResponse>());
   const [evidence, setEvidence] = useState<ModelClassEvidenceResponse | null>(null);
   const [displayMode, setDisplayMode] = useState<EvidenceDisplayMode>("raw");
@@ -58,14 +65,15 @@ export function ClassContributionsPanel({ datasetId, subjectId, source, windowIn
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!datasetId || !subjectId || windowIndex === null) {
+    const modelName = modelInfo?.name;
+    if (!datasetId || !subjectId || !modelName || windowIndex === null) {
       setEvidence(null);
       setIsLoading(false);
       setError(null);
       return;
     }
 
-    const cacheKey = `${datasetId}::${subjectId}::${source}::${windowIndex}`;
+    const cacheKey = `${modelName}::${datasetId}::${subjectId}::${source}::${windowIndex}`;
     const cachedEvidence = cacheRef.current.get(cacheKey);
     if (cachedEvidence) {
       setEvidence(cachedEvidence);
@@ -78,7 +86,7 @@ export function ClassContributionsPanel({ datasetId, subjectId, source, windowIn
     setIsLoading(true);
     setError(null);
 
-    TimeseriesService.computeClassEvidence(datasetId, subjectId, windowIndex, source)
+    TimeseriesService.computeClassEvidence(datasetId, subjectId, windowIndex, source, modelName)
       .then((response) => {
         cacheRef.current.set(cacheKey, response);
         if (!isCurrent) {
@@ -104,7 +112,7 @@ export function ClassContributionsPanel({ datasetId, subjectId, source, windowIn
     return () => {
       isCurrent = false;
     };
-  }, [datasetId, source, subjectId, windowIndex]);
+  }, [datasetId, modelInfo?.name, source, subjectId, windowIndex]);
 
   const classLabels = useMemo(() => {
     if (!evidence?.bands.length) {

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { EmbeddingScatterplot } from "../../components";
+import { ComponentStatusIndicator, EmbeddingScatterplot } from "../../components";
 import type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from "../../components";
+import type { ComponentStatus } from "../../components/ui";
 import { getAnnotationClassColor, getEmbeddingClassColors, getModelClassLabels } from "../../constants/eegModel";
 import type { ModelInfoResponse, ModelPatientEmbeddingsResponse } from "../../types";
 
@@ -53,6 +54,7 @@ export function PatientEmbeddingScatterplot({
   const [brushSelectedSubjectIds, setBrushSelectedSubjectIds] = useState<string[] | null>(null);
   const modelClasses = modelInfo?.classes ?? [];
   const modelClassLabels = useMemo(() => getModelClassLabels(modelClasses), [modelClasses]);
+  const status = getPatientEmbeddingStatus({ embeddings, isLoading, error });
 
   const values = useMemo<PatientEmbeddingDatum[]>(
     () =>
@@ -183,8 +185,9 @@ export function PatientEmbeddingScatterplot({
           <p className="overview-kicker">Patient embedding</p>
           <h3>{embeddings?.embedding_label ?? (modelInfo ? "Patient embedding" : "Model unavailable")}</h3>
         </div>
-        {embeddings ? (
-          <div className="overview-embedding-meta-group">
+        <div className="overview-embedding-meta-group">
+          {embeddings ? (
+            <>
             {selectedSubjectIds ? (
               <button type="button" className="overview-embedding-selection-clear" onClick={clearSelectedSubjects}>
                 {selectedSubjectIds.length} selected
@@ -193,8 +196,10 @@ export function PatientEmbeddingScatterplot({
             <span className="overview-embedding-meta">
               {embeddings.points.length} patients / {embeddings.reduction.source_dimension}D
             </span>
-          </div>
-        ) : null}
+            </>
+          ) : null}
+          <ComponentStatusIndicator status={status.status} label={status.label} />
+        </div>
       </div>
 
       <div className="overview-embedding-plot-shell">
@@ -284,6 +289,30 @@ export function PatientEmbeddingScatterplot({
       ) : null}
     </section>
   );
+}
+
+function getPatientEmbeddingStatus({
+  embeddings,
+  isLoading,
+  error,
+}: {
+  embeddings: ModelPatientEmbeddingsResponse | null;
+  isLoading: boolean;
+  error: string | null;
+}): { status: ComponentStatus; label: string } {
+  if (error) {
+    return { status: "error", label: error };
+  }
+
+  if (isLoading) {
+    return { status: "loading", label: "Loading patient embeddings" };
+  }
+
+  if (embeddings) {
+    return { status: "loaded", label: "Patient embeddings loaded" };
+  }
+
+  return { status: "idle", label: "Patient embeddings unavailable" };
 }
 
 function areSubjectSelectionsEqual(first: string[] | null, second: string[] | null): boolean {

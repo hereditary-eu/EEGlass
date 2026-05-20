@@ -13,6 +13,7 @@ interface UseTimeseriesBandPowerOptions {
   datasetId: string;
   subjectId: string;
   source: TimeseriesSource;
+  modelName: string | null | undefined;
   lockedPredictionWindowIndex: number | null;
 }
 
@@ -20,6 +21,7 @@ export function useTimeseriesBandPower({
   datasetId,
   subjectId,
   source,
+  modelName,
   lockedPredictionWindowIndex,
 }: UseTimeseriesBandPowerOptions) {
   const [bandPower, setBandPower] = useState<ModelBandPowerResponse | null>(null);
@@ -32,7 +34,7 @@ export function useTimeseriesBandPower({
   const [bandPowerStatsError, setBandPowerStatsError] = useState<string | null>(null);
   const bandPowerCacheRef = useRef(new Map<string, ModelBandPowerResponse>());
   const bandPowerStatsCacheRef = useRef(new Map<string, ModelBandPowerStatsResponse>());
-  const canLoadBandPowerStats = Boolean(datasetId && subjectId && lockedPredictionWindowIndex !== null);
+  const canLoadBandPowerStats = Boolean(datasetId && subjectId && modelName && lockedPredictionWindowIndex !== null);
 
   const clearBandPowerData = useCallback(() => {
     bandPowerCacheRef.current.clear();
@@ -47,7 +49,7 @@ export function useTimeseriesBandPower({
   }, []);
 
   useEffect(() => {
-    if (!datasetId || !subjectId || lockedPredictionWindowIndex === null) {
+    if (!datasetId || !subjectId || !modelName || lockedPredictionWindowIndex === null) {
       setIsLoadingBandPower(false);
       setBandPower(null);
       setBandPowerError(null);
@@ -56,7 +58,7 @@ export function useTimeseriesBandPower({
 
     const requestSource = source;
     const requestWindowIndex = lockedPredictionWindowIndex;
-    const cacheKey = `${datasetId}::${subjectId}::${requestSource}::${requestWindowIndex}`;
+    const cacheKey = `${modelName}::${datasetId}::${subjectId}::${requestSource}::${requestWindowIndex}`;
     const cachedBandPower = bandPowerCacheRef.current.get(cacheKey);
     if (cachedBandPower) {
       setBandPower(cachedBandPower);
@@ -69,7 +71,7 @@ export function useTimeseriesBandPower({
     setIsLoadingBandPower(true);
     setBandPowerError(null);
 
-    TimeseriesService.computeBandPower(datasetId, subjectId, requestWindowIndex, requestSource)
+    TimeseriesService.computeBandPower(datasetId, subjectId, requestWindowIndex, requestSource, modelName)
       .then((response) => {
         if (!isCurrent) {
           return;
@@ -95,10 +97,11 @@ export function useTimeseriesBandPower({
     return () => {
       isCurrent = false;
     };
-  }, [datasetId, lockedPredictionWindowIndex, source, subjectId]);
+  }, [datasetId, lockedPredictionWindowIndex, modelName, source, subjectId]);
 
   useEffect(() => {
-    if (!canLoadBandPowerStats) {
+    const requestModelName = modelName;
+    if (!canLoadBandPowerStats || !requestModelName) {
       setIsLoadingBandPowerStats(false);
       setBandPowerStats(null);
       setBandPowerStatsError(null);
@@ -108,7 +111,7 @@ export function useTimeseriesBandPower({
 
     const requestSource = source;
     const requestMode = bandPowerStatsMode;
-    const cacheKey = `${datasetId}::${subjectId}::${requestSource}::${requestMode}`;
+    const cacheKey = `${requestModelName}::${datasetId}::${subjectId}::${requestSource}::${requestMode}`;
     const cachedBandPowerStats = bandPowerStatsCacheRef.current.get(cacheKey);
     if (cachedBandPowerStats) {
       setBandPowerStats(cachedBandPowerStats);
@@ -121,7 +124,7 @@ export function useTimeseriesBandPower({
     setIsLoadingBandPowerStats(true);
     setBandPowerStatsError(null);
 
-    TimeseriesService.getBandPowerStats(datasetId, subjectId, requestSource, requestMode)
+    TimeseriesService.getBandPowerStats(datasetId, subjectId, requestSource, requestMode, requestModelName)
       .then((response) => {
         if (!isCurrent) {
           return;
@@ -157,7 +160,7 @@ export function useTimeseriesBandPower({
     return () => {
       isCurrent = false;
     };
-  }, [bandPowerStatsMode, canLoadBandPowerStats, datasetId, source, subjectId]);
+  }, [bandPowerStatsMode, canLoadBandPowerStats, datasetId, modelName, source, subjectId]);
 
   return {
     bandPower,

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
+import { ComponentStatusIndicator } from "../../components";
+import type { ComponentStatus } from "../../components/ui";
 import { formatCompactClassLabel, getDistributionClassColor, getModelClassLabels } from "../../constants/eegModel";
 import type {
   ModelInfoResponse,
@@ -15,6 +17,7 @@ interface DatasetSummaryCardProps {
   subjects: TimeseriesSubjectInfo[];
   cacheStatus: ModelPredictionCacheStatus | null;
   isLoadingSubjects: boolean;
+  error: string | null;
   modelInfo: ModelInfoResponse | null;
 }
 
@@ -32,6 +35,7 @@ export function DatasetSummaryCard({
   subjects,
   cacheStatus,
   isLoadingSubjects,
+  error,
   modelInfo,
 }: DatasetSummaryCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -42,6 +46,7 @@ export function DatasetSummaryCard({
     [cacheStatus, modelInfo, subjects],
   );
   const hasPredictedLabels = useMemo(() => values.some((value) => value.series === "Predicted label"), [values]);
+  const status = getDatasetSummaryStatus({ subjects, isLoadingSubjects, error });
 
   useEffect(() => {
     const container = containerRef.current;
@@ -151,10 +156,15 @@ export function DatasetSummaryCard({
 
   return (
     <section className="overview-placeholder-card overview-dataset-summary-card">
-      <p className="overview-kicker">Dataset Summary</p>
-      <h3 title={dataset?.name || dataset?.id || "Dataset summary"}>
-        {dataset?.name || dataset?.id || "Dataset summary"}
-      </h3>
+      <div className="overview-card-header">
+        <div>
+          <p className="overview-kicker">Dataset Summary</p>
+          <h3 title={dataset?.name || dataset?.id || "Dataset summary"}>
+            {dataset?.name || dataset?.id || "Dataset summary"}
+          </h3>
+        </div>
+        <ComponentStatusIndicator status={status.status} label={status.label} />
+      </div>
       {dataset ? (
         <dl className="overview-dataset-details">
           <div>
@@ -180,6 +190,30 @@ export function DatasetSummaryCard({
       </div>
     </section>
   );
+}
+
+function getDatasetSummaryStatus({
+  subjects,
+  isLoadingSubjects,
+  error,
+}: {
+  subjects: TimeseriesSubjectInfo[];
+  isLoadingSubjects: boolean;
+  error: string | null;
+}): { status: ComponentStatus; label: string } {
+  if (error) {
+    return { status: "error", label: error };
+  }
+
+  if (isLoadingSubjects) {
+    return { status: "loading", label: "Loading subjects" };
+  }
+
+  if (subjects.length) {
+    return { status: "loaded", label: "Subject data loaded" };
+  }
+
+  return { status: "idle", label: "No subject data" };
 }
 
 function createLabelDistributionValues(

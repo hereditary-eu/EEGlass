@@ -8,6 +8,7 @@ interface UseTimeseriesSubjectSourceOptions {
   routeDatasetId: string;
   routeSubjectId: string;
   source: TimeseriesSource;
+  modelName: string | null | undefined;
   setSelectedTimeseriesSource: (source: TimeseriesSource) => void;
   onRouteChange: () => void;
   onSubjectReset: () => void;
@@ -17,6 +18,7 @@ export function useTimeseriesSubjectSource({
   routeDatasetId,
   routeSubjectId,
   source,
+  modelName,
   setSelectedTimeseriesSource,
   onRouteChange,
   onSubjectReset,
@@ -100,6 +102,12 @@ export function useTimeseriesSubjectSource({
         return;
       }
 
+      if (!modelName) {
+        setSubjects([]);
+        setIsLoadingSubjects(false);
+        return;
+      }
+
       if (datasets.length > 0 && !datasets.some((dataset) => dataset.id === datasetId)) {
         setSubjects([]);
         setSubjectId("");
@@ -112,7 +120,7 @@ export function useTimeseriesSubjectSource({
       onSubjectReset();
 
       try {
-        const nextSubjects = await TimeseriesService.getSubjects(datasetId);
+        const nextSubjects = await TimeseriesService.getSubjects(datasetId, modelName);
         if (!isCurrent) {
           return;
         }
@@ -150,7 +158,16 @@ export function useTimeseriesSubjectSource({
     return () => {
       isCurrent = false;
     };
-  }, [datasetId, datasets, isLoadingDatasets, onSubjectReset, routeSubjectId, setSelectedTimeseriesSource, source]);
+  }, [
+    datasetId,
+    datasets,
+    isLoadingDatasets,
+    modelName,
+    onSubjectReset,
+    routeSubjectId,
+    setSelectedTimeseriesSource,
+    source,
+  ]);
 
   return {
     datasets,

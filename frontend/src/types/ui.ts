@@ -114,6 +114,18 @@ export interface ModelInfoResponse {
   metadata: Record<string, ModelMetadataValue>;
 }
 
+export interface ModelListItem {
+  name: string;
+  display_name: string;
+  architecture: string;
+  is_current: boolean;
+}
+
+export interface ModelListResponse {
+  current_model_name: string;
+  models: ModelListItem[];
+}
+
 export interface ModelPredictionCacheJobResponse {
   job_id: string;
   dataset_id: string;

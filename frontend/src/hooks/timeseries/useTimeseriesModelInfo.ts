@@ -1,30 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
-import { TimeseriesService } from "../../services/TimeseriesService";
-import type { ModelInfoResponse } from "../../types";
+import { useAppStore } from "../../stores/useAppStore";
 
 export function useTimeseriesModelInfo() {
-  const [modelInfo, setModelInfo] = useState<ModelInfoResponse | null>(null);
+  const modelInfo = useAppStore((state) => state.modelInfo);
+  const initializeModelState = useAppStore((state) => state.initializeModelState);
 
   useEffect(() => {
-    let isCurrent = true;
-
-    TimeseriesService.getModelInfo()
-      .then((nextModelInfo) => {
-        if (isCurrent) {
-          setModelInfo(nextModelInfo);
-        }
-      })
-      .catch(() => {
-        if (isCurrent) {
-          setModelInfo(null);
-        }
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, []);
+    void initializeModelState();
+  }, [initializeModelState]);
 
   return modelInfo;
 }

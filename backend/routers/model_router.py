@@ -13,6 +13,7 @@ from backend.pydantic_models.inference import (
     ModelInfoResponse,
     ModelInferenceRequest,
     ModelInferenceResponse,
+    ModelListResponse,
     ModelPatientEmbeddingsResponse,
     ModelPredictionCacheJobRequest,
     ModelPredictionCacheJobResponse,
@@ -21,6 +22,7 @@ from backend.pydantic_models.inference import (
     ModelScalpTopologyResponse,
     ModelWindowEmbeddingsResponse,
     ModelWindowScalpTopologyResponse,
+    SetCurrentModelRequest,
 )
 from backend.pydantic_models.timeseries import TimeseriesSource
 from backend.services.prediction_cache_service import PredictionCacheService
@@ -36,6 +38,22 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 model_router = APIRouter(tags=["model"])
+
+
+@model_router.get("/models", response_model=ModelListResponse)
+async def list_models() -> ModelListResponse:
+    try:
+        return ModelService.list_models()
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@model_router.put("/models/current", response_model=ModelInfoResponse)
+async def set_current_model(request: SetCurrentModelRequest) -> ModelInfoResponse:
+    try:
+        return ModelService.set_current_model(model_name=request.model_name)
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
 
 
 @model_router.get("/models/default", response_model=ModelInfoResponse)

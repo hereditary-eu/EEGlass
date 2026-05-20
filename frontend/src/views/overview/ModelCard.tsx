@@ -1,7 +1,10 @@
 import { useState } from "react";
 
+import { ComponentStatusIndicator } from "../../components";
+import type { ComponentStatus } from "../../components/ui";
 import type {
   ModelInfoResponse,
+  ModelListItem,
   ModelMetadataValue,
   ModelPredictionCacheProgress,
   ModelPredictionCacheStatus,
@@ -13,12 +16,16 @@ import { getCacheSummary, isCacheJobRunning } from "./overviewUtils";
 interface ModelCardProps {
   modelInfo: ModelInfoResponse | null;
   modelInfoError: string | null;
+  availableModels: ModelListItem[];
+  isLoadingModels: boolean;
+  isSwitchingModel: boolean;
   selectedDatasetId: string;
   cacheStatus: ModelPredictionCacheStatus | null;
   cacheProgress: ModelPredictionCacheProgress | null;
   cacheError: string | null;
   isStartingCacheJob: boolean;
   isDeletingCache: boolean;
+  onModelChange: (modelName: string) => void;
   onStartPredictionCacheJob: () => void;
   onDeletePredictionCache: () => void;
 }
@@ -26,18 +33,30 @@ interface ModelCardProps {
 export function ModelCard({
   modelInfo,
   modelInfoError,
+  availableModels,
+  isLoadingModels,
+  isSwitchingModel,
   selectedDatasetId,
   cacheStatus,
   cacheProgress,
   cacheError,
   isStartingCacheJob,
   isDeletingCache,
+  onModelChange,
   onStartPredictionCacheJob,
   onDeletePredictionCache,
 }: ModelCardProps) {
   const metadataEntries = Object.entries(modelInfo?.metadata ?? {});
   const [isModelSummaryOpen, setIsModelSummaryOpen] = useState(false);
+  const [isModelConfigOpen, setIsModelConfigOpen] = useState(false);
   const hasModelSummary = Boolean(modelInfo?.model_summary);
+  const isCacheRunning = isCacheJobRunning(cacheProgress);
+  const modelStatus = getModelCardStatus({
+    modelInfo,
+    modelInfoError,
+    isLoadingModels,
+    isSwitchingModel,
+  });
 
   return (
     <section className="overview-placeholder-card overview-model-card">
@@ -62,12 +81,39 @@ export function ModelCard({
           <button
             type="button"
             className="overview-model-config-button"
-            title="Model settings and metadata panel"
-            aria-label="Open model settings and metadata panel"
-            disabled={true}
+            title="Model settings"
+            aria-label="Open model settings"
+            aria-expanded={isModelConfigOpen}
+            onClick={() => setIsModelConfigOpen((isOpen) => !isOpen)}
           >
             {"\u2699"}
           </button>
+          {isModelConfigOpen ? (
+            <div className="overview-model-config-popover" role="dialog" aria-label="Model settings">
+              <label htmlFor="overview-model-select">Pretrained model</label>
+              <select
+                id="overview-model-select"
+                value={modelInfo?.name ?? ""}
+                disabled={!availableModels.length || isLoadingModels || isSwitchingModel || isCacheRunning}
+                onChange={(event) => {
+                  onModelChange(event.currentTarget.value);
+                  setIsModelConfigOpen(false);
+                }}
+              >
+                {availableModels.map((model) => (
+                  <option key={model.name} value={model.name}>
+                    {model.display_name}
+                  </option>
+                ))}
+              </select>
+              <span>
+                {isCacheRunning
+                  ? "Model switching is disabled while prediction cache is running."
+                  : modelInfo?.architecture ?? "No model loaded."}
+              </span>
+            </div>
+          ) : null}
+          <ComponentStatusIndicator status={modelStatus.status} label={modelStatus.label} />
         </div>
       </div>
 
@@ -103,7 +149,7 @@ export function ModelCard({
                 type="button"
                 className="overview-model-compute-button"
                 onClick={onStartPredictionCacheJob}
-                disabled={!modelInfo || !selectedDatasetId || isStartingCacheJob || isCacheJobRunning(cacheProgress)}
+                disabled={!modelInfo || !selectedDatasetId || isStartingCacheJob || isCacheRunning}
               >
                 Compute all
               </button>
@@ -115,7 +161,7 @@ export function ModelCard({
                   !selectedDatasetId ||
                   !modelInfo ||
                   isDeletingCache ||
-                  isCacheJobRunning(cacheProgress) ||
+                  isCacheRunning ||
                   cacheStatus?.status === "missing"
                 }
               >
@@ -146,6 +192,32 @@ export function ModelCard({
       ) : null}
     </section>
   );
+}
+
+function getModelCardStatus({
+  modelInfo,
+  modelInfoError,
+  isLoadingModels,
+  isSwitchingModel,
+}: {
+  modelInfo: ModelInfoResponse | null;
+  modelInfoError: string | null;
+  isLoadingModels: boolean;
+  isSwitchingModel: boolean;
+}): { status: ComponentStatus; label: string } {
+  if (modelInfoError) {
+    return { status: "error", label: modelInfoError };
+  }
+
+  if (isLoadingModels || isSwitchingModel) {
+    return { status: "loading", label: isSwitchingModel ? "Switching model" : "Loading model" };
+  }
+
+  if (modelInfo) {
+    return { status: "loaded", label: "Model loaded" };
+  }
+
+  return { status: "idle", label: "Model unavailable" };
 }
 
 function formatModelMetadataValue(value: ModelMetadataValue): string {

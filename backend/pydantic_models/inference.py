@@ -29,7 +29,10 @@ from backend.pydantic_models.embeddings import (
 from backend.pydantic_models.model_info import (
     ModelClassPresentation,
     ModelInfoResponse,
+    ModelListItem,
+    ModelListResponse,
     ModelMetadataValue,
+    SetCurrentModelRequest,
 )
 from backend.pydantic_models.prediction_cache import (
     ModelPredictionCacheJobRequest,
@@ -93,6 +96,8 @@ __all__ = [
     "ModelInfoResponse",
     "ModelInferenceRequest",
     "ModelInferenceResponse",
+    "ModelListItem",
+    "ModelListResponse",
     "ModelMetadataValue",
     "ModelPatientEmbeddingPoint",
     "ModelPatientEmbeddingReduction",
@@ -113,5 +118,6 @@ __all__ = [
     "ModelWindowScalpTopologyChannel",
     "ModelWindowScalpTopologyMode",
     "ModelWindowScalpTopologyResponse",
+    "SetCurrentModelRequest",
     "WindowPrediction",
 ]

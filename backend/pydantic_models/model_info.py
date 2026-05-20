@@ -20,3 +20,19 @@ class ModelInfoResponse(BaseModel):
     model_summary: str
     classes: List[ModelClassPresentation]
     metadata: Dict[str, ModelMetadataValue]
+
+
+class ModelListItem(BaseModel):
+    name: str
+    display_name: str
+    architecture: str
+    is_current: bool
+
+
+class ModelListResponse(BaseModel):
+    current_model_name: str
+    models: List[ModelListItem]
+
+
+class SetCurrentModelRequest(BaseModel):
+    model_name: str

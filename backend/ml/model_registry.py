@@ -48,6 +48,7 @@ DEFAULT_MODEL_CLASSES = tuple(
     for class_id, label in MODEL_CLASS_LABELS.items()
 )
 
+
 def build_xeegnet_model_spec(model_name: str, checkpoint_filename: str) -> ModelSpec:
     return ModelSpec(
         name=model_name,
@@ -83,3 +84,7 @@ def get_model_spec(model_name: str) -> ModelSpec:
     except KeyError as exc:
         known_models = ", ".join(sorted(MODEL_REGISTRY)) or "none"
         raise KeyError(f"Unknown model '{model_name}'. Available models: {known_models}.") from exc
+
+
+def list_model_specs() -> tuple[ModelSpec, ...]:
+    return tuple(MODEL_REGISTRY[model_name] for model_name in sorted(MODEL_REGISTRY))

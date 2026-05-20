@@ -34,6 +34,7 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
   const clearSelectedPredictionWindow = useAppStore((state) => state.clearSelectedPredictionWindow);
 
   const modelInfo = useTimeseriesModelInfo();
+  const modelName = modelInfo?.name;
   const {
     resetViewSignal,
     hoveredChannel,
@@ -70,6 +71,7 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     routeDatasetId,
     routeSubjectId,
     source,
+    modelName,
     setSelectedTimeseriesSource,
     onRouteChange: resetPatientViewState,
     onSubjectReset: resetPatientViewState,
@@ -117,6 +119,7 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     datasetId,
     subjectId,
     source,
+    modelName,
     lockedPredictionWindowIndex,
   });
 
@@ -135,6 +138,7 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     datasetId,
     subjectId,
     source,
+    modelName,
     signal,
     activeChannels,
     isLoadingSubjects,
