@@ -14,7 +14,7 @@ export function PatientView() {
   const navigate = useNavigate();
   const { setPatientViewHeaderDetails } = useOutletContext<PatientViewOutletContext>();
   const ts = useTimeseriesData({ datasetId, subjectId });
-  const setSelectedTimeseriesBandFilter = useAppStore((state) => state.setSelectedTimeseriesBandFilter);
+  const setSelectedScalpBand = useAppStore((state) => state.setSelectedScalpBand);
 
   useEffect(() => {
     if (!datasetId || !subjectId) {
@@ -62,11 +62,11 @@ export function PatientView() {
       }
 
       if (event.key === "n" || event.key === "m") {
-        const current = ts.selectedTimeseriesBandFilter;
+        const current = useAppStore.getState().selectedScalpBand;
         const currentIndex = current ? MODEL_BANDS.indexOf(current) : -1;
         const direction = event.key === "n" ? 1 : -1;
         const nextIndex = (currentIndex + direction + MODEL_BANDS.length) % MODEL_BANDS.length;
-        setSelectedTimeseriesBandFilter(MODEL_BANDS[nextIndex]);
+        setSelectedScalpBand(MODEL_BANDS[nextIndex]);
         return;
       }
 
@@ -83,7 +83,7 @@ export function PatientView() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [datasetId, navigate, setSelectedTimeseriesBandFilter, subjectId, ts]);
+  }, [datasetId, navigate, setSelectedScalpBand, subjectId, ts]);
 
   useEffect(() => {
     if (!datasetId || !subjectId) {

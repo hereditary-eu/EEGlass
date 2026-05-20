@@ -7,7 +7,6 @@ import type {
   ModelInfoResponse,
   ModelWindowScalpTopologyBand,
   ModelWindowScalpTopologyResponse,
-  TimeseriesBandFilter,
   TimeseriesSource,
 } from "../../types";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
@@ -35,26 +34,21 @@ export function EegScalpTopologyPanel({
   selectedChannels,
   onChannelSelect,
 }: EegScalpTopologyPanelProps) {
-  const [selectedBand, setSelectedBand] = useState<TimeseriesBandFilter>(SCALP_BAND_OPTIONS[0]);
   const [applyBandFilterOnClick, setApplyBandFilterOnClick] = useState(false);
   const [scalpTopologies, setScalpTopologies] = useState<ModelWindowScalpTopologyResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const selectedScalpBand = useAppStore((state) => state.selectedScalpBand);
+  const setSelectedScalpBand = useAppStore((state) => state.setSelectedScalpBand);
   const selectedTimeseriesBandFilter = useAppStore((state) => state.selectedTimeseriesBandFilter);
   const setSelectedTimeseriesBandFilter = useAppStore((state) => state.setSelectedTimeseriesBandFilter);
   const modelName = modelInfo?.name ?? undefined;
 
   useEffect(() => {
     if (applyBandFilterOnClick) {
-      setSelectedTimeseriesBandFilter(selectedBand);
+      setSelectedTimeseriesBandFilter(selectedScalpBand);
     }
-  }, [applyBandFilterOnClick, selectedBand, setSelectedTimeseriesBandFilter]);
-
-  useEffect(() => {
-    if (selectedTimeseriesBandFilter) {
-      setSelectedBand(selectedTimeseriesBandFilter);
-    }
-  }, [selectedTimeseriesBandFilter]);
+  }, [applyBandFilterOnClick, selectedScalpBand, setSelectedTimeseriesBandFilter]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -100,8 +94,8 @@ export function EegScalpTopologyPanel({
     [scalpTopologies],
   );
   const activeBand = useMemo(
-    () => activeMode?.bands.find((band) => band.band === selectedBand) ?? activeMode?.bands[0] ?? null,
-    [activeMode, selectedBand],
+    () => activeMode?.bands.find((band) => band.band === selectedScalpBand) ?? activeMode?.bands[0] ?? null,
+    [activeMode, selectedScalpBand],
   );
   const bandValueRange = useMemo(() => getPerBandDivergingValueRange(activeBand), [activeBand]);
   const channels = useMemo<ScalpTopologyValueChannel[]>(
@@ -116,7 +110,7 @@ export function EegScalpTopologyPanel({
   );
   const subtitle =
     scalpTopologies && activeMode
-      ? `Window ${scalpTopologies.window_index + 1}: ${scalpTopologies.start_time.toFixed(1)}s-${scalpTopologies.end_time.toFixed(1)}s - ${selectedBand} spatial evidence`
+      ? `Window ${scalpTopologies.window_index + 1}: ${scalpTopologies.start_time.toFixed(1)}s-${scalpTopologies.end_time.toFixed(1)}s - ${selectedScalpBand} spatial evidence`
       : "";
   const status = getScalpStatus({ error, isLoading, scalpTopologies });
 
@@ -137,7 +131,7 @@ export function EegScalpTopologyPanel({
       </div>
 
       <div className="topology-panel-controls">
-        <BandSelector selectedBand={selectedBand} onSelectedBandChange={setSelectedBand} />
+        <BandSelector selectedBand={selectedScalpBand} onSelectedBandChange={setSelectedScalpBand} />
       </div>
 
       <label className="topology-panel-filter-toggle">
@@ -147,7 +141,7 @@ export function EegScalpTopologyPanel({
           onChange={(event) => {
             const shouldApplyFilter = event.currentTarget.checked;
             setApplyBandFilterOnClick(shouldApplyFilter);
-            setSelectedTimeseriesBandFilter(shouldApplyFilter ? selectedBand : null);
+            setSelectedTimeseriesBandFilter(shouldApplyFilter ? selectedScalpBand : null);
           }}
         />
         <span>Apply selected band to timeseries clicks</span>
@@ -168,7 +162,7 @@ export function EegScalpTopologyPanel({
           onChannelSelect={(channel) => {
             onChannelSelect(channel);
             if (applyBandFilterOnClick) {
-              setSelectedTimeseriesBandFilter(selectedBand);
+              setSelectedTimeseriesBandFilter(selectedScalpBand);
             }
           }}
           isLoading={isLoading}
