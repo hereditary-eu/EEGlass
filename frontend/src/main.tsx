@@ -11,7 +11,7 @@ import { App } from "./App";
 
 const elem = document.getElementById("root")!;
 const app = (
-  <BrowserRouter>
+  <BrowserRouter basename={import.meta.env.BUN_PUBLIC_BASE_PATH ?? "/"}>
     <App />
   </BrowserRouter>
 );

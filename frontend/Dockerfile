@@ -10,7 +10,8 @@ FROM deps AS build
 WORKDIR /app
 
 COPY frontend ./frontend
-RUN BUN_PUBLIC_API_BASE_URL="." bun run build
+ARG BASE_PATH=/all-in-on-eeg/
+RUN BUN_PUBLIC_API_BASE_URL="." BUN_PUBLIC_BASE_PATH="$BASE_PATH" bun run build
 
 FROM nginx:1.27-alpine
 
