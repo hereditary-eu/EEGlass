@@ -28,6 +28,9 @@ function getProcessEnvValue(key: string): string | undefined {
 }
 
 function buildApiUrl(path: string): string {
+  if (!API_BASE_URL || API_BASE_URL === ".") {
+    return path.startsWith("/") ? path : `/${path}`;
+  }
   return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
