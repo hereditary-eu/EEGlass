@@ -1,5 +1,6 @@
 services:
   dataset-downloader:
+    image: registry.gitlab.tugraz.at/hereditary/all-in-on-eeg:dataset-downloader_master
     build:
       context: .
       dockerfile: backend/Dockerfile.dataset-downloader
@@ -12,9 +13,10 @@ services:
     volumes:
       - datasets:/app/data/datasets
     networks:
-      - all-in-on-eeg
+      - web
 
   backend:
+    image: registry.gitlab.tugraz.at/hereditary/all-in-on-eeg:backend_master
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -23,8 +25,8 @@ services:
       MODEL_OUTPUT_STORAGE_DIR: /app/data/model_outputs
       MNE_LOG_LEVEL: ERROR
       SERVER: "true"
-    ports:
-      - "8000:8000"
+    # ports:
+    #   - "8000:8000"
     volumes:
       - datasets:/app/data/datasets:ro
       - model-outputs:/app/data/model_outputs
@@ -32,22 +34,41 @@ services:
       dataset-downloader:
         condition: service_completed_successfully
     networks:
-      - all-in-on-eeg
+      - web
 
   frontend:
+    image: registry.gitlab.tugraz.at/hereditary/all-in-on-eeg:frontend_master
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    ports:
-      - "3000:80"
+    # ports:
+    #   - "3000:80"
     depends_on:
       - backend
     networks:
-      - all-in-on-eeg
+      - web
+    labels:
+      # Traefik configuration, Hostname needs to be changed
+      - traefik.http.routers.allinoneeg_backend-http.rule=Host(`hereditary.cgv.tugraz.at`) && PathPrefix(`/all-in-on-eeg/`)
+      - traefik.http.routers.allinoneeg_backend-http.entrypoints=http
+      - traefik.http.routers.allinoneeg_backend-https.rule=Host(`hereditary.cgv.tugraz.at`) && PathPrefix(`/all-in-on-eeg/`)
+      - traefik.http.routers.allinoneeg_backend-https.entrypoints=https
+
+      - traefik.http.routers.allinoneeg_backend-https.tls=true
+      - traefik.http.routers.allinoneeg_backend-https.tls.certresolver=letsencrypt
+
+      - "traefik.http.routers.allinoneeg_backend-http.middlewares=redirect,allinoneeg_backend_sp@docker"
+      - "traefik.http.routers.allinoneeg_backend-https.middlewares=redirect,allinoneeg_backend_sp@docker"
+      - "traefik.http.middlewares.allinoneeg_backend_sp.stripprefix.prefixes=/all-in-on-eeg/"
+      - "traefik.http.middlewares.allinoneeg_backend_sp.stripprefix.forceSlash=false"
+      - traefik.http.middlewares.redirect.redirectscheme.scheme=https
+      - traefik.http.services.allinoneeg_backend.loadbalancer.server.port=80
 
 networks:
-  all-in-on-eeg:
-    driver: bridge
+  internal:
+    external: false
+  web:
+    external: true
 
 volumes:
   datasets:
