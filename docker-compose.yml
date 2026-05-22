@@ -1,5 +1,5 @@
 services:
-  dataset-downloader:
+  all-in-on-eeg-dataset-downloader:
     image: registry.gitlab.tugraz.at/hereditary/all-in-on-eeg:dataset-downloader_master
     build:
       context: .
@@ -15,7 +15,7 @@ services:
     networks:
       - web
 
-  backend:
+  all-in-on-eeg-backend:
     image: registry.gitlab.tugraz.at/hereditary/all-in-on-eeg:backend_master
     build:
       context: .
@@ -36,7 +36,7 @@ services:
     networks:
       - web
 
-  frontend:
+  all-in-on-eeg-frontend:
     image: registry.gitlab.tugraz.at/hereditary/all-in-on-eeg:frontend_master
     build:
       context: .
