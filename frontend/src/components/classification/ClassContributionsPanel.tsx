@@ -587,7 +587,15 @@ function getRelativeBandContribution(
   contributionValue: number,
   band: ModelClassEvidenceResponse["bands"][number],
 ): number {
-  return Math.abs(contributionValue) - getMeanAbsBandContribution(band);
+  return contributionValue - getMeanBandContribution(band);
+}
+
+function getMeanBandContribution(band: ModelClassEvidenceResponse["bands"][number]): number {
+  if (!band.class_contributions.length) {
+    return 0;
+  }
+  const sum = band.class_contributions.reduce((acc, contribution) => acc + contribution.contribution, 0);
+  return sum / band.class_contributions.length;
 }
 
 function getMaxAbsRelativeBandContribution(band: ModelClassEvidenceResponse["bands"][number]): number {
