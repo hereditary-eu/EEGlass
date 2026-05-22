@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { View } from "vega";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
@@ -11,6 +12,7 @@ import type {
   TimeseriesDatasetInfo,
   TimeseriesSubjectInfo,
 } from "../../types";
+import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 
 interface DatasetSummaryCardProps {
   dataset: TimeseriesDatasetInfo | null;
@@ -39,6 +41,7 @@ export function DatasetSummaryCard({
   modelInfo,
 }: DatasetSummaryCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<View | null>(null);
   const [plotHeight, setPlotHeight] = useState(180);
   const classLabels = useMemo(() => getModelClassLabels(modelInfo?.classes), [modelInfo]);
   const values = useMemo(
@@ -47,6 +50,7 @@ export function DatasetSummaryCard({
   );
   const hasPredictedLabels = useMemo(() => values.some((value) => value.series === "Predicted label"), [values]);
   const status = getDatasetSummaryStatus({ subjects, isLoadingSubjects, error });
+  useVegaLayoutResize(viewRef);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -57,6 +61,7 @@ export function DatasetSummaryCard({
     const resizeObserver = new ResizeObserver(([entry]) => {
       const nextHeight = Math.max(150, Math.floor(entry.contentRect.height));
       setPlotHeight((current) => (current === nextHeight ? current : nextHeight));
+      resizeVegaView(viewRef.current);
     });
 
     resizeObserver.observe(container);
@@ -71,6 +76,7 @@ export function DatasetSummaryCard({
 
     container.innerHTML = "";
     if (!values.length || isLoadingSubjects || plotHeight <= 0) {
+      viewRef.current = null;
       return;
     }
 
@@ -143,6 +149,14 @@ export function DatasetSummaryCard({
     });
 
     resultPromise.catch(() => undefined);
+    resultPromise
+      .then((result) => {
+        if (!finalized) {
+          viewRef.current = result.view;
+          resizeVegaView(result.view);
+        }
+      })
+      .catch(() => undefined);
 
     return () => {
       if (finalized) {
@@ -150,6 +164,7 @@ export function DatasetSummaryCard({
       }
 
       finalized = true;
+      viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
   }, [classLabels, isLoadingSubjects, modelInfo, plotHeight, values]);

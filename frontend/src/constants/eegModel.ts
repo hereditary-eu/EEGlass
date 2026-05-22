@@ -48,10 +48,10 @@ export const MODEL_CLASS_COLORS = {
     embedding_stroke: "#be123c",
   },
   "Frontotemporal Dementia": {
-    annotation: "#c2ddfc",
-    distribution: "#c2ddfc",
-    embedding_fill: "rgb(37 99 235 / 20%)",
-    embedding_stroke: "#2563eb",
+    annotation: "rgb(251 191 36 / 34%)",
+    distribution: "rgb(251 191 36 / 42%)",
+    embedding_fill: "rgb(251 191 36 / 28%)",
+    embedding_stroke: "#b45309",
   },
 } satisfies Record<string, ModelClassColors>;
 

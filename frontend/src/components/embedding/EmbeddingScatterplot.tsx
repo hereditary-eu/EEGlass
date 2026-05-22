@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import type { View } from "vega";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
+
+import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 
 export interface EmbeddingScatterplotPoint {
   id: string;
@@ -49,12 +52,14 @@ export function EmbeddingScatterplot({
   onSelectionChange,
 }: EmbeddingScatterplotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<View | null>(null);
   const pointsRef = useRef(points);
   const onPointClickRef = useRef(onPointClick);
   const onSelectionChangeRef = useRef(onSelectionChange);
   const [plotHeight, setPlotHeight] = useState(280);
   const hasPointClick = Boolean(onPointClick);
   const hasSelection = Boolean(onSelectionChange);
+  useVegaLayoutResize(viewRef);
 
   useEffect(() => {
     pointsRef.current = points;
@@ -77,6 +82,7 @@ export function EmbeddingScatterplot({
     const resizeObserver = new ResizeObserver(([entry]) => {
       const nextHeight = Math.max(minHeight, Math.floor(entry.contentRect.height));
       setPlotHeight((current) => (current !== nextHeight ? nextHeight : current));
+      resizeVegaView(viewRef.current);
     });
 
     resizeObserver.observe(container);
@@ -91,6 +97,7 @@ export function EmbeddingScatterplot({
 
     container.innerHTML = "";
     if (!points.length || (showStatusOverlay && isLoading) || (showStatusOverlay && error) || plotHeight <= 0) {
+      viewRef.current = null;
       return;
     }
 
@@ -153,6 +160,12 @@ export function EmbeddingScatterplot({
     resultPromise.catch(() => undefined);
     resultPromise
       .then((result) => {
+        if (finalized) {
+          return;
+        }
+
+        viewRef.current = result.view;
+        resizeVegaView(result.view);
         result.view.addEventListener("click", (_event, item) => {
           const datum = item?.datum as EmbeddingScatterplotPoint | undefined;
           if (datum) {
@@ -173,6 +186,7 @@ export function EmbeddingScatterplot({
       }
 
       finalized = true;
+      viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
   }, [error, hasPointClick, hasSelection, isLoading, plotHeight, points, showStatusOverlay, tooltipFields]);

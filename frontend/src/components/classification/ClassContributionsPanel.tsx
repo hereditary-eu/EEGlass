@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { View } from "vega";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
 import { formatCompactClassLabel } from "../../constants/eegModel";
 import { TimeseriesService } from "../../services/TimeseriesService";
 import type { ModelClassEvidenceResponse, ModelInfoResponse, TimeseriesSource } from "../../types";
+import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
 import "./ClassContributionsPanel.css";
 
@@ -212,6 +214,8 @@ export function ClassContributionsPanel({
 
 function ClassContributionsHeatmap({ rows }: { rows: ClassContributionDatum[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<View | null>(null);
+  useVegaLayoutResize(viewRef);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -221,6 +225,7 @@ function ClassContributionsHeatmap({ rows }: { rows: ClassContributionDatum[] })
 
     container.innerHTML = "";
     if (!rows.length) {
+      viewRef.current = null;
       return;
     }
 
@@ -294,6 +299,14 @@ function ClassContributionsHeatmap({ rows }: { rows: ClassContributionDatum[] })
     });
 
     resultPromise.catch(() => undefined);
+    resultPromise
+      .then((result) => {
+        if (!finalized) {
+          viewRef.current = result.view;
+          resizeVegaView(result.view);
+        }
+      })
+      .catch(() => undefined);
 
     return () => {
       if (finalized) {
@@ -301,6 +314,7 @@ function ClassContributionsHeatmap({ rows }: { rows: ClassContributionDatum[] })
       }
 
       finalized = true;
+      viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
   }, [rows]);
@@ -310,6 +324,8 @@ function ClassContributionsHeatmap({ rows }: { rows: ClassContributionDatum[] })
 
 function ClassLogitPanel({ rows }: { rows: ClassLogitDatum[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<View | null>(null);
+  useVegaLayoutResize(viewRef);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -319,6 +335,7 @@ function ClassLogitPanel({ rows }: { rows: ClassLogitDatum[] }) {
 
     container.innerHTML = "";
     if (!rows.length) {
+      viewRef.current = null;
       return;
     }
 
@@ -391,6 +408,14 @@ function ClassLogitPanel({ rows }: { rows: ClassLogitDatum[] }) {
     });
 
     resultPromise.catch(() => undefined);
+    resultPromise
+      .then((result) => {
+        if (!finalized) {
+          viewRef.current = result.view;
+          resizeVegaView(result.view);
+        }
+      })
+      .catch(() => undefined);
 
     return () => {
       if (finalized) {
@@ -398,6 +423,7 @@ function ClassLogitPanel({ rows }: { rows: ClassLogitDatum[] }) {
       }
 
       finalized = true;
+      viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
   }, [rows]);

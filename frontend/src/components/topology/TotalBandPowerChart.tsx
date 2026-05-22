@@ -11,6 +11,7 @@ import type {
   ModelBandPowerStatsMode,
   ModelBandPowerStatsResponse,
 } from "../../types";
+import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
 
 interface TotalBandPowerChartProps {
@@ -47,6 +48,7 @@ export function TotalBandPowerChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
   const [plotHeight, setPlotHeight] = useState(240);
+  useVegaLayoutResize(viewRef);
 
   const channels = bandPower?.channels ?? [];
   const availableChannels = useMemo(() => channels.map((channel) => channel.channel), [channels]);
@@ -106,6 +108,7 @@ export function TotalBandPowerChart({
     const resizeObserver = new ResizeObserver(([entry]) => {
       const nextHeight = Math.max(180, Math.floor(entry.contentRect.height));
       setPlotHeight((current) => (current !== nextHeight ? nextHeight : current));
+      resizeVegaView(viewRef.current);
     });
 
     resizeObserver.observe(container);
@@ -227,6 +230,7 @@ export function TotalBandPowerChart({
       .then((result) => {
         if (!finalized) {
           viewRef.current = result.view;
+          resizeVegaView(result.view);
           result.view
             .change(
               BAND_POWER_DATA_NAME,

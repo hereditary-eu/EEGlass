@@ -21,6 +21,7 @@
   --color-table-rows-odd: #f8fafc;
   --color-table-rows-even: #ffffff;
   --color-table-rows-hover: rgb(14 116 144 / 10%);
+  --assistant-drawer-width: 24rem;
   --svg-url-compress: url("../assets/compress.svg");
   --svg-url-expand: url("../assets/expand.svg");
 }
@@ -60,6 +61,7 @@ select {
 .app-shell {
   min-height: 100vh;
   padding: 0.75rem;
+  transition: padding-right 180ms ease;
 }
 
 .app-shell--patient-view {
@@ -222,6 +224,188 @@ select {
   background: rgb(14 116 144 / 12%);
 }
 
+.app-assistant-toggle {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  min-height: 1.7rem;
+  padding: 0.3rem 0.55rem;
+  border: 0;
+  border-left: 1px solid #d7e0e8;
+  border-radius: 6px;
+  background: transparent;
+  color: #5d6b78;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.app-assistant-toggle:hover,
+.app-assistant-toggle:focus-visible,
+.app-assistant-toggle.is-active {
+  color: #0f5f76;
+  background: rgb(14 116 144 / 12%);
+}
+
+.app-assistant-toggle:focus-visible,
+.app-assistant-close:focus-visible,
+.app-assistant-composer button:focus-visible {
+  outline: 2px solid rgb(14 116 144 / 34%);
+  outline-offset: 2px;
+}
+
+.app-assistant-backdrop {
+  display: none;
+}
+
+.app-assistant-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 40;
+  width: min(var(--assistant-drawer-width), calc(100vw - 1rem));
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-left: 1px solid #d7e0e8;
+  background: #ffffff;
+  box-shadow: -18px 0 44px rgb(15 23 42 / 14%);
+  transform: translateX(100%);
+  transition: transform 180ms ease;
+  pointer-events: none;
+}
+
+.app-assistant-drawer.is-open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.app-assistant-drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.app-assistant-eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.62rem;
+  line-height: 1.1;
+  color: #748391;
+}
+
+.app-assistant-title {
+  margin: 0.1rem 0 0;
+  font-size: 1.05rem;
+  line-height: 1.15;
+  color: #17212b;
+}
+
+.app-assistant-close {
+  display: inline-grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid #d7e0e8;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #5d6b78;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.app-assistant-close:hover {
+  color: #17212b;
+  background: rgb(14 116 144 / 8%);
+}
+
+.app-assistant-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.app-assistant-context span {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.24rem 0.5rem;
+  border: 1px solid #d7e0e8;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-assistant-thread {
+  min-height: 0;
+  border: 1px solid #d7e0e8;
+  border-radius: 8px;
+  background: #fbfcfd;
+  overflow: auto;
+}
+
+.app-assistant-empty {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  color: #748391;
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.app-assistant-empty p {
+  margin: 0;
+}
+
+.app-assistant-composer {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.app-assistant-composer-label {
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.app-assistant-composer textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: vertical;
+  border: 1px solid #d7e0e8;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #748391;
+  padding: 0.65rem;
+}
+
+.app-assistant-composer button {
+  justify-self: end;
+  border: 1px solid #d7e0e8;
+  border-radius: 7px;
+  background: #0f5f76;
+  color: #ffffff;
+  padding: 0.42rem 0.8rem;
+  font-weight: 800;
+}
+
+.app-assistant-composer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .app-section {
   padding: 1.5rem;
   border: 1px solid #d7e0e8;
@@ -305,6 +489,20 @@ select {
     align-self: flex-start;
   }
 
+  .app-assistant-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    display: block;
+    border: 0;
+    background: rgb(15 23 42 / 28%);
+    padding: 0;
+  }
+
+  .app-assistant-drawer {
+    width: min(22rem, calc(100vw - 1.5rem));
+  }
+
   .patient-view-panel {
     grid-template-columns: 1fr;
     grid-template-rows: none;
@@ -317,6 +515,16 @@ select {
 
   .patient-view-slot--timeseries {
     grid-column: auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-shell--assistant-open {
+    padding-right: calc(var(--assistant-drawer-width) + 0.75rem);
+  }
+
+  .app-shell--assistant-open .app-layout {
+    max-width: none;
   }
 }
 
