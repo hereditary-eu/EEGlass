@@ -12,9 +12,22 @@ function getApiBaseUrl(): string {
   const configuredBaseUrl =
     (typeof window !== "undefined" ? window.__ALL_IN_ON_EEG_CONFIG__?.apiBaseUrl : undefined) ??
     (typeof process !== "undefined" ? process.env.BUN_PUBLIC_API_BASE_URL : undefined) ??
-    "http://localhost:8000";
+    getDefaultApiBaseUrl();
 
   return configuredBaseUrl.replace(/\/$/, "");
+}
+
+function getDefaultApiBaseUrl(): string {
+  if (typeof window === "undefined") {
+    return "http://localhost:8000";
+  }
+
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    return "http://localhost:8000";
+  }
+
+  const [, basePath] = window.location.pathname.split("/");
+  return basePath ? `/${basePath}` : ".";
 }
 
 function buildApiUrl(path: string): string {
