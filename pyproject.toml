@@ -7,7 +7,7 @@ requires-python = ">=3.14"
 dependencies = [
   "fastapi[standard]>=0.136.1",
   "mne>=1.12.1",
-  "openai>=2.37.0",
+  "openai>=2.38.0",
   "python-dotenv>=1.2.2",
   "selfeeg>=0.2.1",
   "torch>=2.12.0",
@@ -21,6 +21,11 @@ exclude = [
   ".venv",
 ]
 
+[tool.uv]
+index = [
+  { name = "pytorch-cpu", url = "https://download.pytorch.org/whl/cpu", explicit = true },
+]
+
 [tool.uv.sources]
 torch = [
   { index = "pytorch-cpu", marker = "platform_system == 'Linux'" },
@@ -29,15 +34,10 @@ torchaudio = [
   { index = "pytorch-cpu", marker = "platform_system == 'Linux'" },
 ]
 
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
 [dependency-groups]
 dev = [
   "ipykernel>=7.2.0",
-  "ruff>=0.15.13",
+  "ruff>=0.15.14",
   "selenium>=4.44.0",
   "selfeeg[interactive]>=0.2.1",
 ]
