@@ -413,6 +413,7 @@ function createClassContributionRows(
 ): ClassContributionDatum[] {
   const totals = new Map<string, number>();
   const rows: ClassContributionDatum[] = [];
+  const relativeColorScale = getGlobalMaxAbsRelativeContribution(evidence.bands);
 
   classLabels.forEach((classLabel, classOrder) => {
     const classShort = formatClassLabel(classLabel);
@@ -422,7 +423,7 @@ function createClassContributionRows(
       totals.set(classLabel, (totals.get(classLabel) ?? 0) + rawContribution);
       const displayedContribution =
         displayMode === "relative" ? getRelativeBandContribution(rawContribution, band) : rawContribution;
-      const colorScale = displayMode === "relative" ? getMaxAbsRelativeBandContribution(band) : maxAbsContribution;
+      const colorScale = displayMode === "relative" ? relativeColorScale : maxAbsContribution;
       rows.push(
         createContributionDatum({
           classLabel,
@@ -597,6 +598,18 @@ function getMaxAbsRelativeBandContribution(band: ModelClassEvidenceResponse["ban
     ),
     1e-12,
   );
+}
+
+function getGlobalMaxAbsRelativeContribution(bands: ModelClassEvidenceResponse["bands"]): number {
+  let max = 1e-12;
+  for (const band of bands) {
+    const meanAbs = getMeanAbsBandContribution(band);
+    for (const contribution of band.class_contributions) {
+      const relative = Math.abs(Math.abs(contribution.contribution) - meanAbs);
+      if (relative > max) max = relative;
+    }
+  }
+  return max;
 }
 
 function getMeanAbsBandContribution(band: ModelClassEvidenceResponse["bands"][number]): number {
