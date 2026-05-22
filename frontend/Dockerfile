@@ -11,7 +11,8 @@ WORKDIR /app
 
 COPY frontend ./frontend
 ARG BASE_PATH=/all-in-on-eeg/
-RUN BUN_PUBLIC_API_BASE_URL="${BASE_PATH}" BUN_PUBLIC_BASE_PATH="${BASE_PATH}" bun run build
+RUN printf 'BUN_PUBLIC_BASE_PATH=%s\nBUN_PUBLIC_API_BASE_URL=%s\n' "${BASE_PATH}" "${BASE_PATH}" > .env
+RUN bun run build
 
 FROM nginx:alpine
 

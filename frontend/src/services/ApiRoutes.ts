@@ -9,11 +9,7 @@ declare global {
 const API_BASE_URL = getApiBaseUrl();
 
 function getApiBaseUrl(): string {
-  const configuredBaseUrl =
-    (typeof window !== "undefined" ? window.__ALL_IN_ON_EEG_CONFIG__?.apiBaseUrl : undefined) ??
-    (typeof process !== "undefined" ? process.env.BUN_PUBLIC_API_BASE_URL : undefined) ??
-    "http://localhost:8000";
-
+  const configuredBaseUrl = process.env.BUN_PUBLIC_API_BASE_URL!;
   return configuredBaseUrl.replace(/\/$/, "");
 }
 

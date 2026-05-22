@@ -11,7 +11,7 @@ import { App } from "./App";
 
 const elem = document.getElementById("root")!;
 const app = (
-  <BrowserRouter basename={typeof process !== "undefined" ? (process.env.BUN_PUBLIC_BASE_PATH ?? "/") : "/"}>
+  <BrowserRouter basename={process.env.BUN_PUBLIC_BASE_PATH}>
     <App />
   </BrowserRouter>
 );
