@@ -31,7 +31,7 @@ services:
       - datasets:/app/data/datasets:ro
       - model-outputs:/app/data/model_outputs
     depends_on:
-      dataset-downloader:
+      all-in-on-eeg-dataset-downloader:
         condition: service_completed_successfully
     networks:
       - web
@@ -44,7 +44,7 @@ services:
     # ports:
     #   - "3000:80"
     depends_on:
-      - backend
+      - all-in-on-eeg-backend
     networks:
       - web
     labels:
