@@ -8,8 +8,11 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
 import { App } from "./App";
+import { installAppVacpDebugOverlay } from "./vacp/installDebugOverlay";
 
 const elem = document.getElementById("root")!;
+installAppVacpDebugOverlay();
+
 const app = (
   <BrowserRouter basename={process.env.BUN_PUBLIC_BASE_PATH}>
     <App />

@@ -1,0 +1,1185 @@
+@import "react-json-view-lite/dist/index.css";
+@import "streamdown/styles.css";
+
+/* Plain CSS compatibility layer for the vendored debug UI.
+   The upstream package uses Tailwind utility class names in JSX. The host app
+   does not run Tailwind, so we provide the subset of utilities the overlay uses
+   as normal CSS and scope it to the debug UI root. */
+[data-vacp-debug-ui],
+[data-vacp-debug-ui] * {
+  box-sizing: border-box;
+}
+
+[data-vacp-debug-ui] {
+  color: rgba(241, 245, 249, 0.96);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+[data-vacp-debug-ui] :is(button, input, textarea, select) {
+  font: inherit;
+}
+
+[data-vacp-debug-ui] button {
+  appearance: none;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  text-align: inherit;
+}
+
+[data-vacp-debug-ui] .fixed {
+  position: fixed;
+}
+[data-vacp-debug-ui] .absolute {
+  position: absolute;
+}
+[data-vacp-debug-ui] .relative {
+  position: relative;
+}
+[data-vacp-debug-ui] .sticky {
+  position: sticky;
+}
+[data-vacp-debug-ui] .inset-0 {
+  inset: 0;
+}
+[data-vacp-debug-ui] .left-0 {
+  left: 0;
+}
+[data-vacp-debug-ui] .right-0 {
+  right: 0;
+}
+[data-vacp-debug-ui] .top-0 {
+  top: 0;
+}
+[data-vacp-debug-ui] .bottom-0 {
+  bottom: 0;
+}
+[data-vacp-debug-ui] .bottom-2 {
+  bottom: 0.5rem;
+}
+[data-vacp-debug-ui] .right-2 {
+  right: 0.5rem;
+}
+[data-vacp-debug-ui] .top-9 {
+  top: 2.25rem;
+}
+[data-vacp-debug-ui] .left-3 {
+  left: 0.75rem;
+}
+[data-vacp-debug-ui] .right-3 {
+  right: 0.75rem;
+}
+[data-vacp-debug-ui] .bottom-3 {
+  bottom: 0.75rem;
+}
+[data-vacp-debug-ui] .z-0 {
+  z-index: 0;
+}
+[data-vacp-debug-ui] .z-10 {
+  z-index: 10;
+}
+[data-vacp-debug-ui] .z-20 {
+  z-index: 20;
+}
+[data-vacp-debug-ui] .z-30 {
+  z-index: 30;
+}
+[data-vacp-debug-ui] .z-\[2147483000\] {
+  z-index: 2147483000;
+}
+[data-vacp-debug-ui] .z-\[2147483001\] {
+  z-index: 2147483001;
+}
+.z-\[2147483647\] {
+  z-index: 2147483647;
+}
+
+[data-vacp-debug-ui] .block {
+  display: block;
+}
+[data-vacp-debug-ui] .inline-flex {
+  display: inline-flex;
+}
+[data-vacp-debug-ui] .flex {
+  display: flex;
+}
+[data-vacp-debug-ui] .grid {
+  display: grid;
+}
+[data-vacp-debug-ui] .hidden {
+  display: none;
+}
+[data-vacp-debug-ui] .flex-col {
+  flex-direction: column;
+}
+[data-vacp-debug-ui] .flex-row {
+  flex-direction: row;
+}
+[data-vacp-debug-ui] .flex-wrap {
+  flex-wrap: wrap;
+}
+[data-vacp-debug-ui] .items-start {
+  align-items: flex-start;
+}
+[data-vacp-debug-ui] .items-center {
+  align-items: center;
+}
+[data-vacp-debug-ui] .items-stretch {
+  align-items: stretch;
+}
+[data-vacp-debug-ui] .justify-between {
+  justify-content: space-between;
+}
+[data-vacp-debug-ui] .justify-center {
+  justify-content: center;
+}
+[data-vacp-debug-ui] .justify-start {
+  justify-content: flex-start;
+}
+[data-vacp-debug-ui] .place-items-center {
+  place-items: center;
+}
+[data-vacp-debug-ui] .gap-0\.5 {
+  gap: 0.125rem;
+}
+[data-vacp-debug-ui] .gap-1 {
+  gap: 0.25rem;
+}
+[data-vacp-debug-ui] .gap-1\.5 {
+  gap: 0.375rem;
+}
+[data-vacp-debug-ui] .gap-2 {
+  gap: 0.5rem;
+}
+[data-vacp-debug-ui] .gap-2\.5 {
+  gap: 0.625rem;
+}
+[data-vacp-debug-ui] .gap-3 {
+  gap: 0.75rem;
+}
+[data-vacp-debug-ui] .gap-4 {
+  gap: 1rem;
+}
+[data-vacp-debug-ui] .grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+[data-vacp-debug-ui] .grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+[data-vacp-debug-ui] .grid-cols-\[180px_1fr\] {
+  grid-template-columns: 180px minmax(0, 1fr);
+}
+[data-vacp-debug-ui] .grid-rows-\[auto_minmax\(0\,1fr\)\] {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+[data-vacp-debug-ui] .grid-rows-none {
+  grid-template-rows: none;
+}
+[data-vacp-debug-ui] .grid-rows-\[auto_minmax\(0\,1fr\)_auto\] {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+[data-vacp-debug-ui] .h-2 {
+  height: 0.5rem;
+}
+[data-vacp-debug-ui] .h-2\.5 {
+  height: 0.625rem;
+}
+[data-vacp-debug-ui] .h-3 {
+  height: 0.75rem;
+}
+[data-vacp-debug-ui] .h-3\.5 {
+  height: 0.875rem;
+}
+[data-vacp-debug-ui] .h-4 {
+  height: 1rem;
+}
+[data-vacp-debug-ui] .h-7 {
+  height: 1.75rem;
+}
+[data-vacp-debug-ui] .h-8 {
+  height: 2rem;
+}
+[data-vacp-debug-ui] .h-11 {
+  height: 2.75rem;
+}
+[data-vacp-debug-ui] .h-full {
+  height: 100%;
+}
+[data-vacp-debug-ui] .min-h-0 {
+  min-height: 0;
+}
+[data-vacp-debug-ui] .min-h-\[112px\] {
+  min-height: 112px;
+}
+[data-vacp-debug-ui] .min-h-\[140px\] {
+  min-height: 140px;
+}
+[data-vacp-debug-ui] .max-h-full {
+  max-height: 100%;
+}
+[data-vacp-debug-ui] .max-h-none {
+  max-height: none;
+}
+[data-vacp-debug-ui] .max-h-\[360px\] {
+  max-height: 360px;
+}
+[data-vacp-debug-ui] .max-h-\[45\%\] {
+  max-height: 45%;
+}
+
+[data-vacp-debug-ui] .w-2 {
+  width: 0.5rem;
+}
+[data-vacp-debug-ui] .w-3 {
+  width: 0.75rem;
+}
+[data-vacp-debug-ui] .w-3\.5 {
+  width: 0.875rem;
+}
+[data-vacp-debug-ui] .w-4 {
+  width: 1rem;
+}
+[data-vacp-debug-ui] .w-7 {
+  width: 1.75rem;
+}
+[data-vacp-debug-ui] .w-8 {
+  width: 2rem;
+}
+[data-vacp-debug-ui] .w-auto {
+  width: auto;
+}
+[data-vacp-debug-ui] .w-full {
+  width: 100%;
+}
+[data-vacp-debug-ui] .min-w-0 {
+  min-width: 0;
+}
+[data-vacp-debug-ui] .min-w-full {
+  min-width: 100%;
+}
+[data-vacp-debug-ui] .min-w-\[152px\] {
+  min-width: 152px;
+}
+[data-vacp-debug-ui] .max-w-full {
+  max-width: 100%;
+}
+[data-vacp-debug-ui] .max-w-\[140px\] {
+  max-width: 140px;
+}
+[data-vacp-debug-ui] .max-w-\[320px\] {
+  max-width: 320px;
+}
+[data-vacp-debug-ui] .max-w-\[520px\] {
+  max-width: 520px;
+}
+[data-vacp-debug-ui] .flex-1 {
+  flex: 1 1 0%;
+}
+[data-vacp-debug-ui] .shrink-0 {
+  flex-shrink: 0;
+}
+
+[data-vacp-debug-ui] .overflow-hidden {
+  overflow: hidden;
+}
+[data-vacp-debug-ui] .overflow-auto {
+  overflow: auto;
+}
+[data-vacp-debug-ui] .overflow-y-auto {
+  overflow-y: auto;
+}
+[data-vacp-debug-ui] .overflow-x-auto {
+  overflow-x: auto;
+}
+[data-vacp-debug-ui] .overflow-x-hidden {
+  overflow-x: hidden;
+}
+[data-vacp-debug-ui] .overflow-y-visible {
+  overflow-y: visible;
+}
+
+[data-vacp-debug-ui] .m-0 {
+  margin: 0;
+}
+[data-vacp-debug-ui] .ml-auto {
+  margin-left: auto;
+}
+[data-vacp-debug-ui] .mt-0\.5 {
+  margin-top: 0.125rem;
+}
+[data-vacp-debug-ui] .mt-1 {
+  margin-top: 0.25rem;
+}
+[data-vacp-debug-ui] .mt-2 {
+  margin-top: 0.5rem;
+}
+[data-vacp-debug-ui] .mt-3 {
+  margin-top: 0.75rem;
+}
+[data-vacp-debug-ui] .mb-3 {
+  margin-bottom: 0.75rem;
+}
+[data-vacp-debug-ui] .mb-4 {
+  margin-bottom: 1rem;
+}
+[data-vacp-debug-ui] .p-0 {
+  padding: 0;
+}
+[data-vacp-debug-ui] .p-1 {
+  padding: 0.25rem;
+}
+[data-vacp-debug-ui] .p-1\.5 {
+  padding: 0.375rem;
+}
+[data-vacp-debug-ui] .p-2 {
+  padding: 0.5rem;
+}
+[data-vacp-debug-ui] .p-3 {
+  padding: 0.75rem;
+}
+[data-vacp-debug-ui] .p-4 {
+  padding: 1rem;
+}
+[data-vacp-debug-ui] .p-6 {
+  padding: 1.5rem;
+}
+[data-vacp-debug-ui] .px-1\.5 {
+  padding-left: 0.375rem;
+  padding-right: 0.375rem;
+}
+[data-vacp-debug-ui] .px-2 {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+[data-vacp-debug-ui] .px-2\.5 {
+  padding-left: 0.625rem;
+  padding-right: 0.625rem;
+}
+[data-vacp-debug-ui] .px-3 {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+[data-vacp-debug-ui] .px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+[data-vacp-debug-ui] .py-0\.5 {
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+}
+[data-vacp-debug-ui] .py-1 {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+[data-vacp-debug-ui] .py-1\.5 {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+[data-vacp-debug-ui] .py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+[data-vacp-debug-ui] .py-2\.5 {
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+}
+[data-vacp-debug-ui] .py-3 {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+[data-vacp-debug-ui] .py-4 {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+[data-vacp-debug-ui] .pb-3 {
+  padding-bottom: 0.75rem;
+}
+[data-vacp-debug-ui] .pt-1 {
+  padding-top: 0.25rem;
+}
+
+[data-vacp-debug-ui] .select-none {
+  user-select: none;
+}
+[data-vacp-debug-ui] .touch-none {
+  touch-action: none;
+}
+[data-vacp-debug-ui] .cursor-default {
+  cursor: default;
+}
+[data-vacp-debug-ui] .cursor-grab {
+  cursor: grab;
+}
+[data-vacp-debug-ui] .cursor-pointer {
+  cursor: pointer;
+}
+[data-vacp-debug-ui] .cursor-nwse-resize {
+  cursor: nwse-resize;
+}
+[data-vacp-debug-ui] .pointer-events-none {
+  pointer-events: none;
+}
+.pointer-events-auto {
+  pointer-events: auto;
+}
+
+[data-vacp-debug-ui] .rounded-sm {
+  border-radius: 0.125rem;
+}
+[data-vacp-debug-ui] .rounded-md {
+  border-radius: 0.375rem;
+}
+[data-vacp-debug-ui] .rounded-lg {
+  border-radius: 0.5rem;
+}
+[data-vacp-debug-ui] .rounded-xl {
+  border-radius: 0.75rem;
+}
+[data-vacp-debug-ui] .rounded-2xl {
+  border-radius: 1rem;
+}
+[data-vacp-debug-ui] .rounded-full {
+  border-radius: 999px;
+}
+[data-vacp-debug-ui] .rounded-none {
+  border-radius: 0;
+}
+[data-vacp-debug-ui] .rounded-t-lg {
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+}
+
+[data-vacp-debug-ui] .border {
+  border-width: 1px;
+  border-style: solid;
+}
+[data-vacp-debug-ui] .border-0 {
+  border-width: 0;
+}
+[data-vacp-debug-ui] .border-b {
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+}
+[data-vacp-debug-ui] .border-r {
+  border-right-width: 1px;
+  border-right-style: solid;
+}
+[data-vacp-debug-ui] .border-b-0 {
+  border-bottom-width: 0;
+}
+[data-vacp-debug-ui] .border-dashed {
+  border-style: dashed;
+}
+[data-vacp-debug-ui] .border-white\/10 {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+[data-vacp-debug-ui] .border-white\/15 {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+[data-vacp-debug-ui] .border-white\/20 {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+[data-vacp-debug-ui] .border-transparent {
+  border-color: transparent;
+}
+[data-vacp-debug-ui] .border-sky-300\/30 {
+  border-color: rgba(125, 211, 252, 0.3);
+}
+[data-vacp-debug-ui] .border-sky-300\/35 {
+  border-color: rgba(125, 211, 252, 0.35);
+}
+[data-vacp-debug-ui] .border-sky-300\/40 {
+  border-color: rgba(125, 211, 252, 0.4);
+}
+[data-vacp-debug-ui] .border-rose-300\/25 {
+  border-color: rgba(253, 164, 175, 0.25);
+}
+[data-vacp-debug-ui] .border-rose-300\/35 {
+  border-color: rgba(253, 164, 175, 0.35);
+}
+[data-vacp-debug-ui] .border-amber-300\/25 {
+  border-color: rgba(252, 211, 77, 0.25);
+}
+[data-vacp-debug-ui] .border-emerald-300\/25 {
+  border-color: rgba(110, 231, 183, 0.25);
+}
+
+[data-vacp-debug-ui] .bg-transparent {
+  background: transparent;
+}
+[data-vacp-debug-ui] .bg-black\/20 {
+  background: rgba(0, 0, 0, 0.2);
+}
+[data-vacp-debug-ui] .bg-white\/5 {
+  background: rgba(255, 255, 255, 0.05);
+}
+[data-vacp-debug-ui] .bg-white\/10 {
+  background: rgba(255, 255, 255, 0.1);
+}
+[data-vacp-debug-ui] .bg-slate-900\/70 {
+  background: rgba(15, 23, 42, 0.7);
+}
+[data-vacp-debug-ui] .bg-slate-950 {
+  background: rgb(2, 6, 23);
+}
+[data-vacp-debug-ui] .bg-slate-950\/35 {
+  background: rgba(2, 6, 23, 0.35);
+}
+[data-vacp-debug-ui] .bg-slate-950\/45 {
+  background: rgba(2, 6, 23, 0.45);
+}
+[data-vacp-debug-ui] .bg-slate-950\/55 {
+  background: rgba(2, 6, 23, 0.55);
+}
+[data-vacp-debug-ui] .bg-slate-950\/80 {
+  background: rgba(2, 6, 23, 0.8);
+}
+[data-vacp-debug-ui] .bg-slate-950\/85 {
+  background: rgba(2, 6, 23, 0.85);
+}
+[data-vacp-debug-ui] .bg-slate-950\/95 {
+  background: rgba(2, 6, 23, 0.95);
+}
+[data-vacp-debug-ui] .bg-slate-950\/98 {
+  background: rgba(2, 6, 23, 0.98);
+}
+[data-vacp-debug-ui] .bg-sky-500\/10 {
+  background: rgba(14, 165, 233, 0.1);
+}
+[data-vacp-debug-ui] .bg-sky-500\/12 {
+  background: rgba(14, 165, 233, 0.12);
+}
+[data-vacp-debug-ui] .bg-sky-500\/15 {
+  background: rgba(14, 165, 233, 0.15);
+}
+[data-vacp-debug-ui] .bg-sky-500\/20 {
+  background: rgba(14, 165, 233, 0.2);
+}
+[data-vacp-debug-ui] .bg-rose-500\/10 {
+  background: rgba(244, 63, 94, 0.1);
+}
+[data-vacp-debug-ui] .bg-rose-500\/15 {
+  background: rgba(244, 63, 94, 0.15);
+}
+[data-vacp-debug-ui] .bg-amber-500\/10 {
+  background: rgba(245, 158, 11, 0.1);
+}
+[data-vacp-debug-ui] .bg-emerald-500\/10 {
+  background: rgba(16, 185, 129, 0.1);
+}
+[data-vacp-debug-ui] .bg-\[\#ff5f57\] {
+  background: #ff5f57;
+}
+[data-vacp-debug-ui] .bg-\[\#febc2e\] {
+  background: #febc2e;
+}
+[data-vacp-debug-ui] .bg-\[\#28c840\] {
+  background: #28c840;
+}
+[data-vacp-debug-ui] .bg-sky-300 {
+  background: rgb(125, 211, 252);
+}
+[data-vacp-debug-ui] .bg-violet-300 {
+  background: rgb(196, 181, 253);
+}
+[data-vacp-debug-ui] .bg-emerald-300 {
+  background: rgb(110, 231, 183);
+}
+[data-vacp-debug-ui] .bg-amber-300 {
+  background: rgb(252, 211, 77);
+}
+[data-vacp-debug-ui] .bg-white\/40 {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+[data-vacp-debug-ui] .text-left {
+  text-align: left;
+}
+[data-vacp-debug-ui] .text-center {
+  text-align: center;
+}
+[data-vacp-debug-ui] .text-pretty {
+  text-wrap: pretty;
+}
+[data-vacp-debug-ui] .text-xs {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+[data-vacp-debug-ui] .text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+[data-vacp-debug-ui] .text-\[10px\] {
+  font-size: 10px;
+}
+[data-vacp-debug-ui] .text-\[11px\] {
+  font-size: 11px;
+}
+[data-vacp-debug-ui] .text-\[12px\] {
+  font-size: 12px;
+}
+[data-vacp-debug-ui] .font-medium {
+  font-weight: 500;
+}
+[data-vacp-debug-ui] .font-semibold {
+  font-weight: 600;
+}
+[data-vacp-debug-ui] .uppercase {
+  text-transform: uppercase;
+}
+[data-vacp-debug-ui] .leading-4 {
+  line-height: 1rem;
+}
+[data-vacp-debug-ui] .leading-5 {
+  line-height: 1.25rem;
+}
+[data-vacp-debug-ui] .leading-none {
+  line-height: 1;
+}
+[data-vacp-debug-ui] .tracking-wide {
+  letter-spacing: 0.025em;
+}
+[data-vacp-debug-ui] .tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+[data-vacp-debug-ui] .whitespace-nowrap {
+  white-space: nowrap;
+}
+[data-vacp-debug-ui] .whitespace-pre {
+  white-space: pre;
+}
+[data-vacp-debug-ui] .whitespace-pre-wrap {
+  white-space: pre-wrap;
+}
+[data-vacp-debug-ui] .break-words {
+  overflow-wrap: break-word;
+}
+[data-vacp-debug-ui] .truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-vacp-debug-ui] .text-slate-50 {
+  color: rgb(248, 250, 252);
+}
+[data-vacp-debug-ui] .text-slate-100 {
+  color: rgb(241, 245, 249);
+}
+[data-vacp-debug-ui] .text-slate-100\/45 {
+  color: rgba(241, 245, 249, 0.45);
+}
+[data-vacp-debug-ui] .text-slate-100\/52 {
+  color: rgba(241, 245, 249, 0.52);
+}
+[data-vacp-debug-ui] .text-slate-100\/55 {
+  color: rgba(241, 245, 249, 0.55);
+}
+[data-vacp-debug-ui] .text-slate-100\/60 {
+  color: rgba(241, 245, 249, 0.6);
+}
+[data-vacp-debug-ui] .text-slate-100\/62 {
+  color: rgba(241, 245, 249, 0.62);
+}
+[data-vacp-debug-ui] .text-slate-100\/65 {
+  color: rgba(241, 245, 249, 0.65);
+}
+[data-vacp-debug-ui] .text-slate-100\/70 {
+  color: rgba(241, 245, 249, 0.7);
+}
+[data-vacp-debug-ui] .text-slate-100\/72 {
+  color: rgba(241, 245, 249, 0.72);
+}
+[data-vacp-debug-ui] .text-slate-100\/78 {
+  color: rgba(241, 245, 249, 0.78);
+}
+[data-vacp-debug-ui] .text-slate-100\/80 {
+  color: rgba(241, 245, 249, 0.8);
+}
+[data-vacp-debug-ui] .text-slate-100\/85 {
+  color: rgba(241, 245, 249, 0.85);
+}
+[data-vacp-debug-ui] .text-slate-100\/88 {
+  color: rgba(241, 245, 249, 0.88);
+}
+[data-vacp-debug-ui] .text-slate-100\/90 {
+  color: rgba(241, 245, 249, 0.9);
+}
+[data-vacp-debug-ui] .text-slate-100\/95 {
+  color: rgba(241, 245, 249, 0.95);
+}
+[data-vacp-debug-ui] .text-sky-100 {
+  color: rgb(224, 242, 254);
+}
+[data-vacp-debug-ui] .text-sky-100\/85 {
+  color: rgba(224, 242, 254, 0.85);
+}
+[data-vacp-debug-ui] .text-violet-100\/90 {
+  color: rgba(237, 233, 254, 0.9);
+}
+[data-vacp-debug-ui] .text-rose-100 {
+  color: rgb(255, 228, 230);
+}
+[data-vacp-debug-ui] .text-rose-100\/80 {
+  color: rgba(255, 228, 230, 0.8);
+}
+[data-vacp-debug-ui] .text-amber-50\/70 {
+  color: rgba(255, 251, 235, 0.7);
+}
+[data-vacp-debug-ui] .text-amber-50\/85 {
+  color: rgba(255, 251, 235, 0.85);
+}
+[data-vacp-debug-ui] .text-amber-50\/90 {
+  color: rgba(255, 251, 235, 0.9);
+}
+[data-vacp-debug-ui] .text-amber-100\/90 {
+  color: rgba(254, 243, 199, 0.9);
+}
+[data-vacp-debug-ui] .text-emerald-50\/90 {
+  color: rgba(236, 253, 245, 0.9);
+}
+[data-vacp-debug-ui] .text-emerald-100\/80 {
+  color: rgba(209, 250, 229, 0.8);
+}
+[data-vacp-debug-ui] .text-black\/60 {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+[data-vacp-debug-ui] .opacity-0 {
+  opacity: 0;
+}
+[data-vacp-debug-ui] .opacity-60 {
+  opacity: 0.6;
+}
+[data-vacp-debug-ui] .outline-none {
+  outline: none;
+}
+[data-vacp-debug-ui] .isolate {
+  isolation: isolate;
+}
+[data-vacp-debug-ui] .shadow-lg {
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+[data-vacp-debug-ui] .shadow-\[0_8px_24px_rgba\(0\,0\,0\,0\.18\)\] {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+[data-vacp-debug-ui] .shadow-\[0_12px_28px_rgba\(0\,0\,0\,0\.28\)\] {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+[data-vacp-debug-ui] .shadow-\[0_16px_36px_rgba\(0\,0\,0\,0\.45\)\],
+[data-vacp-debug-ui] .shadow-\[0_18px_38px_rgba\(0\,0\,0\,0\.42\)\],
+[data-vacp-debug-ui] .shadow-\[0_18px_38px_rgba\(0\,0\,0\,0\.45\)\],
+[data-vacp-debug-ui] .shadow-\[0_20px_48px_rgba\(0\,0\,0\,0\.38\)\] {
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.38);
+}
+[data-vacp-debug-ui] .shadow-\[inset_0_0_0_1px_rgba\(255\,255\,255\,0\.02\)\] {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+[data-vacp-debug-ui] .shadow-\[inset_0_0_0_1px_rgba\(0\,0\,0\,0\.18\)\] {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+[data-vacp-debug-ui] .ring-2 {
+  box-shadow: 0 0 0 2px var(--vacp-ring-color, currentColor);
+}
+[data-vacp-debug-ui] .ring-slate-950 {
+  --vacp-ring-color: rgb(2, 6, 23);
+}
+
+[data-vacp-debug-ui] .transition-colors,
+[data-vacp-debug-ui] .transition-opacity {
+  transition-duration: 150ms;
+  transition-property: color, background-color, border-color, opacity, box-shadow, filter;
+}
+[data-vacp-debug-ui] .backdrop-blur,
+[data-vacp-debug-ui] .backdrop-blur-sm {
+  backdrop-filter: blur(8px);
+}
+
+[data-vacp-debug-ui] .hover\:bg-white\/8:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+[data-vacp-debug-ui] .hover\:bg-white\/5:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+[data-vacp-debug-ui] .hover\:bg-white\/10:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+[data-vacp-debug-ui] .hover\:bg-sky-500\/15:hover {
+  background: rgba(14, 165, 233, 0.15);
+}
+[data-vacp-debug-ui] .hover\:bg-sky-500\/25:hover {
+  background: rgba(14, 165, 233, 0.25);
+}
+[data-vacp-debug-ui] .hover\:bg-rose-500\/25:hover {
+  background: rgba(244, 63, 94, 0.25);
+}
+[data-vacp-debug-ui] .hover\:bg-amber-500\/15:hover {
+  background: rgba(245, 158, 11, 0.15);
+}
+[data-vacp-debug-ui] .hover\:opacity-90:hover {
+  opacity: 0.9;
+}
+[data-vacp-debug-ui] .hover\:brightness-\[0\.98\]:hover {
+  filter: brightness(0.98);
+}
+[data-vacp-debug-ui] .active\:brightness-\[0\.96\]:active {
+  filter: brightness(0.96);
+}
+[data-vacp-debug-ui] .active\:cursor-grabbing:active {
+  cursor: grabbing;
+}
+
+[data-vacp-debug-ui] .data-\[state\=active\]\:border-sky-300\/35[data-state="active"] {
+  border-color: rgba(125, 211, 252, 0.35);
+}
+[data-vacp-debug-ui] .data-\[state\=active\]\:bg-sky-500\/12[data-state="active"] {
+  background: rgba(14, 165, 233, 0.12);
+}
+[data-vacp-debug-ui] .data-\[state\=active\]\:text-slate-50[data-state="active"] {
+  color: rgb(248, 250, 252);
+}
+[data-vacp-debug-ui]
+  .data-\[state\=active\]\:shadow-\[inset_0_0_0_2px_rgba\(121\,178\,255\,0\.14\)\][data-state="active"] {
+  box-shadow: inset 0 0 0 2px rgba(121, 178, 255, 0.14);
+}
+
+[data-vacp-debug-ui] .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+#vacp-debug-ui-panel
+  .font-\[ui-monospace\,SFMono-Regular\,Menlo\,Monaco\,Consolas\,\'Liberation_Mono\'\,\'Courier_New\'\,monospace\],
+#vacp-debug-ui-panel
+  .\[font-family\:ui-monospace\,SFMono-Regular\,Menlo\,Monaco\,Consolas\,\'Liberation_Mono\'\,\'Courier_New\'\,monospace\] {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+#vacp-debug-ui-panel .\[overflow-wrap\:anywhere\] {
+  overflow-wrap: anywhere;
+}
+
+#vacp-debug-ui-panel .\[aria-pressed\=true\]\:bg-sky-500\/20[aria-pressed="true"] {
+  background: rgba(14, 165, 233, 0.2);
+}
+#vacp-debug-ui-panel .\[aria-pressed\=true\]\:border-sky-300\/40[aria-pressed="true"] {
+  border-color: rgba(125, 211, 252, 0.4);
+}
+#vacp-debug-ui-panel .\[aria-pressed\=true\]\:text-sky-100[aria-pressed="true"] {
+  color: rgb(224, 242, 254);
+}
+
+#vacp-debug-ui-panel .\[\&_svg\]\:pointer-events-none svg {
+  pointer-events: none;
+}
+#vacp-debug-ui-panel .\[\&_svg\]\:size-4 svg {
+  width: 1rem;
+  height: 1rem;
+}
+#vacp-debug-ui-panel .\[\&_svg\]\:shrink-0 svg {
+  flex-shrink: 0;
+}
+
+#vacp-debug-ui-panel .focus-visible\:outline-none:focus-visible {
+  outline: none;
+}
+#vacp-debug-ui-panel .focus-visible\:ring-2:focus-visible,
+#vacp-debug-ui-panel .focus\:ring-2:focus {
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.45);
+}
+
+#vacp-debug-ui-panel :disabled,
+[data-vacp-debug-ui] .disabled\:pointer-events-none:disabled {
+  pointer-events: none;
+}
+#vacp-debug-ui-panel :disabled,
+[data-vacp-debug-ui] .disabled\:opacity-50:disabled {
+  opacity: 0.5;
+}
+
+#vacp-debug-ui-root {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2147483000;
+  display: block;
+  isolation: isolate;
+  touch-action: none;
+}
+
+#vacp-debug-ui-root .vacp-debug-ui-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.95);
+  color: rgb(241, 245, 249);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  cursor: grab;
+}
+
+#vacp-debug-ui-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 84px;
+  z-index: 2147483001;
+  display: grid;
+  width: min(980px, calc(100vw - 28px));
+  height: min(680px, calc(100vh - 92px));
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 1rem;
+  background: rgb(2, 6, 23);
+  color: rgb(241, 245, 249);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.38);
+}
+
+@media (max-width: 720px) {
+  #vacp-debug-ui-panel {
+    right: 14px;
+    bottom: 76px;
+  }
+
+  [data-vacp-debug-ui] .sm\:grid-cols-2,
+  [data-vacp-debug-ui] .sm\:grid-cols-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 640px) {
+  [data-vacp-debug-ui] .sm\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  [data-vacp-debug-ui] .sm\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  [data-vacp-debug-ui] .sm\:col-span-3 {
+    grid-column: span 3 / span 3;
+  }
+}
+
+/* Overlay animation helpers for the draggable pill. */
+#vacp-debug-ui-root.vacp-debug-ui-snap {
+  transition:
+    left 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    top 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+#vacp-debug-ui-root.vacp-debug-ui-dragging {
+  transition: none !important;
+}
+
+/* Mermaid output should use the full available pane size. */
+#vacp-debug-ui-panel .vacp-debug-ui-diagram svg {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  display: block;
+}
+
+/* Host apps often set `svg { width: 100%; height: auto; }` (good for charts, bad for icons).
+   We need to neutralize those unlayered host rules without clobbering Tailwind utilities.
+   `revert-layer` falls back to the layered Tailwind value when present (e.g. `w-4 h-4`) or
+   the UA default otherwise. */
+:where(#vacp-debug-ui-panel) svg {
+  width: revert-layer;
+  height: revert-layer;
+}
+
+/* Keep scrollbar presence from shifting panel layout (important for inspectors). */
+#vacp-debug-ui-panel .vacp-debug-ui-scroll {
+  scrollbar-gutter: stable;
+}
+
+/* Ensure inline code pills are readable even if the host app styles `code`. */
+#vacp-debug-ui-panel code {
+  background: rgba(15, 23, 42, 0.85) !important;
+  color: rgba(241, 245, 249, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  padding: 1px 6px !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+}
+
+/* react-json-view-lite ships themed backgrounds; let the debug UI panel control backgrounds. */
+#vacp-debug-ui-panel .vacp-json-viewer-tree {
+  background: transparent !important;
+}
+
+#vacp-debug-ui-panel .vacp-chat-streamdown {
+  color: rgba(241, 245, 249, 0.9);
+}
+
+#vacp-debug-ui-panel .vacp-chat-reasoning {
+  color: rgba(226, 232, 240, 0.82);
+}
+
+#vacp-debug-ui-panel .vacp-chat-streamdown p,
+#vacp-debug-ui-panel .vacp-chat-streamdown ul,
+#vacp-debug-ui-panel .vacp-chat-streamdown ol,
+#vacp-debug-ui-panel .vacp-chat-streamdown pre,
+#vacp-debug-ui-panel .vacp-chat-streamdown blockquote {
+  margin: 0.25rem 0;
+  overflow-wrap: anywhere;
+}
+
+#vacp-debug-ui-panel .vacp-chat-streamdown pre {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.75);
+  padding: 0.6rem 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+#vacp-debug-ui-panel .vacp-chat-streamdown code:not(pre code) {
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0 0.35rem;
+  font-size: 11px;
+}
+
+#vacp-debug-ui-panel .vacp-chat-json-view .vacp-json-viewer-tree {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+#vacp-debug-ui-panel .vacp-chat-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(126, 152, 183, 0.52) rgba(15, 23, 42, 0.42);
+  overscroll-behavior-y: contain;
+}
+
+#vacp-debug-ui-panel .vacp-chat-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+#vacp-debug-ui-panel .vacp-chat-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.32);
+  border-radius: 999px;
+}
+
+#vacp-debug-ui-panel .vacp-chat-scroll::-webkit-scrollbar-thumb {
+  background: rgba(126, 152, 183, 0.48);
+  border: 2px solid rgba(15, 23, 42, 0.3);
+  border-radius: 999px;
+}
+
+#vacp-debug-ui-panel .vacp-chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 182, 220, 0.62);
+}
+
+/* When a diagram is being refreshed, soften the existing one briefly. */
+#vacp-debug-ui-panel .vacp-debug-ui-diagram[data-stale="1"] {
+  opacity: 0.72;
+  filter: grayscale(0.15) saturate(0.75);
+}
+
+/* Highlight selected Mermaid nodes when inspecting. */
+#vacp-debug-ui-panel .vacp-debug-ui-diagram svg g.node.vacp-selected rect {
+  stroke: rgba(121, 178, 255, 0.85) !important;
+  stroke-width: 3px !important;
+}
+
+/* Resizing handles (all edges + corners). */
+#vacp-debug-ui-panel .vacp-debug-ui-resize-handle {
+  position: absolute;
+  z-index: 20;
+  touch-action: none;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-n,
+#vacp-debug-ui-panel .vacp-debug-ui-resize-s {
+  left: 10px;
+  right: 10px;
+  height: 10px;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-n {
+  top: 0;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-s {
+  bottom: 0;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-e,
+#vacp-debug-ui-panel .vacp-debug-ui-resize-w {
+  top: 10px;
+  bottom: 10px;
+  width: 10px;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-e {
+  right: 0;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-w {
+  left: 0;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-ne,
+#vacp-debug-ui-panel .vacp-debug-ui-resize-nw,
+#vacp-debug-ui-panel .vacp-debug-ui-resize-se,
+#vacp-debug-ui-panel .vacp-debug-ui-resize-sw {
+  width: 18px;
+  height: 18px;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-ne {
+  top: 0;
+  right: 0;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-nw {
+  top: 0;
+  left: 0;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-se {
+  bottom: 0;
+  right: 0;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-sw {
+  bottom: 0;
+  left: 0;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-se,
+#vacp-debug-ui-panel .vacp-debug-ui-resize-sw {
+  background:
+    linear-gradient(135deg, transparent 0 45%, rgba(231, 233, 238, 0.22) 45% 55%, transparent 55% 100%),
+    linear-gradient(135deg, transparent 0 65%, rgba(231, 233, 238, 0.14) 65% 75%, transparent 75% 100%);
+  opacity: 0.75;
+}
+#vacp-debug-ui-panel .vacp-debug-ui-resize-sw {
+  transform: scaleX(-1);
+}
+#vacp-debug-ui-panel.vacp-debug-ui-resizing {
+  user-select: none;
+}
+
+/* Dragging feedback for the overlay panel. */
+#vacp-debug-ui-panel.vacp-debug-ui-panel-dragging {
+  user-select: none;
+}

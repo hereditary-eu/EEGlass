@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ComponentStatusIndicator, EmbeddingScatterplot } from "../../components";
-import type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from "../../components";
+import type {
+  EmbeddingScatterplotPoint,
+  EmbeddingScatterplotTooltipField,
+  EmbeddingScatterplotVegaViewArgs,
+} from "../../components";
 import type { ComponentStatus } from "../../components/ui";
 import { getAnnotationClassColor, getEmbeddingClassColors, getModelClassLabels } from "../../constants/eegModel";
 import type { ModelInfoResponse, ModelPatientEmbeddingsResponse } from "../../types";
+import { registerVacpVegaLiteChart } from "../../vacp/registerVegaLiteChart";
 
 type LegendHighlightTarget = { kind: "true" | "predicted"; label: string } | { kind: "misclassified" };
 
@@ -177,6 +182,18 @@ export function PatientEmbeddingScatterplot({
   const selectBrushSubjects = (subjectIds: string[] | null) => {
     setBrushSelectedSubjectIds(subjectIds);
   };
+  const registerVacpChart = useCallback(
+    ({ root, view, spec }: EmbeddingScatterplotVegaViewArgs) =>
+      registerVacpVegaLiteChart({
+        root,
+        view,
+        spec,
+        chartId: "overview/patient-embedding",
+        title: embeddings?.embedding_label ?? "Patient Embedding",
+        description: "Patient embedding scatterplot for the current dataset and model.",
+      }),
+    [embeddings?.embedding_label],
+  );
 
   return (
     <section className="overview-placeholder-card overview-placeholder-card--wide overview-embedding-card">
@@ -218,6 +235,7 @@ export function PatientEmbeddingScatterplot({
             }
           }}
           onSelectionChange={selectBrushSubjects}
+          onVegaViewReady={registerVacpChart}
         />
       </div>
 

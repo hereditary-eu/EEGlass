@@ -24,6 +24,12 @@ export interface EmbeddingScatterplotTooltipField {
   format?: string;
 }
 
+export interface EmbeddingScatterplotVegaViewArgs {
+  root: HTMLElement;
+  view: View;
+  spec: VisualizationSpec;
+}
+
 interface EmbeddingScatterplotProps {
   points: EmbeddingScatterplotPoint[];
   isLoading: boolean;
@@ -36,6 +42,7 @@ interface EmbeddingScatterplotProps {
   showStatusOverlay?: boolean;
   onPointClick?: (point: EmbeddingScatterplotPoint) => void;
   onSelectionChange?: (selectedPointIds: string[] | null) => void;
+  onVegaViewReady?: (args: EmbeddingScatterplotVegaViewArgs) => void | (() => void);
 }
 
 export function EmbeddingScatterplot({
@@ -50,6 +57,7 @@ export function EmbeddingScatterplot({
   showStatusOverlay = true,
   onPointClick,
   onSelectionChange,
+  onVegaViewReady,
 }: EmbeddingScatterplotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
@@ -80,6 +88,10 @@ export function EmbeddingScatterplot({
     }
 
     const resizeObserver = new ResizeObserver(([entry]) => {
+      if (!entry) {
+        return;
+      }
+
       const nextHeight = Math.max(minHeight, Math.floor(entry.contentRect.height));
       setPlotHeight((current) => (current !== nextHeight ? nextHeight : current));
       resizeVegaView(viewRef.current);
@@ -152,6 +164,7 @@ export function EmbeddingScatterplot({
     };
 
     let finalized = false;
+    let cleanupVegaView: (() => void) | null = null;
     const resultPromise = embed(container, spec, {
       actions: false,
       renderer: "svg",
@@ -177,6 +190,7 @@ export function EmbeddingScatterplot({
             onSelectionChangeRef.current?.(getSelectedPointIds(pointsRef.current, value));
           });
         }
+        cleanupVegaView = onVegaViewReady?.({ root: container, view: result.view, spec }) ?? null;
       })
       .catch(() => undefined);
 
@@ -186,10 +200,22 @@ export function EmbeddingScatterplot({
       }
 
       finalized = true;
+      cleanupVegaView?.();
+      cleanupVegaView = null;
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [error, hasPointClick, hasSelection, isLoading, plotHeight, points, showStatusOverlay, tooltipFields]);
+  }, [
+    error,
+    hasPointClick,
+    hasSelection,
+    isLoading,
+    onVegaViewReady,
+    plotHeight,
+    points,
+    showStatusOverlay,
+    tooltipFields,
+  ]);
 
   return (
     <>
