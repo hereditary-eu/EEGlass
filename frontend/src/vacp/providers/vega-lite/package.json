@@ -1,0 +1,29 @@
+{
+  "name": "@vacp/vega-lite",
+  "version": "0.0.0",
+  "private": true,
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "oxlint src",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@vacp/core": "workspace:*",
+    "@vacp/gateway": "workspace:*"
+  },
+  "peerDependencies": {
+    "vega": "*",
+    "vega-embed": "*",
+    "vega-lite": "*"
+  }
+}

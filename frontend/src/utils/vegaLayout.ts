@@ -10,7 +10,10 @@ export function requestAppLayoutResize() {
 }
 
 export function resizeVegaView(view: View | null) {
-  view?.resize().runAsync().catch(() => undefined);
+  view
+    ?.resize()
+    .runAsync()
+    .catch(() => undefined);
 }
 
 export function useVegaLayoutResize(viewRef: RefObject<View | null>) {

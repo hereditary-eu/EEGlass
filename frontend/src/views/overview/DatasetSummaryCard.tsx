@@ -13,6 +13,7 @@ import type {
   TimeseriesSubjectInfo,
 } from "../../types";
 import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
+import { registerVacpVegaLiteChart } from "../../vacp/registerVegaLiteChart";
 
 interface DatasetSummaryCardProps {
   dataset: TimeseriesDatasetInfo | null;
@@ -143,6 +144,7 @@ export function DatasetSummaryCard({
     };
 
     let finalized = false;
+    let unregisterVacp: (() => void) | null = null;
     const resultPromise = embed(container, spec, {
       actions: false,
       renderer: "svg",
@@ -154,6 +156,14 @@ export function DatasetSummaryCard({
         if (!finalized) {
           viewRef.current = result.view;
           resizeVegaView(result.view);
+          unregisterVacp = registerVacpVegaLiteChart({
+            root: container,
+            view: result.view,
+            spec,
+            chartId: "overview/dataset-summary-label-distribution",
+            title: "Dataset Summary Label Distribution",
+            description: "Label distribution for the current dataset.",
+          });
         }
       })
       .catch(() => undefined);
@@ -164,6 +174,8 @@ export function DatasetSummaryCard({
       }
 
       finalized = true;
+      unregisterVacp?.();
+      unregisterVacp = null;
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };

@@ -1,5 +1,5 @@
 services:
-  dataset-downloader:
+  all-in-on-eeg-dataset-downloader:
     image: registry.gitlab.tugraz.at/hereditary/all-in-on-eeg:dataset-downloader_master
     build:
       context: .
@@ -15,7 +15,7 @@ services:
     networks:
       - web
 
-  backend:
+  all-in-on-eeg-backend:
     image: registry.gitlab.tugraz.at/hereditary/all-in-on-eeg:backend_master
     build:
       context: .
@@ -31,12 +31,12 @@ services:
       - datasets:/app/data/datasets:ro
       - model-outputs:/app/data/model_outputs
     depends_on:
-      dataset-downloader:
+      all-in-on-eeg-dataset-downloader:
         condition: service_completed_successfully
     networks:
       - web
 
-  frontend:
+  all-in-on-eeg-frontend:
     image: registry.gitlab.tugraz.at/hereditary/all-in-on-eeg:frontend_master
     build:
       context: .
@@ -44,7 +44,7 @@ services:
     # ports:
     #   - "3000:80"
     depends_on:
-      - backend
+      - all-in-on-eeg-backend
     networks:
       - web
     labels:
@@ -59,7 +59,7 @@ services:
 
       - "traefik.http.routers.allinoneeg_backend-http.middlewares=redirect,allinoneeg_backend_sp@docker"
       - "traefik.http.routers.allinoneeg_backend-https.middlewares=redirect,allinoneeg_backend_sp@docker"
-      - "traefik.http.middlewares.allinoneeg_backend_sp.stripprefix.prefixes=/all-in-on-eeg/"
+      - "traefik.http.middlewares.allinoneeg_backend_sp.stripprefix.prefixes=/all-in-on-eeg"
       - "traefik.http.middlewares.allinoneeg_backend_sp.stripprefix.forceSlash=false"
       - traefik.http.middlewares.redirect.redirectscheme.scheme=https
       - traefik.http.services.allinoneeg_backend.loadbalancer.server.port=80

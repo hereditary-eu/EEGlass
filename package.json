@@ -3,14 +3,30 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "frontend/src/vacp/protocol/core",
+    "frontend/src/vacp/protocol/diagrams",
+    "frontend/src/vacp/protocol/gateway",
+    "frontend/src/vacp/protocol/kit",
+    "frontend/src/vacp/providers/vega-lite",
+    "frontend/src/vacp/tooling/debug-ui",
+    "frontend/src/vacp/transports/agent-client"
+  ],
   "scripts": {
     "dev": "bun frontend/index.ts",
     "dev:hot": "bun --hot frontend/index.ts",
-    "build": "bun build ./frontend/index.html --outdir=dist --public-path=./ --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*'",
+    "build": "bun build ./frontend/index.html --outdir=dist --public-path=./ --sourcemap --target=browser --minify --env='BUN_PUBLIC_*'",
     "start": "NODE_ENV=production bun frontend/index.ts"
   },
   "dependencies": {
     "@observablehq/plot": "^0.6.17",
+    "@vacp/core": "workspace:*",
+    "@vacp/debug-ui": "workspace:*",
+    "@vacp/diagrams": "workspace:*",
+    "@vacp/gateway": "workspace:*",
+    "@vacp/kit": "workspace:*",
+    "@vacp/vega-lite": "workspace:*",
+    "@vacp/agent-client": "workspace:*",
     "d3": "^7.9.0",
     "katex": "^0.16.47",
     "ml-pca": "^4.1.1",
