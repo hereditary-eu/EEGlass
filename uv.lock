@@ -27,6 +27,8 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "ipykernel" },
+    { name = "isort" },
+    { name = "mass-ts" },
     { name = "ruff" },
     { name = "selenium" },
     { name = "selfeeg", extra = ["interactive"] },
@@ -48,6 +50,8 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "ipykernel", specifier = ">=7.2.0" },
+    { name = "isort", specifier = ">=8.0.1" },
+    { name = "mass-ts", specifier = ">=0.1.4" },
     { name = "ruff", specifier = ">=0.15.14" },
     { name = "selenium", specifier = ">=4.44.0" },
     { name = "selfeeg", extras = ["interactive"], specifier = ">=0.2.1" },
@@ -751,6 +755,15 @@ wheels = [
 ]
 
 [[package]]
+name = "isort"
+version = "8.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ef/7c/ec4ab396d31b3b395e2e999c8f46dec78c5e29209fac49d1f4dace04041d/isort-8.0.1.tar.gz", hash = "sha256:171ac4ff559cdc060bcfff550bc8404a486fee0caab245679c2abe7cb253c78d", size = 769592, upload-time = "2026-02-28T10:08:20.685Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3e/95/c7c34aa53c16353c56d0b802fba48d5f5caa2cdee7958acbcb795c830416/isort-8.0.1-py3-none-any.whl", hash = "sha256:28b89bc70f751b559aeca209e6120393d43fbe2490de0559662be7a9787e3d75", size = 89733, upload-time = "2026-02-28T10:08:19.466Z" },
+]
+
+[[package]]
 name = "jedi"
 version = "0.20.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1128,6 +1141,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fb/df/5bd7a48c256faecd1d36edc13133e51397e41b73bb77e1a69deab746ebac/markupsafe-3.0.3-cp314-cp314t-win32.whl", hash = "sha256:915c04ba3851909ce68ccc2b8e2cd691618c4dc4c4232fb7982bca3f41fd8c3d", size = 14819, upload-time = "2025-09-27T18:37:26.285Z" },
     { url = "https://files.pythonhosted.org/packages/1a/8a/0402ba61a2f16038b48b39bccca271134be00c5c9f0f623208399333c448/markupsafe-3.0.3-cp314-cp314t-win_amd64.whl", hash = "sha256:4faffd047e07c38848ce017e8725090413cd80cbc23d86e55c587bf979e579c9", size = 15426, upload-time = "2025-09-27T18:37:27.316Z" },
     { url = "https://files.pythonhosted.org/packages/70/bc/6f1c2f612465f5fa89b95bead1f44dcb607670fd42891d8fdcd5d039f4f4/markupsafe-3.0.3-cp314-cp314t-win_arm64.whl", hash = "sha256:32001d6a8fc98c8cb5c947787c5d08b0a50663d139f1305bac5885d98d9b40fa", size = 14146, upload-time = "2025-09-27T18:37:28.327Z" },
+]
+
+[[package]]
+name = "mass-ts"
+version = "0.1.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0e/c8/814623a4c4d19e4e085e8b81d071b02c7b3e88889ecc448fd61870854255/mass_ts-0.1.4.tar.gz", hash = "sha256:1629515379042ec5166454f5bd68d13cb7a0023d6589a4d2e1d9a96e7c4712a2", size = 48936, upload-time = "2019-10-04T18:36:13.481Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/58/90/a66739db6d92edcf51e8c672372305511444b562e175f0f1a53adcfab18f/mass_ts-0.1.4-py2.py3-none-any.whl", hash = "sha256:3c9c41944115c0776d652fa89a33b5870534d153d44af9e25ffb0448abac2a5b", size = 15216, upload-time = "2019-10-04T18:36:11.884Z" },
 ]
 
 [[package]]
