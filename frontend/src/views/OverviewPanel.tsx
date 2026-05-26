@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { StatusOverlay } from "../components/ui";
+import { ModelService } from "../services/ModelService";
 import { TimeseriesService } from "../services/TimeseriesService";
 import { useAppStore } from "../stores/useAppStore";
 import type {
@@ -95,7 +96,7 @@ export function OverviewPanel() {
   const activeModelName = modelInfo?.name ?? null;
 
   const refreshPredictionCacheStatus = useCallback((datasetId: string, modelName: string) => {
-    TimeseriesService.getPredictionCacheStatus(datasetId, "derivatives", modelName)
+    ModelService.getPredictionCacheStatus(datasetId, "derivatives", modelName)
       .then(setCacheStatus)
       .catch((loadError) => setCacheError(getOverviewError(loadError, "Unable to refresh prediction cache status.")));
   }, []);
@@ -105,7 +106,7 @@ export function OverviewPanel() {
       progressSocketRef.current?.close();
       setCacheProgress(initialProgress);
 
-      const socket = TimeseriesService.createPredictionCacheProgressSocket(
+      const socket = ModelService.createPredictionCacheProgressSocket(
         initialProgress.job_id,
         initialProgress.model_name,
       );
@@ -258,7 +259,7 @@ export function OverviewPanel() {
     }
 
     setIsLoadingEmbeddings(true);
-    TimeseriesService.getPatientEmbeddings(selectedDatasetId, "derivatives", activeModelName)
+    ModelService.getPatientEmbeddings(selectedDatasetId, "derivatives", activeModelName)
       .then((embeddings) => {
         if (isCurrent) {
           setPatientEmbeddings(embeddings);
@@ -295,8 +296,8 @@ export function OverviewPanel() {
     async function loadPredictionCacheState() {
       try {
         const [status, activeProgress] = await Promise.all([
-          TimeseriesService.getPredictionCacheStatus(selectedDatasetId, "derivatives", activeModelName),
-          TimeseriesService.getActivePredictionCacheJob(selectedDatasetId, "derivatives", activeModelName),
+          ModelService.getPredictionCacheStatus(selectedDatasetId, "derivatives", activeModelName),
+          ModelService.getActivePredictionCacheJob(selectedDatasetId, "derivatives", activeModelName),
         ]);
         if (!isCurrent) {
           return;
@@ -428,7 +429,7 @@ export function OverviewPanel() {
     setCacheError(null);
 
     try {
-      const job = await TimeseriesService.startPredictionCacheJob(selectedDatasetId, "derivatives", activeModelName);
+      const job = await ModelService.startPredictionCacheJob(selectedDatasetId, "derivatives", activeModelName);
       connectPredictionCacheProgress({
         job_id: job.job_id,
         dataset_id: job.dataset_id,
@@ -462,7 +463,7 @@ export function OverviewPanel() {
     setCacheError(null);
 
     try {
-      const nextStatus = await TimeseriesService.deletePredictionCache(
+      const nextStatus = await ModelService.deletePredictionCache(
         selectedDatasetId,
         "derivatives",
         activeModelName,

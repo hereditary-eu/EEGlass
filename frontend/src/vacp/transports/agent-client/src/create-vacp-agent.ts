@@ -87,7 +87,7 @@ export function createVacpToolLoopAgent(options: VacpAgentFactoryOptions) {
     instructions,
     stopWhen: stepCountIs(config.maxSteps ?? DEFAULT_MAX_STEPS),
     temperature: config.temperature ?? DEFAULT_TEMPERATURE,
-    maxOutputTokens: config.maxOutputTokens,
+    // maxOutputTokens: config.maxOutputTokens, # temp fix ~ Lukas
     tools,
   });
 }

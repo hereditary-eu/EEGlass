@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { TimeseriesService } from "../../services/TimeseriesService";
+import { ModelService } from "../../services/ModelService";
 import type {
   ModelBandPowerResponse,
   ModelBandPowerStatsMode,
@@ -71,7 +71,7 @@ export function useTimeseriesBandPower({
     setIsLoadingBandPower(true);
     setBandPowerError(null);
 
-    TimeseriesService.computeBandPower(datasetId, subjectId, requestWindowIndex, requestSource, modelName)
+    ModelService.computeBandPower(datasetId, subjectId, requestWindowIndex, requestSource, modelName)
       .then((response) => {
         if (!isCurrent) {
           return;
@@ -124,7 +124,7 @@ export function useTimeseriesBandPower({
     setIsLoadingBandPowerStats(true);
     setBandPowerStatsError(null);
 
-    TimeseriesService.getBandPowerStats(datasetId, subjectId, requestSource, requestMode, requestModelName)
+    ModelService.getBandPowerStats(datasetId, subjectId, requestSource, requestMode, requestModelName)
       .then((response) => {
         if (!isCurrent) {
           return;

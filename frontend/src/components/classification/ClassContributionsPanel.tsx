@@ -4,7 +4,7 @@ import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
 import { formatCompactClassLabel } from "../../constants/eegModel";
-import { TimeseriesService } from "../../services/TimeseriesService";
+import { ModelService } from "../../services/ModelService";
 import type { ModelClassEvidenceResponse, ModelInfoResponse, TimeseriesSource } from "../../types";
 import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
@@ -88,7 +88,7 @@ export function ClassContributionsPanel({
     setIsLoading(true);
     setError(null);
 
-    TimeseriesService.computeClassEvidence(datasetId, subjectId, windowIndex, source, modelName)
+    ModelService.computeClassEvidence(datasetId, subjectId, windowIndex, source, modelName)
       .then((response) => {
         cacheRef.current.set(cacheKey, response);
         if (!isCurrent) {

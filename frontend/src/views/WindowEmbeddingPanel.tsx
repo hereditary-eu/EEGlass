@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ComponentStatusIndicator, EmbeddingScatterplot, MathFormula } from "../components";
 import type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from "../components";
 import { getEmbeddingClassColors, getModelClassLabels } from "../constants/eegModel";
-import { TimeseriesService } from "../services/TimeseriesService";
+import { ModelService } from "../services/ModelService";
 import type { ModelInfoResponse, ModelWindowEmbeddingsResponse, TimeseriesSource } from "../types";
 import "./WindowEmbeddingPanel.css";
 
@@ -63,7 +63,7 @@ export function WindowEmbeddingPanel({
     setIsLoading(true);
     setError(null);
 
-    TimeseriesService.getWindowEmbeddings(datasetId, subjectId, source, modelInfo.name)
+    ModelService.getWindowEmbeddings(datasetId, subjectId, source, modelInfo.name)
       .then((response) => {
         if (isCurrent) {
           setEmbeddings(response);

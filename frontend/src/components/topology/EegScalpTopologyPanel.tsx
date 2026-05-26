@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { TimeseriesService } from "../../services/TimeseriesService";
+import { ModelService } from "../../services/ModelService";
 import { useAppStore } from "../../stores/useAppStore";
 import type {
   ChannelId,
@@ -62,7 +62,7 @@ export function EegScalpTopologyPanel({
 
     setIsLoading(true);
     setError(null);
-    TimeseriesService.getWindowScalpTopologies(datasetId, subjectId, windowIndex, source, modelName)
+    ModelService.getWindowScalpTopologies(datasetId, subjectId, windowIndex, source, modelName)
       .then((response) => {
         if (!isCurrent) {
           return;

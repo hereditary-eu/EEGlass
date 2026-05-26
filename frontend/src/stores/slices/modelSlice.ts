@@ -1,6 +1,6 @@
 import type { StateCreator } from "zustand";
 
-import { TimeseriesService } from "../../services/TimeseriesService";
+import { ModelService } from "../../services/ModelService";
 import type { ModelInfoResponse, ModelListItem } from "../../types";
 import type { AppStoreState } from "../useAppStore";
 
@@ -28,8 +28,8 @@ export const createModelSlice: StateCreator<AppStoreState, [], [], ModelSlice> =
 
     set({ isLoadingModels: true, modelError: null });
     try {
-      const modelList = await TimeseriesService.getModelList();
-      const modelInfo = await TimeseriesService.getModelInfo(modelList.current_model_name);
+      const modelList = await ModelService.getModelList();
+      const modelInfo = await ModelService.getModelInfo(modelList.current_model_name);
       set({
         availableModels: modelList.models,
         modelInfo,
@@ -53,7 +53,7 @@ export const createModelSlice: StateCreator<AppStoreState, [], [], ModelSlice> =
     const previousModelInfo = get().modelInfo;
     set({ modelInfo: null, isSwitchingModel: true, modelError: null });
     try {
-      const modelInfo = await TimeseriesService.setCurrentModel(modelName);
+      const modelInfo = await ModelService.setCurrentModel(modelName);
       set({
         availableModels: get().availableModels.map((model) => ({
           ...model,

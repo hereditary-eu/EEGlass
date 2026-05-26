@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { TimeseriesService } from "../../services/TimeseriesService";
+import { ModelService } from "../../services/ModelService";
 import type { ModelScalpTopologyResponse } from "../../types";
 import { getScalpTopologyErrorMessage } from "./scalpTopologyUtils";
 
@@ -38,7 +38,7 @@ export function useModelScalpTopologies(modelName?: string | null): UseModelScal
 
     const topologyPromise =
       scalpTopologyPromises.get(cacheKey) ??
-      TimeseriesService.getScalpTopologies(modelName ?? undefined).catch((loadError) => {
+      ModelService.getScalpTopologies(modelName ?? undefined).catch((loadError) => {
         scalpTopologyPromises.delete(cacheKey);
         throw loadError;
       });

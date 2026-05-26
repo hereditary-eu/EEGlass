@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { TimeseriesService } from "../../services/TimeseriesService";
+import { ModelService } from "../../services/ModelService";
 import type {
   ChannelId,
   ModelInferenceResponse,
@@ -126,7 +126,7 @@ export function useTimeseriesPredictions({
     onPredictionReset();
 
     try {
-      const response = await TimeseriesService.computeAndCachePredictions(datasetId, subjectId, source, modelName, {
+      const response = await ModelService.computeAndCachePredictions(datasetId, subjectId, source, modelName, {
         signal: abortController.signal,
       });
       if (!isActiveRequest()) {
@@ -175,7 +175,7 @@ export function useTimeseriesPredictions({
     let socket: WebSocket | null = null;
     const abortController = new AbortController();
 
-    TimeseriesService.getActivePredictionCacheJob(datasetId, source, modelName, {
+    ModelService.getActivePredictionCacheJob(datasetId, source, modelName, {
       signal: abortController.signal,
     })
       .then((progress) => {
@@ -189,7 +189,7 @@ export function useTimeseriesPredictions({
         }
 
         setActivePredictionCacheProgress(progress);
-        socket = TimeseriesService.createPredictionCacheProgressSocket(progress.job_id, progress.model_name);
+        socket = ModelService.createPredictionCacheProgressSocket(progress.job_id, progress.model_name);
         socket.onmessage = (event) => {
           let nextProgress: ModelPredictionCacheProgress;
           try {
@@ -326,7 +326,7 @@ async function getCachedPredictionsWithRetry(
     }
 
     try {
-      return await TimeseriesService.getCachedPredictions(datasetId, subjectId, source, modelName, { signal });
+      return await ModelService.getCachedPredictions(datasetId, subjectId, source, modelName, { signal });
     } catch (error) {
       lastError = error;
       if (isAbortError(error) || signal?.aborted) {
