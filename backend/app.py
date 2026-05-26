@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import CONFIG
 from backend.routers import (
-    chat_router,
     timeseries_router,
     model_router,
 )
@@ -25,7 +24,6 @@ def create_app():
         allow_headers=["*"],
     )
 
-    app.include_router(chat_router)
     app.include_router(timeseries_router)
     app.include_router(model_router)
 
