@@ -273,12 +273,13 @@ class PredictionCacheService:
                 subject_id=summary.subject_id,
                 x=float(coordinate[0]),
                 y=float(coordinate[1]),
+                raw_embedding=list(vector),  # NEW
                 true_label=summary.true_label,
                 predicted_label=summary.predicted_label,
                 mean_confidence=summary.mean_confidence,
                 total_windows=summary.total_windows,
             )
-            for summary, coordinate in zip(summaries, coordinates, strict=True)
+            for summary, coordinate, vector in zip(summaries, coordinates, vectors, strict=True)
         ]
 
         return cls._patient_embeddings_response(

@@ -11,6 +11,7 @@ class ModelPatientEmbeddingPoint(BaseModel):
     subject_id: str
     x: float
     y: float
+    raw_embedding: List[float] | None = None
     true_label: str | None = None
     predicted_label: str | None = None
     mean_confidence: float | None = None
