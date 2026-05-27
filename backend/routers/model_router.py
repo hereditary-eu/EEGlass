@@ -10,6 +10,7 @@ from backend.pydantic_models.inference import (
     ModelBandPowerStatsResponse,
     ModelClassEvidenceRequest,
     ModelClassEvidenceResponse,
+    ModelClassWeightsResponse,
     ModelInfoResponse,
     ModelInferenceRequest,
     ModelInferenceResponse,
@@ -101,6 +102,14 @@ async def get_model_class_evidence(
             window_index=request.window_index,
             model_name=model_name,
         )
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@model_router.get("/models/{model_name}/class-weights", response_model=ModelClassWeightsResponse)
+async def get_model_class_weights(model_name: str = DEFAULT_MODEL_NAME) -> ModelClassWeightsResponse:
+    try:
+        return ModelService.get_class_weights(model_name=model_name)
     except ModelServiceError as exc:
         raise _http_error(exc) from exc
 

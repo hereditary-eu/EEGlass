@@ -38,6 +38,7 @@ export const API_ROUTES = {
     info: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}`),
     infer: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/infer`),
     classEvidence: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/class-evidence`),
+    classWeights: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/class-weights`),
     bandPower: (modelName: string) => buildApiUrl(`/models/${encodeURIComponent(modelName)}/band-power`),
     bandPowerStats: (datasetId: string, subjectId: string, modelName: string) =>
       buildApiUrl(

@@ -11,6 +11,7 @@ import type {
 } from "../../types";
 import { ModelScalpTopologyPanel } from "../../components";
 import { PredictionCacheProgressBar } from "./PredictionCacheProgressBar";
+import { ModelClassWeightsMatrix } from "./ModelClassWeightsMatrix";
 import { getCacheSummary, isCacheJobRunning } from "./overviewUtils";
 
 interface ModelCardProps {
@@ -133,9 +134,12 @@ export function ModelCard({
 
       <div className="overview-model-operations">
         {modelInfo ? (
-          <div className="overview-model-topology">
-            <ModelScalpTopologyPanel modelName={modelInfo.name} compact />
-          </div>
+          <>
+            <div className="overview-model-topology">
+              <ModelScalpTopologyPanel modelName={modelInfo.name} compact />
+            </div>
+            <ModelClassWeightsMatrix modelInfo={modelInfo} />
+          </>
         ) : null}
 
         <div className="overview-model-cache">

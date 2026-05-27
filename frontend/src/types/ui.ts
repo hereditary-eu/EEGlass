@@ -245,10 +245,21 @@ export interface ModelClassEvidenceContribution {
   contribution: number;
 }
 
+export interface ModelClassWeight {
+  class_id: number;
+  class_label: string;
+  weight: number;
+}
+
 export interface ModelClassEvidenceBand {
   band: string;
   feature_value: number;
   class_contributions: ModelClassEvidenceContribution[];
+}
+
+export interface ModelClassWeightsBand {
+  band: TimeseriesBandFilter;
+  class_weights: ModelClassWeight[];
 }
 
 export interface ModelClassEvidenceResponse {
@@ -266,6 +277,15 @@ export interface ModelClassEvidenceResponse {
   unit_label: string;
   global_max_abs_contribution: number;
   bands: ModelClassEvidenceBand[];
+}
+
+export interface ModelClassWeightsResponse {
+  model_name: string;
+  checkpoint_signature: string;
+  layer_name: string;
+  unit_label: string;
+  global_max_abs_weight: number;
+  bands: ModelClassWeightsBand[];
 }
 
 export interface ModelBandPowerRequest {

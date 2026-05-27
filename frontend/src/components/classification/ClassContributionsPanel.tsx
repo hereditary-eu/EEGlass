@@ -8,6 +8,13 @@ import { ModelService } from "../../services/ModelService";
 import type { ModelClassEvidenceResponse, ModelInfoResponse, TimeseriesSource } from "../../types";
 import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
+import {
+  BandClassMatrix,
+  type BandClassMatrixCell,
+  formatBandClassValue,
+  getBandClassDivergingColor,
+  normalizeBandClassValue,
+} from "./BandClassMatrix";
 import "./ClassContributionsPanel.css";
 
 export interface ClassContributionsPanelProps {
@@ -19,13 +26,15 @@ export interface ClassContributionsPanelProps {
 }
 
 type EvidenceDisplayMode = "relative" | "raw";
-interface ClassContributionDatum {
+interface ClassContributionDatum extends BandClassMatrixCell {
   classLabel: string;
   classShort: string;
   classOrder: number;
   band: string;
   contributionGroup: string;
   bandOrder: number;
+  value: number;
+  valueText: string;
   contributionRaw: number;
   contributionRelative: number;
   contributionDisplayed: number;
@@ -178,7 +187,11 @@ export function ClassContributionsPanel({
         {evidence ? (
           <>
             <div className="classification-evidence-chart-grid">
-              <ClassContributionsHeatmap rows={contributionRows} />
+              <BandClassMatrix
+                cells={contributionRows}
+                className="classification-evidence-heatmap"
+                tooltip={createContributionTooltip()}
+              />
               <ClassLogitPanel rows={logitRows} />
             </div>
 
@@ -210,116 +223,6 @@ export function ClassContributionsPanel({
       </div>
     </div>
   );
-}
-
-function ClassContributionsHeatmap({ rows }: { rows: ClassContributionDatum[] }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<View | null>(null);
-  useVegaLayoutResize(viewRef);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
-      return;
-    }
-
-    container.innerHTML = "";
-    if (!rows.length) {
-      viewRef.current = null;
-      return;
-    }
-
-    const xDomain = Array.from(new Set(rows.map((row) => row.band)));
-    const yDomain = Array.from(new Set(rows.map((row) => row.classShort)));
-    const chartHeight = getEvidenceChartHeight(yDomain.length);
-    const spec: VisualizationSpec = {
-      $schema: "https://vega.github.io/schema/vega-lite/v6.json",
-      width: "container",
-      height: chartHeight,
-      padding: { left: 0, right: 0, top: 31, bottom: 0 },
-      autosize: {
-        type: "fit",
-        contains: "padding",
-        resize: true,
-      },
-      background: "transparent",
-      data: { values: rows },
-      layer: [
-        {
-          mark: { type: "rect" },
-          encoding: {
-            x: createBandXEncoding(xDomain),
-            y: createClassYEncoding(yDomain),
-            color: { field: "cellColor", type: "nominal", scale: null, legend: null },
-            stroke: {
-              condition: { test: "datum.isWinningLogit", value: "#0f5f76" },
-              value: "#d7e0e8",
-            },
-            strokeWidth: {
-              condition: { test: "datum.isWinningLogit", value: 3 },
-              value: 1,
-            },
-            tooltip: createContributionTooltip(),
-          },
-        },
-        {
-          mark: {
-            type: "text",
-            fontSize: 10,
-            fontWeight: 800,
-            color: "#17212b",
-          },
-          encoding: {
-            x: createBandXEncoding(xDomain),
-            y: createClassYEncoding(yDomain),
-            text: { field: "contributionText", type: "nominal" },
-            tooltip: createContributionTooltip(),
-          },
-        },
-      ],
-      config: {
-        axis: {
-          domain: false,
-          grid: false,
-          ticks: false,
-          labelColor: "#334155",
-          labelFont: "Inter, Segoe UI, sans-serif",
-          labelFontSize: 10,
-          labelFontWeight: 800,
-          title: null,
-        },
-        view: { stroke: "#d7e0e8" },
-      },
-    };
-
-    let finalized = false;
-    const resultPromise = embed(container, spec, {
-      actions: false,
-      renderer: "svg",
-    });
-
-    resultPromise.catch(() => undefined);
-    resultPromise
-      .then((result) => {
-        if (!finalized) {
-          viewRef.current = result.view;
-          resizeVegaView(result.view);
-        }
-      })
-      .catch(() => undefined);
-
-    return () => {
-      if (finalized) {
-        return;
-      }
-
-      finalized = true;
-      viewRef.current = null;
-      resultPromise.then((result) => result.finalize()).catch(() => undefined);
-    };
-  }, [rows]);
-
-  return <div className="classification-evidence-heatmap" ref={containerRef} />;
 }
 
 function ClassLogitPanel({ rows }: { rows: ClassLogitDatum[] }) {
@@ -520,8 +423,10 @@ function createContributionDatum({
   isWinningLogit,
 }: Omit<
   ClassContributionDatum,
-  "contributionText" | "normalizedContribution" | "cellColor" | "tooltipValue"
+  "value" | "valueText" | "contributionText" | "normalizedContribution" | "cellColor" | "tooltipValue"
 >): ClassContributionDatum {
+  const contributionText = formatContribution(contributionDisplayed);
+
   return {
     classLabel,
     classShort,
@@ -529,19 +434,22 @@ function createContributionDatum({
     band,
     contributionGroup: isTotal ? "Total across bands" : `Band ${band}`,
     bandOrder,
+    value: contributionDisplayed,
+    valueText: contributionText,
     contributionRaw,
     contributionRelative,
     contributionDisplayed,
-    contributionText: formatContribution(contributionDisplayed),
+    contributionText,
     colorScale,
     normalizedContribution: normalizeContribution(contributionDisplayed, colorScale),
     cellColor: getEvidenceColor(contributionDisplayed, colorScale),
     isTotal,
     isPredictedClass,
     isWinningLogit,
+    isHighlighted: isWinningLogit,
     tooltipValue: isTotal
-      ? `${classLabel} total logit contribution: ${formatContribution(contributionDisplayed)}`
-      : `${band} -> ${classLabel}: ${formatContribution(contributionDisplayed)}`,
+      ? `${classLabel} total logit contribution: ${contributionText}`
+      : `${band} -> ${classLabel}: ${contributionText}`,
   };
 }
 
@@ -558,16 +466,6 @@ function getDecisionSummary(evidence: ModelClassEvidenceResponse): { label: stri
   return {
     label,
     confidence: evidence.probabilities[label] ?? evidence.confidence,
-  };
-}
-
-function createBandXEncoding(domain: string[]) {
-  return {
-    field: "band",
-    type: "nominal" as const,
-    sort: domain,
-    axis: { orient: "top" as const, labelAngle: 0 },
-    scale: { domain, paddingInner: 0, paddingOuter: 0 },
   };
 }
 
@@ -659,28 +557,15 @@ function getMeanAbsBandContribution(band: ModelClassEvidenceResponse["bands"][nu
 }
 
 function getEvidenceColor(value: number, maxAbsContribution: number): string {
-  const normalized = normalizeContribution(value, maxAbsContribution);
-  if (normalized < 0) {
-    const strength = Math.abs(normalized);
-    const red = Math.round(235 + (14 - 235) * strength);
-    const green = Math.round(245 + (116 - 245) * strength);
-    const blue = Math.round(248 + (144 - 248) * strength);
-    return `rgb(${red} ${green} ${blue})`;
-  }
-
-  const red = Math.round(241 + (225 - 241) * normalized);
-  const green = Math.round(245 + (29 - 245) * normalized);
-  const blue = Math.round(249 + (72 - 249) * normalized);
-  return `rgb(${red} ${green} ${blue})`;
+  return getBandClassDivergingColor(value, maxAbsContribution);
 }
 
 function normalizeContribution(value: number, maxAbsContribution: number): number {
-  return Math.max(-1, Math.min(1, value / maxAbsContribution));
+  return normalizeBandClassValue(value, maxAbsContribution);
 }
 
 function formatContribution(value: number): string {
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}`;
+  return formatBandClassValue(value);
 }
 
 function formatClassLabel(classLabel: string): string {

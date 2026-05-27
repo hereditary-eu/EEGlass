@@ -28,6 +28,9 @@ from backend.pydantic_models.inference import (
     ModelClassEvidenceBand,
     ModelClassEvidenceContribution,
     ModelClassEvidenceResponse,
+    ModelClassWeight,
+    ModelClassWeightsBand,
+    ModelClassWeightsResponse,
     ModelInfoResponse,
     ModelInferenceResponse,
     ModelListItem,
@@ -350,6 +353,35 @@ def compute_class_evidence_response(
                         class_id=class_id,
                         class_label=class_label,
                         contribution=float(contributions_by_class_and_band[class_id, band_index]),
+                    )
+                    for class_id, class_label in MODEL_CLASS_LABELS.items()
+                ],
+            )
+            for band_index, (band_name, _, _) in enumerate(MODEL_BANDS)
+        ],
+    )
+
+
+def build_class_weights_response(model_spec: ModelSpec) -> ModelClassWeightsResponse:
+    torch_module = ModelRuntime.import_torch()
+    model = ModelRuntime.get_model(torch_module, model_spec)
+    dense_weights = model.Dense.weight.detach().cpu().numpy()
+    max_abs_weight = float(np.max(np.abs(dense_weights))) if dense_weights.size else 0.0
+
+    return ModelClassWeightsResponse(
+        model_name=model_spec.name,
+        checkpoint_signature=ModelRuntime.checkpoint_signature(model_spec),
+        layer_name="Dense",
+        unit_label="weight",
+        global_max_abs_weight=max_abs_weight,
+        bands=[
+            ModelClassWeightsBand(
+                band=band_name,
+                class_weights=[
+                    ModelClassWeight(
+                        class_id=class_id,
+                        class_label=class_label,
+                        weight=float(dense_weights[class_id, band_index]),
                     )
                     for class_id, class_label in MODEL_CLASS_LABELS.items()
                 ],
@@ -817,6 +849,7 @@ class ModelService:
     )
     _INFERENCE_CACHE_LIMIT = 16
     _CLASS_EVIDENCE_CACHE_LIMIT = 64
+    _CLASS_WEIGHTS_CACHE_LIMIT = 4
     _BAND_POWER_CACHE_LIMIT = 16
     _BAND_POWER_STATS_CACHE_LIMIT = 8
     _SCALP_TOPOLOGY_CACHE_LIMIT = 4
@@ -826,6 +859,7 @@ class ModelService:
         tuple[str, str, str, TimeseriesSource, int, str],
         ModelClassEvidenceResponse,
     ] = OrderedDict()
+    _class_weights_cache: OrderedDict[str, ModelClassWeightsResponse] = OrderedDict()
     _band_power_cache: OrderedDict[tuple[str, str, str, TimeseriesSource, int], ModelBandPowerResponse] = OrderedDict()
     _band_power_stats_cache: OrderedDict[
         tuple[str, str, str, TimeseriesSource, Literal["intra_patient", "inter_patient"]],
@@ -1063,6 +1097,20 @@ class ModelService:
             window_index=window_index,
         )
         remember(cls._class_evidence_cache, cache_key, response, cls._CLASS_EVIDENCE_CACHE_LIMIT)
+        return response
+
+    @classmethod
+    def get_class_weights(cls, model_name: str = DEFAULT_MODEL_NAME) -> ModelClassWeightsResponse:
+        model_spec = cls._get_model_spec(model_name)
+        checkpoint_signature = ModelRuntime.checkpoint_signature(model_spec)
+        cache_key = f"{model_spec.name}:{checkpoint_signature}"
+        cached_response = cls._class_weights_cache.get(cache_key)
+        if cached_response is not None:
+            cls._class_weights_cache.move_to_end(cache_key)
+            return cached_response
+
+        response = build_class_weights_response(model_spec)
+        remember(cls._class_weights_cache, cache_key, response, cls._CLASS_WEIGHTS_CACHE_LIMIT)
         return response
 
     @classmethod

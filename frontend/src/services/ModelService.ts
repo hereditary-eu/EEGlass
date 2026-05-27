@@ -7,6 +7,7 @@ import type {
   ModelBandPowerStatsResponse,
   ModelClassEvidenceRequest,
   ModelClassEvidenceResponse,
+  ModelClassWeightsResponse,
   ModelInfoResponse,
   ModelInferenceResponse,
   ModelListResponse,
@@ -241,6 +242,11 @@ export class ModelService {
       window_index: windowIndex,
     };
     return ApiClient.post<ModelClassEvidenceResponse>(API_ROUTES.model.classEvidence(resolvedModelName), request);
+  }
+
+  static async getClassWeights(modelName?: string): Promise<ModelClassWeightsResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
+    return ApiClient.get<ModelClassWeightsResponse>(API_ROUTES.model.classWeights(resolvedModelName));
   }
 
   static async getScalpTopologies(modelName?: string): Promise<ModelScalpTopologyResponse> {

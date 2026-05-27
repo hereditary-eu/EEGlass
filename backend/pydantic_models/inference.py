@@ -18,6 +18,9 @@ from backend.pydantic_models.class_evidence import (
     ModelClassEvidenceContribution,
     ModelClassEvidenceRequest,
     ModelClassEvidenceResponse,
+    ModelClassWeight,
+    ModelClassWeightsBand,
+    ModelClassWeightsResponse,
 )
 from backend.pydantic_models.embeddings import (
     ModelPatientEmbeddingPoint,
@@ -92,6 +95,9 @@ __all__ = [
     "ModelClassEvidenceContribution",
     "ModelClassEvidenceRequest",
     "ModelClassEvidenceResponse",
+    "ModelClassWeight",
+    "ModelClassWeightsBand",
+    "ModelClassWeightsResponse",
     "ModelClassPresentation",
     "ModelInfoResponse",
     "ModelInferenceRequest",
