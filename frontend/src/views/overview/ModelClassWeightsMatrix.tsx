@@ -75,10 +75,8 @@ export function ModelClassWeightsMatrix({ modelInfo }: ModelClassWeightsMatrixPr
   return (
     <div className="overview-model-class-weights">
       <div className="overview-model-section-heading">
-        <div>
-          <h4>Dense weights</h4>
-          <span>{activeWeights?.layer_name ?? "Dense"}: bands to classes</span>
-        </div>
+        <h3>Dense weights</h3>
+        <span>{activeWeights?.layer_name ?? "Dense"}: bands to classes</span>
         {/* <span>{activeWeights?.unit_label ?? "weight"}</span> */}
       </div>
 
@@ -87,8 +85,9 @@ export function ModelClassWeightsMatrix({ modelInfo }: ModelClassWeightsMatrixPr
           <BandClassMatrix
             cells={cells}
             className="overview-model-class-weights-plot"
-            rowHeight={34}
-            minHeight={102}
+            rowHeight={24}
+            minHeight={72}
+            topPadding={14}
             tooltip={createWeightTooltip()}
           />
         ) : null}

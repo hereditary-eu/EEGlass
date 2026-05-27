@@ -27,12 +27,18 @@ export type {
 } from "./topology";
 export { ClassContributionsPanel } from "./classification";
 export {
+  BandActivationChart,
   BandClassMatrix,
   formatBandClassValue,
   getBandClassDivergingColor,
   normalizeBandClassValue,
 } from "./classification";
-export type { BandClassMatrixCell, BandClassMatrixProps, ClassContributionsPanelProps } from "./classification";
+export type {
+  BandActivationChartProps,
+  BandClassMatrixCell,
+  BandClassMatrixProps,
+  ClassContributionsPanelProps,
+} from "./classification";
 export {
   ClassLabelCountCell,
   CompactGridSelectorRow,

@@ -24,6 +24,7 @@ export interface BandClassMatrixProps {
   className?: string;
   rowHeight?: number;
   minHeight?: number;
+  topPadding?: number;
   showClassAxis?: boolean;
   tooltip: Array<Record<string, unknown>>;
 }
@@ -33,6 +34,7 @@ export function BandClassMatrix({
   className,
   rowHeight = 76,
   minHeight = 120,
+  topPadding = 31,
   showClassAxis = true,
   tooltip,
 }: BandClassMatrixProps) {
@@ -59,7 +61,7 @@ export function BandClassMatrix({
       $schema: "https://vega.github.io/schema/vega-lite/v6.json",
       width: "container",
       height: chartHeight,
-      padding: { left: 0, right: 0, top: 31, bottom: 0 },
+      padding: { left: 0, right: 0, top: topPadding, bottom: 0 },
       autosize: {
         type: "fit",
         contains: "padding",
@@ -140,7 +142,7 @@ export function BandClassMatrix({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [cells, minHeight, rowHeight, showClassAxis, tooltip]);
+  }, [cells, minHeight, rowHeight, showClassAxis, tooltip, topPadding]);
 
   return <div className={className} ref={containerRef} />;
 }

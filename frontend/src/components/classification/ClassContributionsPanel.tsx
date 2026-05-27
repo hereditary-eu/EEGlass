@@ -4,7 +4,6 @@ import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
 import { formatCompactClassLabel } from "../../constants/eegModel";
-import { ModelService } from "../../services/ModelService";
 import type { ModelClassEvidenceResponse, ModelInfoResponse, TimeseriesSource } from "../../types";
 import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
@@ -15,6 +14,7 @@ import {
   getBandClassDivergingColor,
   normalizeBandClassValue,
 } from "./BandClassMatrix";
+import { useModelClassEvidence } from "./useModelClassEvidence";
 import "./ClassContributionsPanel.css";
 
 export interface ClassContributionsPanelProps {
@@ -23,6 +23,7 @@ export interface ClassContributionsPanelProps {
   source: TimeseriesSource;
   modelInfo: ModelInfoResponse | null;
   windowIndex: number | null;
+  compact?: boolean;
 }
 
 type EvidenceDisplayMode = "relative" | "raw";
@@ -68,62 +69,16 @@ export function ClassContributionsPanel({
   source,
   modelInfo,
   windowIndex,
+  compact = false,
 }: ClassContributionsPanelProps) {
-  const cacheRef = useRef(new Map<string, ModelClassEvidenceResponse>());
-  const [evidence, setEvidence] = useState<ModelClassEvidenceResponse | null>(null);
   const [displayMode, setDisplayMode] = useState<EvidenceDisplayMode>("raw");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const modelName = modelInfo?.name;
-    if (!datasetId || !subjectId || !modelName || windowIndex === null) {
-      setEvidence(null);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-
-    const cacheKey = `${modelName}::${datasetId}::${subjectId}::${source}::${windowIndex}`;
-    const cachedEvidence = cacheRef.current.get(cacheKey);
-    if (cachedEvidence) {
-      setEvidence(cachedEvidence);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-
-    let isCurrent = true;
-    setIsLoading(true);
-    setError(null);
-
-    ModelService.computeClassEvidence(datasetId, subjectId, windowIndex, source, modelName)
-      .then((response) => {
-        cacheRef.current.set(cacheKey, response);
-        if (!isCurrent) {
-          return;
-        }
-
-        setEvidence(response);
-      })
-      .catch((loadError) => {
-        if (!isCurrent) {
-          return;
-        }
-
-        setEvidence(null);
-        setError(getEvidenceErrorMessage(loadError));
-      })
-      .finally(() => {
-        if (isCurrent) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [datasetId, modelInfo?.name, source, subjectId, windowIndex]);
+  const { evidence, isLoading, error } = useModelClassEvidence({
+    datasetId,
+    subjectId,
+    source,
+    modelInfo,
+    windowIndex,
+  });
 
   const classLabels = useMemo(() => {
     if (!evidence?.bands.length) {
@@ -135,51 +90,33 @@ export function ClassContributionsPanel({
   }, [evidence]);
 
   const maxAbsContribution = Math.max(evidence?.global_max_abs_contribution ?? 0, 1e-12);
+  const modelClasses = modelInfo?.classes ?? null;
   const contributionRows = useMemo(
-    () => (evidence ? createClassContributionRows(evidence, classLabels, displayMode, maxAbsContribution) : []),
-    [classLabels, displayMode, evidence, maxAbsContribution],
+    () =>
+      evidence
+        ? createClassContributionRows(evidence, classLabels, modelClasses, displayMode, maxAbsContribution)
+        : [],
+    [classLabels, displayMode, evidence, maxAbsContribution, modelClasses],
   );
   const logitRows = useMemo(
-    () => (evidence ? createClassLogitRows(evidence, classLabels) : []),
-    [classLabels, evidence],
+    () => (evidence ? createClassLogitRows(evidence, classLabels, modelClasses) : []),
+    [classLabels, evidence, modelClasses],
   );
   const decision = useMemo(() => (evidence ? getDecisionSummary(evidence) : null), [evidence]);
   const status = getEvidenceStatus({ error, evidence, isLoading });
 
   return (
-    <div className="classification-evidence">
+    <div className={`classification-evidence${compact ? " classification-evidence--compact" : ""}`}>
       <div className="classification-evidence-header">
         <div>
           <h3 className="classification-evidence-title">Class contributions</h3>
-          <p className="classification-evidence-subtitle">
-            {evidence
-              ? `Window ${evidence.window_index + 1}: ${evidence.start_time.toFixed(1)}s-${evidence.end_time.toFixed(1)}s`
-              : windowIndex === null
-                ? "Select a prediction window"
-                : `Window ${windowIndex + 1}`}
-          </p>
         </div>
         <div className="classification-evidence-header-side">
+          
           <p className="classification-evidence-stage">
             Dense layer: <MathFormula tex={"Z_f"} /> mapped to class logits <MathFormula tex={"\\Omega"} />
             <ComponentStatusIndicator status={status.status} label={status.label} />
           </p>
-          <div className="classification-evidence-mode-toggle" aria-label="Evidence value mode">
-            <button
-              type="button"
-              className={`classification-evidence-mode-button${displayMode === "raw" ? " classification-evidence-mode-button--active" : ""}`}
-              onClick={() => setDisplayMode("raw")}
-            >
-              raw
-            </button>
-            <button
-              type="button"
-              className={`classification-evidence-mode-button${displayMode === "relative" ? " classification-evidence-mode-button--active" : ""}`}
-              onClick={() => setDisplayMode("relative")}
-            >
-              rel
-            </button>
-          </div>
         </div>
       </div>
 
@@ -190,17 +127,38 @@ export function ClassContributionsPanel({
               <BandClassMatrix
                 cells={contributionRows}
                 className="classification-evidence-heatmap"
+                rowHeight={compact ? 34 : 76}
+                minHeight={compact ? 102 : 120}
+                topPadding={compact ? 18 : 31}
                 tooltip={createContributionTooltip()}
               />
-              <ClassLogitPanel rows={logitRows} />
+              <ClassLogitPanel rows={logitRows} compact={compact} />
             </div>
 
             <div className="classification-evidence-footer">
-              <span className="classification-evidence-mode-note">
-                {displayMode === "relative"
-                  ? "Relative band salience; logit \u03a9 remains raw"
-                  : "Raw band contributions"}
-              </span>
+              <div className="classification-evidence-footer-left">
+                <div className="classification-evidence-mode-toggle" aria-label="Evidence value mode">
+                  <button
+                    type="button"
+                    className={`classification-evidence-mode-button${displayMode === "raw" ? " classification-evidence-mode-button--active" : ""}`}
+                    onClick={() => setDisplayMode("raw")}
+                  >
+                    raw
+                  </button>
+                  <button
+                    type="button"
+                    className={`classification-evidence-mode-button${displayMode === "relative" ? " classification-evidence-mode-button--active" : ""}`}
+                    onClick={() => setDisplayMode("relative")}
+                  >
+                    rel
+                  </button>
+                </div>
+                <span className="classification-evidence-mode-note">
+                  {displayMode === "relative"
+                    ? "Relative band salience; logit \u03a9 remains raw"
+                    : "Raw band contributions"}
+                </span>
+              </div>
               {decision ? (
                 <div className="classification-evidence-decision">
                   <span className="classification-evidence-decision-kicker">
@@ -225,7 +183,7 @@ export function ClassContributionsPanel({
   );
 }
 
-function ClassLogitPanel({ rows }: { rows: ClassLogitDatum[] }) {
+function ClassLogitPanel({ rows, compact = false }: { rows: ClassLogitDatum[]; compact?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
   useVegaLayoutResize(viewRef);
@@ -243,12 +201,12 @@ function ClassLogitPanel({ rows }: { rows: ClassLogitDatum[] }) {
     }
 
     const yDomain = Array.from(new Set(rows.map((row) => row.classShort)));
-    const chartHeight = getEvidenceChartHeight(yDomain.length);
+    const chartHeight = getEvidenceChartHeight(yDomain.length, compact);
     const spec: VisualizationSpec = {
       $schema: "https://vega.github.io/schema/vega-lite/v6.json",
       width: "container",
       height: chartHeight,
-      padding: { left: 0, right: 0, top: 31, bottom: 0 },
+      padding: { left: 0, right: 0, top: compact ? 18 : 31, bottom: 0 },
       autosize: {
         type: "fit",
         contains: "padding",
@@ -329,7 +287,7 @@ function ClassLogitPanel({ rows }: { rows: ClassLogitDatum[] }) {
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [rows]);
+  }, [compact, rows]);
 
   return <div className="classification-evidence-logits-chart" ref={containerRef} />;
 }
@@ -337,6 +295,7 @@ function ClassLogitPanel({ rows }: { rows: ClassLogitDatum[] }) {
 function createClassContributionRows(
   evidence: ModelClassEvidenceResponse,
   classLabels: string[],
+  modelClasses: ModelInfoResponse["classes"] | null,
   displayMode: EvidenceDisplayMode,
   maxAbsContribution: number,
 ): ClassContributionDatum[] {
@@ -345,7 +304,7 @@ function createClassContributionRows(
   const relativeColorScale = getGlobalMaxAbsRelativeContribution(evidence.bands);
 
   classLabels.forEach((classLabel, classOrder) => {
-    const classShort = formatClassLabel(classLabel);
+    const classShort = formatClassLabel(classLabel, modelClasses);
     evidence.bands.forEach((band, bandOrder) => {
       const contribution = band.class_contributions.find((item) => item.class_label === classLabel);
       const rawContribution = contribution?.contribution ?? 0;
@@ -375,11 +334,15 @@ function createClassContributionRows(
   return rows;
 }
 
-function getEvidenceChartHeight(rowCount: number): number {
-  return Math.max(120, rowCount * 76);
+function getEvidenceChartHeight(rowCount: number, compact = false): number {
+  return Math.max(compact ? 102 : 120, rowCount * (compact ? 34 : 76));
 }
 
-function createClassLogitRows(evidence: ModelClassEvidenceResponse, classLabels: string[]): ClassLogitDatum[] {
+function createClassLogitRows(
+  evidence: ModelClassEvidenceResponse,
+  classLabels: string[],
+  modelClasses: ModelInfoResponse["classes"] | null,
+): ClassLogitDatum[] {
   const logits = classLabels.map((classLabel) => ({
     classLabel,
     logit: evidence.logits[classLabel] ?? 0,
@@ -395,7 +358,7 @@ function createClassLogitRows(evidence: ModelClassEvidenceResponse, classLabels:
 
   return logits.map(({ classLabel, logit }, classOrder) => ({
     classLabel,
-    classShort: formatClassLabel(classLabel),
+    classShort: formatClassLabel(classLabel, modelClasses),
     classOrder,
     logitColumn: "\u03a9",
     logit,
@@ -568,16 +531,8 @@ function formatContribution(value: number): string {
   return formatBandClassValue(value);
 }
 
-function formatClassLabel(classLabel: string): string {
-  return formatCompactClassLabel(classLabel, null);
-}
-
-function getEvidenceErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return `Unable to load class contributions: ${error.message}`;
-  }
-
-  return "Unable to load class contributions.";
+function formatClassLabel(classLabel: string, modelClasses: ModelInfoResponse["classes"] | null): string {
+  return formatCompactClassLabel(classLabel, modelClasses);
 }
 
 function getEvidenceStatus({

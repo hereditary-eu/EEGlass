@@ -56,6 +56,10 @@
   gap: 0.75rem;
 }
 
+.topology-panel--model .topology-panel-header {
+  align-items: baseline;
+}
+
 .topology-panel-eyebrow {
   margin: 0 0 0.15rem;
   color: #748391;
@@ -90,6 +94,10 @@
   font-size: 0.68rem;
   line-height: 1.2;
   text-align: right;
+}
+
+.topology-panel--model .topology-panel-stage {
+  margin: 0;
 }
 
 .topology-panel-stage-text {

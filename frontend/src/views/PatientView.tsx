@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 
-import { ClassContributionsPanel, EegScalpTopologyPanel, TotalBandPowerChart } from "../components";
+import { BandActivationChart, ClassContributionsPanel, EegScalpTopologyPanel, TotalBandPowerChart } from "../components";
 import { MODEL_BANDS } from "../constants/eegModel";
 import { useTimeseriesData } from "../hooks/useTimeseriesData";
 import type { PatientViewOutletContext } from "../layouts/AppLayout";
@@ -163,13 +163,21 @@ export function PatientView() {
         />
       </article>
 
-      <article className="patient-view-slot">
+      <article className="patient-view-slot patient-view-slot--classification-stack">
+        <BandActivationChart
+          datasetId={ts.datasetId}
+          subjectId={ts.subjectId}
+          source={ts.source}
+          modelInfo={ts.modelInfo}
+          windowIndex={ts.lockedPredictionWindowIndex}
+        />
         <ClassContributionsPanel
           datasetId={ts.datasetId}
           subjectId={ts.subjectId}
           source={ts.source}
           modelInfo={ts.modelInfo}
           windowIndex={ts.lockedPredictionWindowIndex}
+          compact
         />
       </article>
     </section>

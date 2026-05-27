@@ -35,9 +35,7 @@ export function ModelScalpTopologyPanel({ modelName, compact = false }: ModelSca
   return (
     <div className={`topology-panel topology-panel--model${compact ? " topology-panel--compact" : ""}`}>
       <div className="topology-panel-header">
-        <div>
-          <h3 className="topology-panel-title">{compact ? "Spatial weights" : "Model scalp view"}</h3>
-        </div>
+        <h3 className="topology-panel-title">{compact ? "Spatial weights" : "Model scalp view"}</h3>
         <p className="topology-panel-stage">
           Spatial layer: learned channel weights <MathFormula tex={"w_{f,c}"} />
         </p>

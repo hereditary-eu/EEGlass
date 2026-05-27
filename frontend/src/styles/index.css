@@ -261,11 +261,20 @@ select {
 
 .patient-view-slot > .topology-bandpower,
 .patient-view-slot > .topology-panel,
+.patient-view-slot > .classification-band-activation-chart,
 .patient-view-slot > .classification-evidence,
 .patient-view-slot > .window-embedding-panel {
   border: 0;
   border-radius: 0;
   box-shadow: none;
+}
+
+.patient-view-slot--classification-stack {
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.patient-view-slot--classification-stack > .classification-band-activation-chart {
+  border-bottom: 1px solid #d7e0e8;
 }
 
 .patient-view-slot--timeseries {
@@ -314,6 +323,10 @@ select {
 
   .patient-view-slot {
     min-height: 180px;
+  }
+
+  .patient-view-slot--classification-stack {
+    min-height: 390px;
   }
 
   .patient-view-slot--timeseries {
