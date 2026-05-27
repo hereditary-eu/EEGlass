@@ -24,11 +24,19 @@ class CONFIG:
     MODEL_OUTPUT_TMP_MAX_AGE_SECONDS = int(os.getenv("MODEL_OUTPUT_TMP_MAX_AGE_SECONDS", "3600"))
 
     # MODEL AGGREGATION
-    # Supported: "majority_vote". Kept configurable so patient-level rules can
-    # move to disease-threshold or confidence-weighted aggregation later.
-    MODEL_PATIENT_AGGREGATION_STRATEGY = os.getenv("MODEL_PATIENT_AGGREGATION_STRATEGY", "majority_vote")
-    MODEL_PATIENT_DISEASE_WINDOW_THRESHOLD = float(os.getenv("MODEL_PATIENT_DISEASE_WINDOW_THRESHOLD", "0.3"))
+    MODEL_PATIENT_AGGREGATION_STRATEGY = os.getenv("MODEL_PATIENT_AGGREGATION_STRATEGY", "disease_threshold")
+    MODEL_PATIENT_ALZHEIMER_WINDOW_THRESHOLD = float(
+        os.getenv(
+            "MODEL_PATIENT_ALZHEIMER_WINDOW_THRESHOLD",
+            os.getenv("MODEL_PATIENT_DISEASE_WINDOW_THRESHOLD", "0.3"),
+        )
+    )
+    MODEL_PATIENT_FTD_WINDOW_THRESHOLD = float(
+        os.getenv(
+            "MODEL_PATIENT_FTD_WINDOW_THRESHOLD",
+            os.getenv("MODEL_PATIENT_DISEASE_WINDOW_THRESHOLD", "0.3"),
+        )
+    )
 
     # LOGGING
     LOG_LEVEL = "DEBUG"
-

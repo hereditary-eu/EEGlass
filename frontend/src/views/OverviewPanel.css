@@ -863,29 +863,97 @@
   opacity: 0.58;
 }
 
-.overview-model-config-popover {
+.overview-model-settings-overlay {
   position: absolute;
   z-index: 25;
   top: calc(100% + 0.45rem);
   right: 0;
-  width: min(16rem, 70vw);
+  width: min(27rem, 82vw);
   display: grid;
-  gap: 0.4rem;
+  gap: 0.75rem;
   border: 1px solid #c8d4de;
-  border-radius: 6px;
+  border-radius: 10px;
   background: #ffffff;
   box-shadow: 0 16px 32px rgb(15 23 42 / 14%);
-  padding: 0.7rem;
+  padding: 0.85rem;
 }
 
-.overview-model-config-popover label {
+.overview-model-settings-header,
+.overview-model-settings-section-heading {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.overview-model-settings-header h4,
+.overview-model-settings-section-heading h5 {
+  margin: 0;
+  color: #17212b;
+  line-height: 1.1;
+}
+
+.overview-model-settings-header h4 {
+  font-size: 0.92rem;
+}
+
+.overview-model-settings-section-heading h5 {
+  font-size: 0.78rem;
+}
+
+.overview-model-settings-header span,
+.overview-model-settings-section-heading span {
+  min-width: 0;
+  color: #748391;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: right;
+}
+
+.overview-model-settings-close {
+  flex: 0 0 auto;
+  border: 1px solid #c8d4de;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #334155;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.overview-model-settings-close:hover {
+  border-color: #9fb0be;
+  background: #f8fbfd;
+}
+
+.overview-model-settings-section {
+  min-width: 0;
+  display: grid;
+  gap: 0.45rem;
+  border-top: 1px solid #e4ebf0;
+  padding-top: 0.65rem;
+}
+
+.overview-model-card .overview-model-settings-section p {
+  margin: 0;
+  color: #748391;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.overview-model-settings-section label {
   color: #64748b;
   font-size: 0.68rem;
   font-weight: 800;
   text-transform: uppercase;
 }
 
-.overview-model-config-popover select {
+.overview-model-settings-section select,
+.overview-model-threshold-grid input {
   min-width: 0;
   border: 1px solid #c8d4de;
   border-radius: 4px;
@@ -896,10 +964,59 @@
   font-weight: 700;
 }
 
-.overview-model-config-popover span {
-  color: #748391;
+.overview-model-threshold-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.overview-model-threshold-grid label {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.overview-model-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.overview-model-reset-button,
+.overview-model-save-button {
+  border-radius: 5px;
+  padding: 0.38rem 0.65rem;
   font-size: 0.72rem;
-  line-height: 1.3;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.overview-model-reset-button {
+  border: 1px solid #c8d4de;
+  background: #ffffff;
+  color: #334155;
+}
+
+.overview-model-save-button {
+  border: 1px solid #8fb9a1;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.overview-model-reset-button:hover:not(:disabled) {
+  border-color: #9fb0be;
+  background: #f8fbfd;
+}
+
+.overview-model-save-button:hover:not(:disabled) {
+  border-color: #16a34a;
+  background: #dcfce7;
+}
+
+.overview-model-reset-button:disabled,
+.overview-model-save-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .overview-model-details {

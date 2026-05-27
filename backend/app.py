@@ -5,6 +5,7 @@ from backend.config import CONFIG
 from backend.routers import (
     timeseries_router,
     model_router,
+    settings_router,
 )
 from backend.utils.mne_logging import configure_mne_logging
 
@@ -26,6 +27,7 @@ def create_app():
 
     app.include_router(timeseries_router)
     app.include_router(model_router)
+    app.include_router(settings_router)
 
     return app
 

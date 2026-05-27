@@ -31,6 +31,10 @@ function getBrowserOrigin(): string {
 }
 
 export const API_ROUTES = {
+  settings: {
+    patientAggregation: buildApiUrl("/settings/patient-aggregation"),
+  },
+
   model: {
     list: buildApiUrl("/models"),
     current: buildApiUrl("/models/current"),

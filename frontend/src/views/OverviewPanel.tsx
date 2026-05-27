@@ -3,12 +3,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { StatusOverlay } from "../components/ui";
 import { ModelService } from "../services/ModelService";
+import { SettingsService } from "../services/SettingsService";
 import { TimeseriesService } from "../services/TimeseriesService";
 import { useAppStore } from "../stores/useAppStore";
 import type {
   ModelPatientEmbeddingsResponse,
   ModelPredictionCacheProgress,
   ModelPredictionCacheStatus,
+  PatientAggregationSettings,
   TimeseriesDatasetInfo,
   TimeseriesSubjectInfo,
 } from "../types";
@@ -53,6 +55,12 @@ export function OverviewPanel() {
   const [shouldFocusFirstPatient, setShouldFocusFirstPatient] = useState(false);
   const [isStartingCacheJob, setIsStartingCacheJob] = useState(false);
   const [isDeletingCache, setIsDeletingCache] = useState(false);
+  const [patientAggregationSettings, setPatientAggregationSettings] =
+    useState<PatientAggregationSettings | null>(null);
+  const [isLoadingPatientAggregationSettings, setIsLoadingPatientAggregationSettings] = useState(true);
+  const [isSavingPatientAggregationSettings, setIsSavingPatientAggregationSettings] = useState(false);
+  const [patientAggregationSettingsError, setPatientAggregationSettingsError] = useState<string | null>(null);
+  const [patientAggregationSettingsVersion, setPatientAggregationSettingsVersion] = useState(0);
   const progressSocketRef = useRef<WebSocket | null>(null);
   const modelInfo = useAppStore((state) => state.modelInfo);
   const availableModels = useAppStore((state) => state.availableModels);
@@ -89,8 +97,9 @@ export function OverviewPanel() {
         cacheStatus?.status ?? "",
         cacheStatus?.completed_subjects ?? 0,
         cacheStatus?.updated_at ?? "",
+        patientAggregationSettingsVersion,
       ].join(":"),
-    [cacheStatus],
+    [cacheStatus, patientAggregationSettingsVersion],
   );
   const highlightedSubjectId = hoveredSubjectId ?? selectedSubjectId;
   const activeModelName = modelInfo?.name ?? null;
@@ -141,6 +150,35 @@ export function OverviewPanel() {
   useEffect(() => {
     void initializeModelState();
   }, [initializeModelState]);
+
+  useEffect(() => {
+    let isCurrent = true;
+    setIsLoadingPatientAggregationSettings(true);
+    setPatientAggregationSettingsError(null);
+
+    SettingsService.getPatientAggregationSettings()
+      .then((settings) => {
+        if (isCurrent) {
+          setPatientAggregationSettings(settings);
+        }
+      })
+      .catch((loadError) => {
+        if (isCurrent) {
+          setPatientAggregationSettingsError(
+            getOverviewError(loadError, "Unable to load patient aggregation settings."),
+          );
+        }
+      })
+      .finally(() => {
+        if (isCurrent) {
+          setIsLoadingPatientAggregationSettings(false);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isCurrent = true;
@@ -360,6 +398,29 @@ export function OverviewPanel() {
     [activeModelName, cacheProgress, clearOverviewModelData, isSwitchingModel, setCurrentModel],
   );
 
+  const savePatientAggregationSettings = useCallback(
+    async (settings: PatientAggregationSettings) => {
+      setIsSavingPatientAggregationSettings(true);
+      setPatientAggregationSettingsError(null);
+
+      try {
+        const nextSettings = await SettingsService.updatePatientAggregationSettings(settings);
+        setPatientAggregationSettings(nextSettings);
+        setPatientAggregationSettingsVersion((version) => version + 1);
+        if (selectedDatasetId && activeModelName) {
+          refreshPredictionCacheStatus(selectedDatasetId, activeModelName);
+        }
+      } catch (saveError) {
+        const message = getOverviewError(saveError, "Unable to save patient aggregation settings.");
+        setPatientAggregationSettingsError(message);
+        throw new Error(message);
+      } finally {
+        setIsSavingPatientAggregationSettings(false);
+      }
+    },
+    [activeModelName, refreshPredictionCacheStatus, selectedDatasetId],
+  );
+
   const selectDataset = (datasetId: string) => {
     setSelectedDatasetId(datasetId);
     setDirectoryLevel("datasets");
@@ -537,9 +598,14 @@ export function OverviewPanel() {
             cacheStatus={cacheStatus}
             cacheProgress={cacheProgress}
             cacheError={cacheError}
+            patientAggregationSettings={patientAggregationSettings}
+            patientAggregationSettingsError={patientAggregationSettingsError}
+            isLoadingPatientAggregationSettings={isLoadingPatientAggregationSettings}
+            isSavingPatientAggregationSettings={isSavingPatientAggregationSettings}
             isStartingCacheJob={isStartingCacheJob}
             isDeletingCache={isDeletingCache}
             onModelChange={handleModelChange}
+            onSavePatientAggregationSettings={savePatientAggregationSettings}
             onStartPredictionCacheJob={startPredictionCacheJob}
             onDeletePredictionCache={deletePredictionCache}
           />

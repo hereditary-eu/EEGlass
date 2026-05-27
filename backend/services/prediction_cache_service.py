@@ -51,6 +51,7 @@ from backend.services.prediction_cache_band_power import (
     extract_band_power_mean_values,
 )
 from backend.services.prediction_cache_writers import write_clustering_artifact, write_prediction_artifact
+from backend.services.patient_aggregation_service import PatientAggregationService
 from backend.services.model_service import (
     ModelNotFoundError,
     ModelService,
@@ -175,6 +176,7 @@ class PredictionCacheService:
             completed_subjects = set(manifest.get("completed_subjects", []))
             failed_subjects = dict(manifest.get("failed_subjects", {}))
 
+        aggregation_settings = PatientAggregationService.get_settings()
         valid_completed_subjects = []
         subject_summaries = []
         for subject in subjects:
@@ -192,7 +194,12 @@ class PredictionCacheService:
 
             if subject.id in completed_subjects:
                 valid_completed_subjects.append(subject.id)
-            subject_summaries.append(ModelPredictionSummary(**artifact["summary"]))
+            subject_summaries.append(
+                PatientAggregationService.apply_to_summary(
+                    ModelPredictionSummary(**artifact["summary"]),
+                    aggregation_settings,
+                )
+            )
         status: Literal["missing", "partial", "complete"] = "missing"
         if valid_completed_subjects or failed_subjects:
             status = "partial"
@@ -226,6 +233,7 @@ class PredictionCacheService:
         checkpoint_key = cls._checkpoint_key(checkpoint_signature)
         subjects = cls._list_subjects(dataset_id)
 
+        aggregation_settings = PatientAggregationService.get_settings()
         summaries: list[ModelPredictionSummary] = []
         vectors: list[list[float]] = []
         source_dimension = 0
@@ -249,7 +257,12 @@ class PredictionCacheService:
             if len(embedding_values) != source_dimension:
                 continue
 
-            summaries.append(ModelPredictionSummary(**artifact["summary"]))
+            summaries.append(
+                PatientAggregationService.apply_to_summary(
+                    ModelPredictionSummary(**artifact["summary"]),
+                    aggregation_settings,
+                )
+            )
             vectors.append(embedding_values)
 
         if len(vectors) < 2:

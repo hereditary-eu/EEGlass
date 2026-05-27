@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ComponentStatusIndicator } from "../../components";
 import type { ComponentStatus } from "../../components/ui";
@@ -8,6 +8,7 @@ import type {
   ModelMetadataValue,
   ModelPredictionCacheProgress,
   ModelPredictionCacheStatus,
+  PatientAggregationSettings,
 } from "../../types";
 import { ModelScalpTopologyPanel } from "../../components";
 import { PredictionCacheProgressBar } from "./PredictionCacheProgressBar";
@@ -24,12 +25,23 @@ interface ModelCardProps {
   cacheStatus: ModelPredictionCacheStatus | null;
   cacheProgress: ModelPredictionCacheProgress | null;
   cacheError: string | null;
+  patientAggregationSettings: PatientAggregationSettings | null;
+  patientAggregationSettingsError: string | null;
+  isLoadingPatientAggregationSettings: boolean;
+  isSavingPatientAggregationSettings: boolean;
   isStartingCacheJob: boolean;
   isDeletingCache: boolean;
   onModelChange: (modelName: string) => void;
+  onSavePatientAggregationSettings: (settings: PatientAggregationSettings) => Promise<void>;
   onStartPredictionCacheJob: () => void;
   onDeletePredictionCache: () => void;
 }
+
+const DEFAULT_PATIENT_AGGREGATION_SETTINGS: PatientAggregationSettings = {
+  strategy: "disease_threshold",
+  alzheimer_threshold: 0.3,
+  frontotemporal_dementia_threshold: 0.3,
+};
 
 export function ModelCard({
   modelInfo,
@@ -41,15 +53,24 @@ export function ModelCard({
   cacheStatus,
   cacheProgress,
   cacheError,
+  patientAggregationSettings,
+  patientAggregationSettingsError,
+  isLoadingPatientAggregationSettings,
+  isSavingPatientAggregationSettings,
   isStartingCacheJob,
   isDeletingCache,
   onModelChange,
+  onSavePatientAggregationSettings,
   onStartPredictionCacheJob,
   onDeletePredictionCache,
 }: ModelCardProps) {
   const metadataEntries = Object.entries(modelInfo?.metadata ?? {});
   const [isModelSummaryOpen, setIsModelSummaryOpen] = useState(false);
   const [isModelConfigOpen, setIsModelConfigOpen] = useState(false);
+  const [draftAggregationSettings, setDraftAggregationSettings] = useState<PatientAggregationSettings>(
+    patientAggregationSettings ?? DEFAULT_PATIENT_AGGREGATION_SETTINGS,
+  );
+  const [settingsSaveError, setSettingsSaveError] = useState<string | null>(null);
   const hasModelSummary = Boolean(modelInfo?.model_summary);
   const isCacheRunning = isCacheJobRunning(cacheProgress);
   const modelStatus = getModelCardStatus({
@@ -58,6 +79,35 @@ export function ModelCard({
     isLoadingModels,
     isSwitchingModel,
   });
+  const settingsStatusText = isLoadingPatientAggregationSettings
+    ? "Loading patient aggregation settings."
+    : patientAggregationSettingsError
+      ? patientAggregationSettingsError
+      : "Saved app-wide aggregation settings are applied to cached patient summaries.";
+
+  useEffect(() => {
+    if (isModelConfigOpen) {
+      setDraftAggregationSettings(patientAggregationSettings ?? DEFAULT_PATIENT_AGGREGATION_SETTINGS);
+      setSettingsSaveError(null);
+    }
+  }, [isModelConfigOpen, patientAggregationSettings]);
+
+  const updateDraftThreshold = (field: "alzheimer_threshold" | "frontotemporal_dementia_threshold", value: string) => {
+    setDraftAggregationSettings((currentSettings) => ({
+      ...currentSettings,
+      [field]: clampThreshold(Number(value)),
+    }));
+  };
+
+  const saveDraftAggregationSettings = async (settings: PatientAggregationSettings) => {
+    setSettingsSaveError(null);
+    try {
+      await onSavePatientAggregationSettings(settings);
+      setIsModelConfigOpen(false);
+    } catch (error) {
+      setSettingsSaveError(error instanceof Error ? error.message : "Unable to save patient aggregation settings.");
+    }
+  };
 
   return (
     <section className="overview-placeholder-card overview-model-card">
@@ -90,28 +140,102 @@ export function ModelCard({
             {"\u2699"}
           </button>
           {isModelConfigOpen ? (
-            <div className="overview-model-config-popover" role="dialog" aria-label="Model settings">
-              <label htmlFor="overview-model-select">Pretrained model</label>
-              <select
-                id="overview-model-select"
-                value={modelInfo?.name ?? ""}
-                disabled={!availableModels.length || isLoadingModels || isSwitchingModel || isCacheRunning}
-                onChange={(event) => {
-                  onModelChange(event.currentTarget.value);
-                  setIsModelConfigOpen(false);
-                }}
-              >
-                {availableModels.map((model) => (
-                  <option key={model.name} value={model.name}>
-                    {model.display_name}
-                  </option>
-                ))}
-              </select>
-              <span>
-                {isCacheRunning
-                  ? "Model switching is disabled while prediction cache is running."
-                  : (modelInfo?.architecture ?? "No model loaded.")}
-              </span>
+            <div className="overview-model-settings-overlay" role="dialog" aria-label="Model settings">
+              <div className="overview-model-settings-header">
+                <div>
+                  <h4>Model settings</h4>
+                  <span>Pretrained model and app-wide patient aggregation</span>
+                </div>
+                <button
+                  type="button"
+                  className="overview-model-settings-close"
+                  aria-label="Close model settings"
+                  onClick={() => setIsModelConfigOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="overview-model-settings-section">
+                <div className="overview-model-settings-section-heading">
+                  <h5>Pretrained model</h5>
+                  <span>{modelInfo?.architecture ?? "No model loaded."}</span>
+                </div>
+                <select
+                  id="overview-model-select"
+                  value={modelInfo?.name ?? ""}
+                  disabled={!availableModels.length || isLoadingModels || isSwitchingModel || isCacheRunning}
+                  onChange={(event) => {
+                    onModelChange(event.currentTarget.value);
+                    setIsModelConfigOpen(false);
+                  }}
+                >
+                  {availableModels.map((model) => (
+                    <option key={model.name} value={model.name}>
+                      {model.display_name}
+                    </option>
+                  ))}
+                </select>
+                <p>
+                  {isCacheRunning
+                    ? "Model switching is disabled while prediction cache is running."
+                    : "Switching model clears overview model outputs and reloads cache state."}
+                </p>
+              </div>
+
+              <div className="overview-model-settings-section">
+                <div className="overview-model-settings-section-heading">
+                  <h5>Patient aggregation</h5>
+                  <span>Disease window thresholds</span>
+                </div>
+                <div className="overview-model-threshold-grid">
+                  <label>
+                    <span>Alzheimer</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={formatThresholdInput(draftAggregationSettings.alzheimer_threshold)}
+                      disabled={isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings}
+                      onChange={(event) => updateDraftThreshold("alzheimer_threshold", event.currentTarget.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>FTD</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={formatThresholdInput(draftAggregationSettings.frontotemporal_dementia_threshold)}
+                      disabled={isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings}
+                      onChange={(event) =>
+                        updateDraftThreshold("frontotemporal_dementia_threshold", event.currentTarget.value)
+                      }
+                    />
+                  </label>
+                </div>
+                <p>{settingsSaveError ?? settingsStatusText}</p>
+                <div className="overview-model-settings-actions">
+                  <button
+                    type="button"
+                    className="overview-model-reset-button"
+                    disabled={isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings}
+                    onClick={() => void saveDraftAggregationSettings(DEFAULT_PATIENT_AGGREGATION_SETTINGS)}
+                  >
+                    Reset defaults
+                  </button>
+                  <button
+                    type="button"
+                    className="overview-model-save-button"
+                    disabled={isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings}
+                    onClick={() => void saveDraftAggregationSettings(draftAggregationSettings)}
+                  >
+                    {isSavingPatientAggregationSettings ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
             </div>
           ) : null}
           <ComponentStatusIndicator status={modelStatus.status} label={modelStatus.label} />
@@ -234,4 +358,16 @@ function formatModelMetadataValue(value: ModelMetadataValue): string {
   }
 
   return String(value);
+}
+
+function clampThreshold(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(1, value));
+}
+
+function formatThresholdInput(value: number): string {
+  return clampThreshold(value).toFixed(2);
 }

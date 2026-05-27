@@ -126,6 +126,12 @@ export interface ModelListResponse {
   models: ModelListItem[];
 }
 
+export interface PatientAggregationSettings {
+  strategy: "disease_threshold";
+  alzheimer_threshold: number;
+  frontotemporal_dementia_threshold: number;
+}
+
 export interface ModelPredictionCacheJobResponse {
   job_id: string;
   dataset_id: string;
