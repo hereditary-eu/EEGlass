@@ -188,7 +188,10 @@ export function PatientView() {
           error={ts.bandPowerError}
           statsError={ts.bandPowerStatsError}
           selectedChannels={ts.activeChannels}
+          selectedWindowIndex={ts.lockedPredictionWindowIndex}
+          predictionWindowCount={ts.inferenceResult?.predictions.length ?? 0}
           onChannelSelect={ts.handleSingleChannelSelect}
+          onWindowSelect={ts.setLockedPredictionWindowIndex}
           onBandPowerStatsModeChange={ts.setBandPowerStatsMode}
         />
       </article>

@@ -41,6 +41,12 @@ const ACTION_NAMES = [
   "patient_view.timeseries.window_next",
   "patient_view.timeseries.window_previous",
   "patient_view.timeseries.window_set",
+  "patient_view.total_band_power.channel_next",
+  "patient_view.total_band_power.channel_previous",
+  "patient_view.total_band_power.channel_set",
+  "patient_view.total_band_power.window_next",
+  "patient_view.total_band_power.window_previous",
+  "patient_view.total_band_power.window_set",
   VACP_APPLY_STATE_ACTION,
 ] as const;
 

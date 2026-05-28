@@ -3,6 +3,7 @@ import { changeset } from "vega";
 import type { View } from "vega";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
+import type { VacpActionCall, VacpActionDescriptor, VacpActionResult, VacpRef } from "@vacp/core";
 
 import { MODEL_BAND_LABELS } from "../../constants/eegModel";
 import type {
@@ -12,6 +13,8 @@ import type {
   ModelBandPowerStatsResponse,
 } from "../../types";
 import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
+import { createVacpChartRefPrefix } from "../../vacp/appBridge";
+import { registerVacpVegaLiteChart } from "../../vacp/registerVegaLiteChart";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
 
 interface TotalBandPowerChartProps {
@@ -24,13 +27,34 @@ interface TotalBandPowerChartProps {
   error: string | null;
   statsError: string | null;
   selectedChannels: ChannelId[];
+  selectedWindowIndex: number | null;
+  predictionWindowCount: number;
   onChannelSelect: (channel: ChannelId) => void;
+  onWindowSelect: (windowIndex: number) => void;
   onBandPowerStatsModeChange: (mode: ModelBandPowerStatsMode) => void;
 }
 
 const MIN_RELATIVE_POWER_FOR_DB = 1e-6;
 const MIN_DB_DOMAIN = -40;
 const BAND_POWER_DATA_NAME = "bandPowerValues";
+const TOTAL_BAND_POWER_CHART_ID = "patient-view/total-band-power";
+const TOTAL_BAND_POWER_ACTIONS = {
+  channelNext: "patient_view.total_band_power.channel_next",
+  channelPrevious: "patient_view.total_band_power.channel_previous",
+  channelSet: "patient_view.total_band_power.channel_set",
+  windowNext: "patient_view.total_band_power.window_next",
+  windowPrevious: "patient_view.total_band_power.window_previous",
+  windowSet: "patient_view.total_band_power.window_set",
+} as const;
+
+interface BandPowerInteractionState {
+  availableChannels: ChannelId[];
+  selectedChannel: ChannelId | null;
+  selectedWindowIndex: number | null;
+  predictionWindowCount: number;
+  onChannelSelect: (channel: ChannelId) => void;
+  onWindowSelect: (windowIndex: number) => void;
+}
 
 export function TotalBandPowerChart({
   bandPower,
@@ -42,11 +66,22 @@ export function TotalBandPowerChart({
   error,
   statsError,
   selectedChannels,
+  selectedWindowIndex,
+  predictionWindowCount,
   onChannelSelect,
+  onWindowSelect,
   onBandPowerStatsModeChange,
 }: TotalBandPowerChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
+  const interactionRef = useRef<BandPowerInteractionState>({
+    availableChannels: [],
+    selectedChannel: null,
+    selectedWindowIndex: null,
+    predictionWindowCount: 0,
+    onChannelSelect,
+    onWindowSelect,
+  });
   const [plotHeight, setPlotHeight] = useState(240);
   useVegaLayoutResize(viewRef);
 
@@ -98,6 +133,17 @@ export function TotalBandPowerChart({
   useEffect(() => {
     valuesRef.current = values;
   }, [values]);
+
+  useEffect(() => {
+    interactionRef.current = {
+      availableChannels,
+      selectedChannel,
+      selectedWindowIndex,
+      predictionWindowCount,
+      onChannelSelect,
+      onWindowSelect,
+    };
+  }, [availableChannels, onChannelSelect, onWindowSelect, predictionWindowCount, selectedChannel, selectedWindowIndex]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -220,6 +266,7 @@ export function TotalBandPowerChart({
     };
 
     let finalized = false;
+    let unregisterVacp: (() => void) | null = null;
     const resultPromise = embed(container, spec, {
       actions: false,
       renderer: "svg",
@@ -240,6 +287,60 @@ export function TotalBandPowerChart({
             )
             .runAsync()
             .catch(() => undefined);
+          const chartRef = createVacpChartRefPrefix(TOTAL_BAND_POWER_CHART_ID);
+          const channelRef = `${chartRef}/channel` as VacpRef;
+          const windowRef = `${chartRef}/window` as VacpRef;
+          unregisterVacp = registerVacpVegaLiteChart({
+            root: container,
+            view: result.view,
+            spec,
+            chartId: TOTAL_BAND_POWER_CHART_ID,
+            title: "Patient View Total Band Power",
+            description: "Total band power Vega-Lite chart for the selected patient window and EEG channel.",
+            extraNodes: [
+              {
+                ref: channelRef,
+                kind: "Selection",
+                layer: "InteractionFeedbackLayer",
+                title: "Selected total-band-power EEG channel",
+              },
+              {
+                ref: windowRef,
+                kind: "Selection",
+                layer: "InteractionFeedbackLayer",
+                title: "Selected total-band-power prediction window",
+              },
+            ],
+            extraEdges: [
+              { from: chartRef, to: channelRef, kind: "contains" },
+              { from: chartRef, to: windowRef, kind: "contains" },
+            ],
+            extraActions: createBandPowerActionDescriptors({
+              channelRef,
+              windowRef,
+              channels: interactionRef.current.availableChannels,
+              predictionWindowCount: interactionRef.current.predictionWindowCount,
+            }),
+            executeExtraAction: (call) => executeBandPowerAction(call, interactionRef.current),
+            getExtraState: () => ({
+              [channelRef]: {
+                availableChannels: interactionRef.current.availableChannels,
+                selectedChannel: interactionRef.current.selectedChannel,
+              },
+              [windowRef]: {
+                selectedWindowIndex: interactionRef.current.selectedWindowIndex,
+                predictionWindowCount: interactionRef.current.predictionWindowCount,
+              },
+            }),
+            getExtraSummary: () => ({
+              [channelRef]: `Total band power channel=${interactionRef.current.selectedChannel ?? "none"}.`,
+              [windowRef]: `Total band power window=${
+                interactionRef.current.selectedWindowIndex === null
+                  ? "none"
+                  : interactionRef.current.selectedWindowIndex + 1
+              }/${interactionRef.current.predictionWindowCount}.`,
+            }),
+          });
         }
       })
       .catch(() => undefined);
@@ -250,6 +351,8 @@ export function TotalBandPowerChart({
       }
 
       finalized = true;
+      unregisterVacp?.();
+      unregisterVacp = null;
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
@@ -399,6 +502,173 @@ function getStatsModeLabel(mode: ModelBandPowerStatsMode): string {
 
 function toRelativePowerDb(relativePower: number): number {
   return 10 * Math.log10(Math.max(relativePower, MIN_RELATIVE_POWER_FOR_DB));
+}
+
+function createBandPowerActionDescriptors({
+  channelRef,
+  windowRef,
+  channels,
+  predictionWindowCount,
+}: {
+  channelRef: VacpRef;
+  windowRef: VacpRef;
+  channels: ChannelId[];
+  predictionWindowCount: number;
+}): VacpActionDescriptor[] {
+  return [
+    createBandPowerActionDescriptor(
+      TOTAL_BAND_POWER_ACTIONS.channelNext,
+      channelRef,
+      "Select the next EEG channel in the total band power chart.",
+    ),
+    createBandPowerActionDescriptor(
+      TOTAL_BAND_POWER_ACTIONS.channelPrevious,
+      channelRef,
+      "Select the previous EEG channel in the total band power chart.",
+    ),
+    createBandPowerActionDescriptor(
+      TOTAL_BAND_POWER_ACTIONS.channelSet,
+      channelRef,
+      "Select a specific EEG channel in the total band power chart.",
+      { channel: { type: "string", enum: channels } },
+    ),
+    createBandPowerActionDescriptor(
+      TOTAL_BAND_POWER_ACTIONS.windowNext,
+      windowRef,
+      "Select the next prediction window in the total band power chart.",
+    ),
+    createBandPowerActionDescriptor(
+      TOTAL_BAND_POWER_ACTIONS.windowPrevious,
+      windowRef,
+      "Select the previous prediction window in the total band power chart.",
+    ),
+    createBandPowerActionDescriptor(
+      TOTAL_BAND_POWER_ACTIONS.windowSet,
+      windowRef,
+      "Select a specific prediction window in the total band power chart.",
+      { windowIndex: { type: "integer", minimum: 0, maximum: Math.max(0, predictionWindowCount - 1) } },
+    ),
+  ];
+}
+
+function createBandPowerActionDescriptor(
+  name: string,
+  targetRef: VacpRef,
+  description: string,
+  properties: Record<string, unknown> = {},
+): VacpActionDescriptor {
+  return {
+    name,
+    targetRef,
+    title: name.replace(/^patient_view\.total_band_power\./, "").replace(/_/g, " "),
+    description,
+    parameters: {
+      type: "object",
+      properties: {
+        ref: { type: "string", const: targetRef },
+        ...properties,
+      },
+      required: Object.keys(properties),
+    },
+  };
+}
+
+function executeBandPowerAction(call: VacpActionCall, state: BandPowerInteractionState): VacpActionResult {
+  if (call.name === TOTAL_BAND_POWER_ACTIONS.channelNext) {
+    return selectBandPowerChannel(call.callId, state, 1);
+  }
+
+  if (call.name === TOTAL_BAND_POWER_ACTIONS.channelPrevious) {
+    return selectBandPowerChannel(call.callId, state, -1);
+  }
+
+  if (call.name === TOTAL_BAND_POWER_ACTIONS.channelSet) {
+    const channel = getChannelParam(call.params);
+    if (!channel || !state.availableChannels.includes(channel)) {
+      return { callId: call.callId, ok: true, result: { channel, found: false } };
+    }
+
+    state.onChannelSelect(channel);
+    return { callId: call.callId, ok: true, result: { channel, found: true } };
+  }
+
+  if (call.name === TOTAL_BAND_POWER_ACTIONS.windowNext) {
+    return selectBandPowerWindow(call.callId, state, 1);
+  }
+
+  if (call.name === TOTAL_BAND_POWER_ACTIONS.windowPrevious) {
+    return selectBandPowerWindow(call.callId, state, -1);
+  }
+
+  if (call.name === TOTAL_BAND_POWER_ACTIONS.windowSet) {
+    const windowIndex = getWindowIndexParam(call.params);
+    if (!isValidWindowIndex(windowIndex, state.predictionWindowCount)) {
+      return { callId: call.callId, ok: true, result: { windowIndex, found: false } };
+    }
+
+    state.onWindowSelect(windowIndex);
+    return { callId: call.callId, ok: true, result: { windowIndex, found: true } };
+  }
+
+  return { callId: call.callId, ok: false, error: { message: `Unknown total band power action: ${call.name}` } };
+}
+
+function selectBandPowerChannel(
+  callId: string,
+  state: BandPowerInteractionState,
+  direction: 1 | -1,
+): VacpActionResult {
+  const channel = getRelativeChannel(state, direction);
+  if (!channel) {
+    return { callId, ok: true, result: { channel: null, found: false } };
+  }
+
+  state.onChannelSelect(channel);
+  return { callId, ok: true, result: { channel, found: true } };
+}
+
+function getRelativeChannel(state: BandPowerInteractionState, direction: 1 | -1): ChannelId | null {
+  const channels = state.availableChannels;
+  if (!channels.length) return null;
+  const currentIndex = state.selectedChannel ? channels.indexOf(state.selectedChannel) : -1;
+  const nextIndex = (currentIndex + direction + channels.length) % channels.length;
+  return channels[nextIndex] ?? null;
+}
+
+function selectBandPowerWindow(
+  callId: string,
+  state: BandPowerInteractionState,
+  direction: 1 | -1,
+): VacpActionResult {
+  const windowIndex = getRelativeWindowIndex(state, direction);
+  if (windowIndex === null) {
+    return { callId, ok: true, result: { windowIndex: null, found: false } };
+  }
+
+  state.onWindowSelect(windowIndex);
+  return { callId, ok: true, result: { windowIndex, found: true } };
+}
+
+function getRelativeWindowIndex(state: BandPowerInteractionState, direction: 1 | -1): number | null {
+  if (state.predictionWindowCount <= 0) return null;
+  const currentIndex = state.selectedWindowIndex ?? -1;
+  return Math.max(0, Math.min(state.predictionWindowCount - 1, currentIndex + direction));
+}
+
+function isValidWindowIndex(windowIndex: number | null, predictionWindowCount: number): windowIndex is number {
+  return windowIndex !== null && windowIndex >= 0 && windowIndex < predictionWindowCount;
+}
+
+function getChannelParam(params: unknown): ChannelId | null {
+  if (!params || typeof params !== "object" || Array.isArray(params)) return null;
+  const channel = (params as { channel?: unknown }).channel;
+  return typeof channel === "string" && channel.length ? channel : null;
+}
+
+function getWindowIndexParam(params: unknown): number | null {
+  if (!params || typeof params !== "object" || Array.isArray(params)) return null;
+  const windowIndex = (params as { windowIndex?: unknown }).windowIndex;
+  return typeof windowIndex === "number" && Number.isInteger(windowIndex) ? windowIndex : null;
 }
 
 function getBandPowerStatus({
