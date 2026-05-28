@@ -36,10 +36,10 @@ const EMPTY_CLASS_COLORS: ModelClassColors = {
 
 export const MODEL_CLASS_COLORS = {
   Healthy: {
-    annotation: "rgb(21 128 61 / 22%)",
+    annotation: "rgb(22 163 74 / 30%)",
     distribution: "rgb(21 128 61 / 32%)",
-    embedding_fill: "rgb(21 128 61 / 22%)",
-    embedding_stroke: "#15803d",
+    embedding_fill: "rgb(22 163 74 / 30%)",
+    embedding_stroke: "#16a34a",
   },
   Alzheimer: {
     annotation: "rgb(225 29 72 / 28%)",
@@ -48,10 +48,28 @@ export const MODEL_CLASS_COLORS = {
     embedding_stroke: "#be123c",
   },
   "Frontotemporal Dementia": {
-    annotation: "rgb(251 191 36 / 34%)",
-    distribution: "rgb(251 191 36 / 42%)",
-    embedding_fill: "rgb(251 191 36 / 28%)",
-    embedding_stroke: "#b45309",
+    // Softer reddish violet:
+    annotation: "rgb(192 38 211 / 24%)",
+    distribution: "rgb(192 38 211 / 34%)",
+    embedding_fill: "rgb(192 38 211 / 22%)",
+    embedding_stroke: "#a21caf",
+
+    // Plum, closer to Alzheimer but darker:
+    // annotation: "rgb(190 24 93 / 24%)",
+    // distribution: "rgb(190 24 93 / 34%)",
+    // embedding_fill: "rgb(190 24 93 / 22%)",
+    // embedding_stroke: "#9d174d",
+
+    // Muted mauve:
+    // annotation: "rgb(147 51 234 / 22%)",
+    // distribution: "rgb(147 51 234 / 32%)",
+    // embedding_fill: "rgb(147 51 234 / 20%)",
+    // embedding_stroke: "#6b21a8",
+
+    // annotation: "rgb(168 85 247 / 24%)",
+    // distribution: "rgb(168 85 247 / 34%)",
+    // embedding_fill: "rgb(168 85 247 / 22%)",
+    // embedding_stroke: "#7e22ce",
   },
 } satisfies Record<string, ModelClassColors>;
 
