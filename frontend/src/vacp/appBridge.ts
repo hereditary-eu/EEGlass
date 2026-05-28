@@ -41,6 +41,7 @@ const ACTION_NAMES = [
   "patient_view.timeseries.window_next",
   "patient_view.timeseries.window_previous",
   "patient_view.timeseries.window_set",
+  "patient_view.timeseries.window_select_by_prediction",
   "patient_view.total_band_power.channel_next",
   "patient_view.total_band_power.channel_previous",
   "patient_view.total_band_power.channel_set",
