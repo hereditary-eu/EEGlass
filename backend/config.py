@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class CONFIG:
     # APP
-    TITLE = "All-in-on-EEG Backend"
+    TITLE = "EEGlass Backend"
 
     # CORS
     ORIGINS = [
