@@ -207,8 +207,8 @@ export function TotalBandPowerChart({
               { field: "percent", type: "quantitative", title: "Relative power (%)", format: ".2f" },
               { field: "relativePowerDb", type: "quantitative", title: "Selected window (dB)", format: ".1f" },
               { field: "meanDb", type: "quantitative", title: "Reference mean (dB)", format: ".1f" },
-              { field: "lower2SigmaDb", type: "quantitative", title: "-2sigma (dB)", format: ".1f" },
-              { field: "upper2SigmaDb", type: "quantitative", title: "+2sigma (dB)", format: ".1f" },
+              { field: "lower2SigmaDb", type: "quantitative", title: "-2σ (dB)", format: ".1f" },
+              { field: "upper2SigmaDb", type: "quantitative", title: "+2σ (dB)", format: ".1f" },
               { field: "statsSampleCount", type: "quantitative", title: "Reference samples", format: ".0f" },
             ],
           },
@@ -394,7 +394,7 @@ function createPowerScale() {
 }
 
 function getStatsModeLabel(mode: ModelBandPowerStatsMode): string {
-  return mode === "intra_patient" ? "2sigma range: patient windows" : "2sigma range: patient means";
+  return mode === "intra_patient" ? "2σ range: patient windows" : "2σ range: patient means";
 }
 
 function toRelativePowerDb(relativePower: number): number {
