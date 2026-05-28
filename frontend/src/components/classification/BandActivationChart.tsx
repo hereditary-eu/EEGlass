@@ -325,6 +325,11 @@ function createBandAxisEncoding() {
 function createActivationAxis() {
   return {
     title: "Value",
+    orient: "right",
+    ticks: false,
+    labelPadding: 4,
+    minExtent: 38,
+    maxExtent: 38,
     titleColor: "#5d6b78",
     titleFontSize: 10,
     labelColor: "#5d6b78",
