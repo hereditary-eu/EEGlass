@@ -41,7 +41,7 @@ DEFAULT_MODEL_CLASSES = tuple(
         label=label,
         compact_label={
             "Healthy": "H",
-            "Alzheimer": "Alz",
+            "Alzheimer Disease": "AD",
             "Frontotemporal Dementia": "FTD",
         }.get(label, label),
     )

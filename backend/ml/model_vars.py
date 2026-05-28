@@ -48,9 +48,20 @@ TRAINING_PARAMETERS_DEFAULT = {
 MODEL_CHANNELS = tuple(PARAMETERS_DEFAULT["x_columns"][1:])
 MODEL_CLASS_LABELS = {
     0: "Healthy",
-    1: "Alzheimer",
+    1: "Alzheimer Disease",
     2: "Frontotemporal Dementia",
 }
+MODEL_CLASS_LABEL_ALIASES = {
+    "Alzheimer": "Alzheimer Disease",
+}
+
+
+def normalize_model_class_label(label: str | None) -> str | None:
+    if label is None:
+        return None
+    return MODEL_CLASS_LABEL_ALIASES.get(label, label)
+
+
 MODEL_BANDS = (
     ("delta", 0.5, 4.0),
     ("theta", 4.0, 8.0),

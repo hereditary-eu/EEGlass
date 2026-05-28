@@ -190,7 +190,7 @@ export function ModelCard({
                 </div>
                 <div className="overview-model-threshold-grid">
                   <label>
-                    <span>Alzheimer</span>
+                    <span>Alzheimer Disease</span>
                     <input
                       type="number"
                       min="0"

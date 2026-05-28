@@ -35,6 +35,12 @@ const ACTION_NAMES = [
   "overview.patient_list.toggle_subject",
   "overview.patient_list.open_focused",
   "overview.patient_list.open_subject",
+  "patient_view.timeseries.channel_next",
+  "patient_view.timeseries.channel_previous",
+  "patient_view.timeseries.channel_set",
+  "patient_view.timeseries.window_next",
+  "patient_view.timeseries.window_previous",
+  "patient_view.timeseries.window_set",
   VACP_APPLY_STATE_ACTION,
 ] as const;
 
