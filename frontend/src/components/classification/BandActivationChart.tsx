@@ -4,8 +4,8 @@ import type { View } from "vega";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
-import { MODEL_BAND_LABELS } from "../../constants/eegModel";
-import type { ModelInfoResponse, TimeseriesSource } from "../../types";
+import { MODEL_BAND_LABELS, formatCompactClassLabel } from "../../constants/eegModel";
+import type { ModelClassEvidenceContribution, ModelInfoResponse, TimeseriesSource } from "../../types";
 import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
 import { useModelClassEvidence } from "./useModelClassEvidence";
@@ -23,6 +23,9 @@ interface BandActivationDatum {
   band: string;
   label: string;
   activation: number;
+  rawActivation: number;
+  multiplier: number | null;
+  classLabel: string;
   activationText: string;
 }
 
@@ -38,6 +41,7 @@ export function BandActivationChart({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
   const [plotHeight, setPlotHeight] = useState(132);
+  const [selectedClassLabel, setSelectedClassLabel] = useState<string | null>(null);
   useVegaLayoutResize(viewRef);
 
   const { evidence, isLoading, error } = useModelClassEvidence({
@@ -47,16 +51,35 @@ export function BandActivationChart({
     modelInfo,
     windowIndex,
   });
+  const classLabels = useMemo(() => {
+    const evidenceClassLabels = evidence?.bands[0]?.class_contributions.map((contribution) => contribution.class_label);
+    if (evidenceClassLabels?.length) {
+      return evidenceClassLabels;
+    }
+
+    return modelInfo?.classes.map((modelClass) => modelClass.label) ?? [];
+  }, [evidence, modelInfo]);
   const values = useMemo(
     () =>
-      evidence?.bands.map((band, order) => ({
-        order,
-        band: band.band,
-        label: MODEL_BAND_LABELS[band.band] ?? band.band,
-        activation: band.feature_value,
-        activationText: formatActivation(band.feature_value),
-      })) ?? [],
-    [evidence],
+      evidence?.bands.map((band, order) => {
+        const contribution = selectedClassLabel
+          ? band.class_contributions.find((item) => item.class_label === selectedClassLabel)
+          : null;
+        const multiplier = getClassMultiplier(band.feature_value, contribution);
+        const activation = contribution ? contribution.contribution : band.feature_value;
+
+        return {
+          order,
+          band: band.band,
+          label: MODEL_BAND_LABELS[band.band] ?? band.band,
+          activation,
+          rawActivation: band.feature_value,
+          multiplier,
+          classLabel: selectedClassLabel ?? "Raw activation",
+          activationText: formatActivation(activation),
+        };
+      }) ?? [],
+    [evidence, selectedClassLabel],
   );
   const valuesRef = useRef<typeof values>([]);
   const status = getActivationStatus({ error, evidence, isLoading });
@@ -64,6 +87,12 @@ export function BandActivationChart({
   useEffect(() => {
     valuesRef.current = values;
   }, [values]);
+
+  useEffect(() => {
+    if (selectedClassLabel && classLabels.length && !classLabels.includes(selectedClassLabel)) {
+      setSelectedClassLabel(null);
+    }
+  }, [classLabels, selectedClassLabel]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -88,7 +117,7 @@ export function BandActivationChart({
     }
 
     container.innerHTML = "";
-    if (!values.length || error || plotHeight <= 0) {
+    if (plotHeight <= 0) {
       viewRef.current = null;
       return;
     }
@@ -103,7 +132,7 @@ export function BandActivationChart({
         resize: true,
       },
       background: "transparent",
-      data: { name: ACTIVATION_DATA_NAME, values },
+      data: { name: ACTIVATION_DATA_NAME, values: [] },
       layer: [
         {
           mark: {
@@ -144,7 +173,10 @@ export function BandActivationChart({
             },
             tooltip: [
               { field: "band", type: "nominal", title: "Band" },
-              { field: "activation", type: "quantitative", title: "Activation Z_f", format: ".4f" },
+              { field: "classLabel", type: "nominal", title: "View" },
+              { field: "rawActivation", type: "quantitative", title: "Activation Z_f", format: ".4f" },
+              { field: "multiplier", type: "quantitative", title: "Class multiplier", format: "+.4f" },
+              { field: "activation", type: "quantitative", title: "Displayed value", format: "+.4f" },
               { field: "activationText", type: "nominal", title: "Displayed" },
             ],
           },
@@ -167,6 +199,15 @@ export function BandActivationChart({
         if (!finalized) {
           viewRef.current = result.view;
           resizeVegaView(result.view);
+          result.view
+            .change(
+              ACTIVATION_DATA_NAME,
+              changeset()
+                .remove(() => true)
+                .insert(valuesRef.current),
+            )
+            .runAsync()
+            .catch(() => undefined);
         }
       })
       .catch(() => undefined);
@@ -180,11 +221,14 @@ export function BandActivationChart({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [error, plotHeight, values.length]);
+  }, [plotHeight]);
 
   useEffect(() => {
     const view = viewRef.current;
-    if (!view || !values.length) {
+    if (!view) {
+      return;
+    }
+    if (isLoading && windowIndex !== null && !values.length) {
       return;
     }
 
@@ -193,11 +237,11 @@ export function BandActivationChart({
         ACTIVATION_DATA_NAME,
         changeset()
           .remove(() => true)
-          .insert(valuesRef.current),
+          .insert(values),
       )
       .runAsync()
       .catch(() => undefined);
-  }, [values]);
+  }, [error, isLoading, values, windowIndex]);
 
   return (
     <div className="classification-band-activation-chart">
@@ -213,12 +257,40 @@ export function BandActivationChart({
           </p>
         </div>
         <span className="classification-band-activation-chart-stage">
-          Encoder output <MathFormula tex={"Z_f"} /> before dense weights
+          {selectedClassLabel ? (
+            <>
+              <MathFormula tex={"Z_f"} /> x dense multiplier
+            </>
+          ) : (
+            <>
+              Encoder output <MathFormula tex={"Z_f"} /> before dense weights
+            </>
+          )}
           <ComponentStatusIndicator status={status.status} label={status.label} />
         </span>
       </div>
 
       <div className="classification-band-activation-chart-shell">
+        {classLabels.length ? (
+          <div className="classification-band-activation-class-selector" aria-label="Band activation class multiplier">
+            {classLabels.map((classLabel) => {
+              const isSelected = classLabel === selectedClassLabel;
+              return (
+                <button
+                  key={classLabel}
+                  type="button"
+                  className={`classification-band-activation-class-button${
+                    isSelected ? " classification-band-activation-class-button--active" : ""
+                  }`}
+                  title={isSelected ? "Clear class multiplier" : `Apply ${classLabel} dense multipliers`}
+                  onClick={() => setSelectedClassLabel((current) => (current === classLabel ? null : classLabel))}
+                >
+                  {formatCompactClassLabel(classLabel, modelInfo?.classes)}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
         <div className="classification-band-activation-chart-plot" ref={containerRef} />
         {!values.length || error ? (
           <div
@@ -252,7 +324,7 @@ function createBandAxisEncoding() {
 
 function createActivationAxis() {
   return {
-    title: "Activation",
+    title: "Value",
     titleColor: "#5d6b78",
     titleFontSize: 10,
     labelColor: "#5d6b78",
@@ -274,6 +346,18 @@ function formatActivation(value: number): string {
   }
 
   return value.toFixed(3);
+}
+
+function getClassMultiplier(
+  activation: number,
+  contribution: ModelClassEvidenceContribution | null | undefined,
+): number | null {
+  if (!contribution || activation === 0) {
+    return null;
+  }
+
+  const multiplier = contribution.contribution / activation;
+  return Number.isFinite(multiplier) ? multiplier : null;
 }
 
 function getActivationStatus({

@@ -313,10 +313,49 @@
   min-width: 0;
   min-height: 0;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.2rem;
   border: 1px solid #e3ebf1;
   border-radius: 10px;
   background: linear-gradient(180deg, #fbfdff 0%, #f7fafc 100%);
-  padding: 0.25rem 0.45rem 0.05rem 0.2rem;
+  padding: 0.28rem 0.45rem 0.05rem 0.2rem;
+}
+
+.classification-band-activation-class-selector {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #d7e0e8;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 82%);
+}
+
+.classification-band-activation-class-button {
+  border: 0;
+  border-right: 1px solid #d7e0e8;
+  border-radius: 0;
+  background: transparent;
+  color: #748391;
+  padding: 0.13rem 0.34rem;
+  font-size: 0.58rem;
+  font-weight: 750;
+  line-height: 1.1;
+  cursor: pointer;
+}
+
+.classification-band-activation-class-button:last-child {
+  border-right: 0;
+}
+
+.classification-band-activation-class-button:hover {
+  background: #f8fbfd;
+  color: #334155;
+}
+
+.classification-band-activation-class-button--active {
+  background: rgb(14 116 144 / 10%);
+  color: #0f5f76;
 }
 
 .classification-band-activation-chart-plot {
