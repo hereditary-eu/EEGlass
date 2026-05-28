@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { ModelService } from "../../services/ModelService";
 import { useAppStore } from "../../stores/useAppStore";
+import { registerVacpScalpTopology } from "../../vacp/registerScalpTopology";
 import type {
   ChannelId,
   ModelInfoResponse,
@@ -43,6 +44,31 @@ export function EegScalpTopologyPanel({
   const selectedTimeseriesBandFilter = useAppStore((state) => state.selectedTimeseriesBandFilter);
   const setSelectedTimeseriesBandFilter = useAppStore((state) => state.setSelectedTimeseriesBandFilter);
   const modelName = modelInfo?.name ?? undefined;
+
+  useEffect(() => {
+    return registerVacpScalpTopology({
+      datasetId,
+      subjectId,
+      source,
+      windowIndex,
+      selectedBand: selectedScalpBand,
+      applyBandFilterOnClick,
+      selectedTimeseriesBandFilter,
+      selectBand: setSelectedScalpBand,
+      setApplyBandFilterOnClick,
+      setSelectedTimeseriesBandFilter,
+    });
+  }, [
+    applyBandFilterOnClick,
+    datasetId,
+    selectedScalpBand,
+    selectedTimeseriesBandFilter,
+    setSelectedScalpBand,
+    setSelectedTimeseriesBandFilter,
+    source,
+    subjectId,
+    windowIndex,
+  ]);
 
   useEffect(() => {
     if (applyBandFilterOnClick) {
