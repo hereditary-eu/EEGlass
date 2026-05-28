@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 
 import { ClassLabelCountCell, CompactGridSelectorRow, DrillButton } from "../../components/ui";
 import { formatCompactClassLabel } from "../../constants/eegModel";
 import type { ModelInfoResponse, ModelPredictionSummary, TimeseriesSubjectInfo } from "../../types";
+import { registerVacpPatientList } from "../../vacp/registerPatientList";
 import {
   formatMeanConfidence,
   getClassDistributionStyle,
@@ -63,13 +64,73 @@ export function PatientList({
     return () => window.cancelAnimationFrame(animationFrame);
   }, [focusSubjectId, onFocusSubjectHandled, subjects]);
 
+  const focusSubjectById = useCallback((subjectId: string) => {
+    window.requestAnimationFrame(() => {
+      document.getElementById(getPatientRowId(subjectId))?.focus();
+    });
+  }, []);
+
+  const getFocusedSubjectId = useCallback(() => {
+    const activeElement = document.activeElement;
+    if (!(activeElement instanceof HTMLElement)) {
+      return null;
+    }
+
+    return (
+      subjects.find((subject) => document.getElementById(getPatientRowId(subject.id)) === activeElement)?.id ?? null
+    );
+  }, [subjects]);
+
+  const toggleSubjectById = useCallback(
+    (subjectId: string) => {
+      onSelectedSubjectIdChange(selectedSubjectId === subjectId ? null : subjectId);
+    },
+    [onSelectedSubjectIdChange, selectedSubjectId],
+  );
+
+  const openSubjectById = useCallback(
+    (subjectId: string) => {
+      const subject = subjects.find((item) => item.id === subjectId);
+      if (subject) {
+        onOpenPatientView(subject);
+      }
+    },
+    [onOpenPatientView, subjects],
+  );
+
+  useEffect(() => {
+    return registerVacpPatientList({
+      subjects,
+      selectedDatasetId,
+      isLoadingSubjects,
+      predictionSummariesBySubject,
+      hoveredSubjectId,
+      selectedSubjectId,
+      getFocusedSubjectId,
+      focusSubject: focusSubjectById,
+      toggleSubject: toggleSubjectById,
+      openSubject: openSubjectById,
+    });
+  }, [
+    focusSubjectById,
+    getFocusedSubjectId,
+    hoveredSubjectId,
+    isLoadingSubjects,
+    openSubjectById,
+    predictionSummariesBySubject,
+    selectedDatasetId,
+    selectedSubjectId,
+    subjects,
+    toggleSubjectById,
+  ]);
+
   const focusPatientRow = (subjectIndex: number) => {
     const nextSubject = subjects[subjectIndex];
     if (!nextSubject) {
       return;
     }
 
-    document.getElementById(getPatientRowId(nextSubject.id))?.focus();
+    focusSubjectById(nextSubject.id);
   };
 
   const handlePatientNavigationKey = (event: KeyboardEvent<HTMLDivElement>, subjectIndex: number) => {

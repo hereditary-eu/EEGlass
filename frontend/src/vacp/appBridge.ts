@@ -28,6 +28,13 @@ const ACTION_NAMES = [
   "vega_lite.clear_selection",
   "vega_lite.hover_tooltip",
   "vega.set_signal",
+  "overview.patient_list.focus_next",
+  "overview.patient_list.focus_previous",
+  "overview.patient_list.focus_subject",
+  "overview.patient_list.toggle_focused",
+  "overview.patient_list.toggle_subject",
+  "overview.patient_list.open_focused",
+  "overview.patient_list.open_subject",
   VACP_APPLY_STATE_ACTION,
 ] as const;
 
