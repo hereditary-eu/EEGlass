@@ -34,14 +34,14 @@ const EMPTY_CLASS_COLORS: ModelClassColors = {
   embedding_stroke: "#64748b",
 };
 
-export const MODEL_CLASS_COLORS = {
+export const MODEL_CLASS_COLORS: Record<string, ModelClassColors> = {
   Healthy: {
-    annotation: "rgb(21 128 61 / 22%)",
+    annotation: "rgb(22 163 74 / 30%)",
     distribution: "rgb(21 128 61 / 32%)",
-    embedding_fill: "rgb(21 128 61 / 22%)",
-    embedding_stroke: "#15803d",
+    embedding_fill: "rgb(22 163 74 / 30%)",
+    embedding_stroke: "#16a34a",
   },
-  Alzheimer: {
+  "Alzheimer Disease": {
     annotation: "rgb(225 29 72 / 28%)",
     distribution: "rgb(225 29 72 / 34%)",
     embedding_fill: "rgb(225 29 72 / 22%)",
@@ -54,7 +54,7 @@ export const MODEL_CLASS_COLORS = {
     embedding_fill: "rgb(192 38 211 / 22%)",
     embedding_stroke: "#a21caf",
 
-    // Plum, closer to Alzheimer but darker:
+    // Plum, closer to Alzheimer Disease but darker:
     // annotation: "rgb(190 24 93 / 24%)",
     // distribution: "rgb(190 24 93 / 34%)",
     // embedding_fill: "rgb(190 24 93 / 22%)",

@@ -16,7 +16,7 @@ from backend.services.prediction_cache_artifacts import read_json, write_json_at
 
 
 HEALTHY_LABEL = "Healthy"
-ALZHEIMER_LABEL = "Alzheimer"
+ALZHEIMER_LABEL = "Alzheimer Disease"
 FTD_LABEL = "Frontotemporal Dementia"
 
 

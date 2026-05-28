@@ -44,7 +44,7 @@ export function AppLayout() {
       <div className={isPatientViewRoute ? "app-layout app-layout--patient-view" : "app-layout"}>
         <header className="app-header">
           <div>
-            <p className="app-eyebrow">All In On EEG</p>
+            <p className="app-eyebrow">EEGlass</p>
             <div className="app-title-row">
               <h1 className="app-title">{pageTitle}</h1>
               {isPatientViewRoute && patientViewHeaderDetails ? (

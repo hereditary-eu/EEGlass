@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import List, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
+from backend.ml.model_vars import normalize_model_class_label
 from backend.pydantic_models.timeseries import TimeseriesSource
 
 
@@ -37,6 +38,11 @@ class ModelPredictionClassWindowCount(BaseModel):
     class_label: str
     count: int
 
+    @field_validator("class_label")
+    @classmethod
+    def normalize_class_label(cls, value: str) -> str:
+        return normalize_model_class_label(value) or value
+
 
 class ModelPredictionSummary(BaseModel):
     subject_id: str
@@ -45,6 +51,11 @@ class ModelPredictionSummary(BaseModel):
     mean_confidence: float | None = None
     total_windows: int = 0
     windows_per_class: List[ModelPredictionClassWindowCount]
+
+    @field_validator("true_label", "predicted_label")
+    @classmethod
+    def normalize_optional_class_label(cls, value: str | None) -> str | None:
+        return normalize_model_class_label(value)
 
 
 class ModelPredictionCacheStatus(BaseModel):

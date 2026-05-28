@@ -1,11 +1,17 @@
 import { useEffect } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 
-import { BandActivationChart, ClassContributionsPanel, EegScalpTopologyPanel, TotalBandPowerChart } from "../components";
+import {
+  BandActivationChart,
+  ClassContributionsPanel,
+  EegScalpTopologyPanel,
+  TotalBandPowerChart,
+} from "../components";
 import { MODEL_BANDS } from "../constants/eegModel";
 import { useTimeseriesData } from "../hooks/useTimeseriesData";
 import type { PatientViewOutletContext } from "../layouts/AppLayout";
 import { useAppStore } from "../stores/useAppStore";
+import { registerVacpTimeseries } from "../vacp/registerTimeseries";
 import { TimeseriesSlot } from "./TimeseriesSlot";
 import { WindowEmbeddingPanel } from "./WindowEmbeddingPanel";
 
@@ -15,6 +21,42 @@ export function PatientView() {
   const { setPatientViewHeaderDetails } = useOutletContext<PatientViewOutletContext>();
   const ts = useTimeseriesData({ datasetId, subjectId });
   const setSelectedScalpBand = useAppStore((state) => state.setSelectedScalpBand);
+
+  useEffect(() => {
+    if (!datasetId || !subjectId) {
+      return;
+    }
+
+    return registerVacpTimeseries({
+      datasetId: ts.datasetId,
+      subjectId: ts.subjectId,
+      source: ts.source,
+      availableChannels: ts.availableChannels,
+      activeChannels: ts.activeChannels,
+      hoveredChannel: ts.hoveredChannel,
+      inferenceResult: ts.inferenceResult,
+      hoveredPredictionWindowIndex: ts.hoveredPredictionWindowIndex,
+      lockedPredictionWindowIndex: ts.lockedPredictionWindowIndex,
+      selectedPredictionWindowIndex: ts.selectedPredictionWindowIndex,
+      selectChannel: ts.handleSingleChannelSelect,
+      selectWindow: ts.setLockedPredictionWindowIndex,
+    });
+  }, [
+    datasetId,
+    subjectId,
+    ts.activeChannels,
+    ts.availableChannels,
+    ts.datasetId,
+    ts.handleSingleChannelSelect,
+    ts.hoveredChannel,
+    ts.hoveredPredictionWindowIndex,
+    ts.inferenceResult,
+    ts.lockedPredictionWindowIndex,
+    ts.selectedPredictionWindowIndex,
+    ts.setLockedPredictionWindowIndex,
+    ts.source,
+    ts.subjectId,
+  ]);
 
   useEffect(() => {
     if (!datasetId || !subjectId) {

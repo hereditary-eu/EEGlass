@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Dict, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
+from backend.ml.model_vars import normalize_model_class_label
 from backend.pydantic_models.band_power import (
     ModelBandPowerRequest,
     ModelBandPowerResponse,
@@ -72,6 +73,16 @@ class WindowPrediction(BaseModel):
     predicted_label: str
     confidence: float
     probabilities: Dict[str, float]
+
+    @field_validator("predicted_label")
+    @classmethod
+    def normalize_predicted_label(cls, value: str) -> str:
+        return normalize_model_class_label(value) or value
+
+    @field_validator("probabilities")
+    @classmethod
+    def normalize_probability_labels(cls, value: Dict[str, float]) -> Dict[str, float]:
+        return {normalize_model_class_label(label) or label: probability for label, probability in value.items()}
 
 
 class ModelInferenceResponse(BaseModel):

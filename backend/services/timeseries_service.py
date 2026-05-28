@@ -27,7 +27,7 @@ _BAND_FILTER_LIMITS: dict[TimeseriesBandFilter, tuple[float, float]] = {
     band_name: (start_hz, end_hz) for band_name, start_hz, end_hz in MODEL_BANDS
 }
 _SUBJECT_GROUP_LABELS = {
-    "A": "Alzheimer",
+    "A": "Alzheimer Disease",
     "F": "Frontotemporal Dementia",
     "C": "Healthy",
 }
