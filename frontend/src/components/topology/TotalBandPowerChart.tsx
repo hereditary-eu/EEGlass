@@ -1,16 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { changeset } from "vega";
 import type { View } from "vega";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 import type { VacpActionCall, VacpActionDescriptor, VacpActionResult, VacpRef } from "@vacp/core";
 
-import { MODEL_BAND_LABELS } from "../../constants/eegModel";
+import {
+  MODEL_BAND_LABELS,
+  formatCompactClassLabel,
+  getEmbeddingClassColors,
+  getModelClassLabels,
+} from "../../constants/eegModel";
 import type {
   ChannelId,
   ModelBandPowerResponse,
   ModelBandPowerStatsMode,
   ModelBandPowerStatsResponse,
+  ModelClassPresentation,
 } from "../../types";
 import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 import { createVacpChartRefPrefix } from "../../vacp/appBridge";
@@ -21,23 +27,28 @@ interface TotalBandPowerChartProps {
   bandPower: ModelBandPowerResponse | null;
   bandPowerStats: ModelBandPowerStatsResponse | null;
   bandPowerStatsMode: ModelBandPowerStatsMode;
+  bandPowerStatsCohortLabel: string | null;
   isInterStatsUnavailable: boolean;
   isLoading: boolean;
   isLoadingStats: boolean;
   error: string | null;
   statsError: string | null;
+  modelClasses: ModelClassPresentation[];
   selectedChannels: ChannelId[];
   selectedWindowIndex: number | null;
   predictionWindowCount: number;
   onChannelSelect: (channel: ChannelId) => void;
   onWindowSelect: (windowIndex: number) => void;
   onBandPowerStatsModeChange: (mode: ModelBandPowerStatsMode) => void;
+  onBandPowerStatsCohortLabelChange: (label: string | null) => void;
 }
 
 const MIN_RELATIVE_POWER_FOR_DB = 1e-6;
 const MIN_DB_DOMAIN = -40;
 const BAND_POWER_DATA_NAME = "bandPowerValues";
 const TOTAL_BAND_POWER_CHART_ID = "patient-view/total-band-power";
+const DEFAULT_RANGE_FILL = "rgb(14 116 144 / 13%)";
+const DEFAULT_RANGE_STROKE = "#64748b";
 const TOTAL_BAND_POWER_ACTIONS = {
   channelNext: "patient_view.total_band_power.channel_next",
   channelPrevious: "patient_view.total_band_power.channel_previous",
@@ -60,17 +71,20 @@ export function TotalBandPowerChart({
   bandPower,
   bandPowerStats,
   bandPowerStatsMode,
+  bandPowerStatsCohortLabel,
   isInterStatsUnavailable,
   isLoading,
   isLoadingStats,
   error,
   statsError,
+  modelClasses,
   selectedChannels,
   selectedWindowIndex,
   predictionWindowCount,
   onChannelSelect,
   onWindowSelect,
   onBandPowerStatsModeChange,
+  onBandPowerStatsCohortLabelChange,
 }: TotalBandPowerChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
@@ -129,10 +143,23 @@ export function TotalBandPowerChart({
   const valuesRef = useRef<typeof values>([]);
   const hasStats = values.some((value) => value.lower2SigmaDb !== null && value.upper2SigmaDb !== null);
   const status = getBandPowerStatus({ bandPower, error, isLoading, isLoadingStats, statsError });
+  const classLabels = useMemo(() => getModelClassLabels(modelClasses), [modelClasses]);
+  const displayedCohortLabel =
+    bandPowerStats?.mode === "inter_patient" ? (bandPowerStats.cohort_label ?? null) : null;
+  const rangeColors = useMemo(
+    () => getRangeColors(displayedCohortLabel, modelClasses),
+    [displayedCohortLabel, modelClasses],
+  );
 
   useEffect(() => {
     valuesRef.current = values;
   }, [values]);
+
+  useEffect(() => {
+    if (bandPowerStatsCohortLabel && !classLabels.includes(bandPowerStatsCohortLabel)) {
+      onBandPowerStatsCohortLabelChange(null);
+    }
+  }, [bandPowerStatsCohortLabel, classLabels, onBandPowerStatsCohortLabelChange]);
 
   useEffect(() => {
     interactionRef.current = {
@@ -191,8 +218,7 @@ export function TotalBandPowerChart({
                 mark: {
                   type: "area",
                   interpolate: "monotone",
-                  color: "#0e7490",
-                  opacity: 0.13,
+                  color: rangeColors.fill,
                 },
                 encoding: {
                   x: createBandAxisEncoding(),
@@ -209,7 +235,7 @@ export function TotalBandPowerChart({
                 mark: {
                   type: "line",
                   interpolate: "monotone",
-                  color: "#64748b",
+                  color: rangeColors.stroke,
                   strokeDash: [4, 3],
                   strokeWidth: 1.5,
                 },
@@ -356,7 +382,7 @@ export function TotalBandPowerChart({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [error, hasStats, plotHeight, values.length]);
+  }, [error, hasStats, plotHeight, rangeColors.fill, rangeColors.stroke, values.length]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -411,24 +437,52 @@ export function TotalBandPowerChart({
 
         <div className="topology-bandpower-plot-shell">
           <div className="topology-bandpower-range-controls" aria-label="Band power reference range">
-            <span>{getStatsModeLabel(bandPowerStatsMode)}</span>
-            <div className="topology-bandpower-range-switch">
-              <button
-                type="button"
-                className={bandPowerStatsMode === "intra_patient" ? "topology-bandpower-range-mode--active" : ""}
-                onClick={() => onBandPowerStatsModeChange("intra_patient")}
-              >
-                Intra
-              </button>
-              <button
-                type="button"
-                className={bandPowerStatsMode === "inter_patient" ? "topology-bandpower-range-mode--active" : ""}
-                disabled={isInterStatsUnavailable}
-                title={isInterStatsUnavailable ? "Run Compute all to enable inter-patient ranges." : undefined}
-                onClick={() => onBandPowerStatsModeChange("inter_patient")}
-              >
-                Inter
-              </button>
+            <span>{getStatsModeLabel(bandPowerStatsMode, bandPowerStatsCohortLabel, modelClasses)}</span>
+            <div className="topology-bandpower-range-actions">
+              <div className="topology-bandpower-range-switch">
+                <button
+                  type="button"
+                  className={bandPowerStatsMode === "intra_patient" ? "topology-bandpower-range-mode--active" : ""}
+                  onClick={() => onBandPowerStatsModeChange("intra_patient")}
+                >
+                  Intra
+                </button>
+                <button
+                  type="button"
+                  className={bandPowerStatsMode === "inter_patient" ? "topology-bandpower-range-mode--active" : ""}
+                  disabled={isInterStatsUnavailable}
+                  title={isInterStatsUnavailable ? "Run Compute all to enable inter-patient ranges." : undefined}
+                  onClick={() => onBandPowerStatsModeChange("inter_patient")}
+                >
+                  Inter
+                </button>
+              </div>
+              {bandPowerStatsMode === "inter_patient" && classLabels.length ? (
+                <div className="topology-bandpower-cohort-selector" aria-label="Inter-patient cohort range">
+                  {classLabels.map((classLabel) => {
+                    const isSelected = classLabel === bandPowerStatsCohortLabel;
+                    const colors = getEmbeddingClassColors(classLabel, modelClasses);
+                    return (
+                      <button
+                        key={classLabel}
+                        type="button"
+                        className={`topology-bandpower-cohort-button${
+                          isSelected ? " topology-bandpower-cohort-button--active" : ""
+                        }`}
+                        style={
+                          isSelected
+                            ? { backgroundColor: colors.fill, color: colors.stroke, borderColor: colors.stroke }
+                            : { borderColor: colors.fill }
+                        }
+                        title={isSelected ? "Show all-patient range" : `Show ${classLabel} inter-patient range`}
+                        onClick={() => onBandPowerStatsCohortLabelChange(isSelected ? null : classLabel)}
+                      >
+                        {formatCompactClassLabel(classLabel, modelClasses)}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
           </div>
           <div className="topology-bandpower-plot-frame">
@@ -439,11 +493,17 @@ export function TotalBandPowerChart({
                 Selected window value
               </span>
               <span className="topology-bandpower-legend-item">
-                <span className="topology-bandpower-legend-mark topology-bandpower-legend-mark--mean" />
+                <span
+                  className="topology-bandpower-legend-mark topology-bandpower-legend-mark--mean"
+                  style={{ "--range-stroke": rangeColors.stroke } as CSSProperties}
+                />
                 Reference mean
               </span>
               <span className="topology-bandpower-legend-item">
-                <span className="topology-bandpower-legend-mark topology-bandpower-legend-mark--range" />
+                <span
+                  className="topology-bandpower-legend-mark topology-bandpower-legend-mark--range"
+                  style={{ background: rangeColors.fill }}
+                />
                 +/-2sigma range
               </span>
             </div>
@@ -496,8 +556,29 @@ function createPowerScale() {
   };
 }
 
-function getStatsModeLabel(mode: ModelBandPowerStatsMode): string {
-  return mode === "intra_patient" ? "2σ range: patient windows" : "2σ range: patient means";
+function getStatsModeLabel(
+  mode: ModelBandPowerStatsMode,
+  cohortLabel: string | null,
+  modelClasses: ModelClassPresentation[],
+): string {
+  if (mode === "intra_patient") {
+    return "2sigma range: patient windows";
+  }
+
+  return cohortLabel
+    ? `2sigma range: ${formatCompactClassLabel(cohortLabel, modelClasses)} patient means`
+    : "2sigma range: patient means";
+}
+
+function getRangeColors(
+  cohortLabel: string | null,
+  modelClasses: ModelClassPresentation[],
+): { fill: string; stroke: string } {
+  if (!cohortLabel) {
+    return { fill: DEFAULT_RANGE_FILL, stroke: DEFAULT_RANGE_STROKE };
+  }
+
+  return getEmbeddingClassColors(cohortLabel, modelClasses);
 }
 
 function toRelativePowerDb(relativePower: number): number {

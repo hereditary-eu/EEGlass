@@ -347,6 +347,7 @@ export interface ModelBandPowerStatsResponse {
   subject_id: string;
   source: TimeseriesSource;
   mode: ModelBandPowerStatsMode;
+  cohort_label?: string | null;
   unit_label: string;
   subject_count: number;
   window_count: number;

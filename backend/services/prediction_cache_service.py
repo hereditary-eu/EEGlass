@@ -373,6 +373,7 @@ class PredictionCacheService:
         model_name: str = DEFAULT_MODEL_NAME,
         source: TimeseriesSource = "derivatives",
         mode: Literal["intra_patient", "inter_patient"] = "intra_patient",
+        cohort_label: str | None = None,
     ) -> ModelBandPowerStatsResponse:
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
         checkpoint_key = cls._checkpoint_key(checkpoint_signature)
@@ -413,6 +414,7 @@ class PredictionCacheService:
         if not available_subject_ids or not set(available_subject_ids).issubset(completed_subjects):
             raise ModelNotFoundError("Inter-patient band-power statistics require a completed dataset compute job.")
 
+        normalized_cohort_label = cohort_label.strip() if cohort_label else None
         patient_mean_values: list[np.ndarray] = []
         for cohort_subject_id in available_subject_ids:
             artifact = cls._read_prediction_artifact(dataset_id, model_name, checkpoint_key, cohort_subject_id, source)
@@ -426,12 +428,19 @@ class PredictionCacheService:
                 checkpoint_key=checkpoint_key,
             ):
                 raise ModelNotFoundError("Inter-patient band-power statistics require a completed dataset compute job.")
+
+            if normalized_cohort_label:
+                summary = ModelPredictionSummary(**artifact["summary"])
+                if summary.true_label != normalized_cohort_label:
+                    continue
+
             patient_mean_values.append(extract_band_power_mean_values(artifact["band_power_stats"]))
 
         return build_inter_patient_band_power_stats_response(
             dataset_id=dataset_id,
             subject_id=subject_id,
             source=source,
+            cohort_label=normalized_cohort_label,
             patient_mean_values=patient_mean_values,
         )
 

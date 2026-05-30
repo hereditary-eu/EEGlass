@@ -492,7 +492,7 @@
 
 .topology-bandpower-range-controls {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
   color: #64748b;
@@ -504,6 +504,48 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.topology-bandpower-range-actions {
+  display: grid;
+  justify-items: end;
+  gap: 0.18rem;
+}
+
+.topology-bandpower-cohort-selector {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #d7e0e8;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 82%);
+}
+
+.topology-bandpower-cohort-button {
+  border: 0;
+  border-right: 1px solid #d7e0e8;
+  border-radius: 0;
+  background: transparent;
+  color: #748391;
+  padding: 0.13rem 0.34rem;
+  font-size: 0.58rem;
+  font-weight: 750;
+  line-height: 1.1;
+  cursor: pointer;
+}
+
+.topology-bandpower-cohort-button:last-child {
+  border-right: 0;
+}
+
+.topology-bandpower-cohort-button:hover {
+  background: #f8fbfd;
+  color: #334155;
+}
+
+.topology-bandpower-cohort-button--active {
+  box-shadow: inset 0 0 0 1px currentColor;
 }
 
 .topology-bandpower-range-switch {
@@ -594,7 +636,7 @@
 }
 
 .topology-bandpower-legend-mark--mean::before {
-  border-top-color: #64748b;
+  border-top-color: var(--range-stroke, #64748b);
   border-top-style: dashed;
 }
 

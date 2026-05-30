@@ -194,17 +194,20 @@ export function PatientView() {
           bandPower={ts.bandPower}
           bandPowerStats={ts.bandPowerStats}
           bandPowerStatsMode={ts.bandPowerStatsMode}
+          bandPowerStatsCohortLabel={ts.bandPowerStatsCohortLabel}
           isInterStatsUnavailable={ts.isInterBandPowerStatsUnavailable}
           isLoading={ts.isLoadingBandPower}
           isLoadingStats={ts.isLoadingBandPowerStats}
           error={ts.bandPowerError}
           statsError={ts.bandPowerStatsError}
+          modelClasses={ts.modelInfo?.classes ?? []}
           selectedChannels={ts.activeChannels}
           selectedWindowIndex={ts.lockedPredictionWindowIndex}
           predictionWindowCount={ts.inferenceResult?.predictions.length ?? 0}
           onChannelSelect={ts.handleSingleChannelSelect}
           onWindowSelect={ts.setLockedPredictionWindowIndex}
           onBandPowerStatsModeChange={ts.setBandPowerStatsMode}
+          onBandPowerStatsCohortLabelChange={ts.setBandPowerStatsCohortLabel}
         />
       </article>
 
