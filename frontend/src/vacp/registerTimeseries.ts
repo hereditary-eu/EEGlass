@@ -28,12 +28,14 @@ interface RegisterVacpTimeseriesArgs {
   hoveredPredictionWindowIndex: number | null;
   lockedPredictionWindowIndex: number | null;
   selectedPredictionWindowIndex: number | null;
+  navigateBack: () => void;
   selectChannel: (channel: ChannelId) => void;
   selectWindow: (windowIndex: number) => void;
 }
 
 const TIMESERIES_CHART_ID = "patient-view/timeseries";
 const TIMESERIES_ACTIONS = {
+  navigateBack: "patient_view.navigate_back",
   channelNext: "patient_view.timeseries.channel_next",
   channelPrevious: "patient_view.timeseries.channel_previous",
   channelSet: "patient_view.timeseries.channel_set",
@@ -49,6 +51,14 @@ export function registerVacpTimeseries(args: RegisterVacpTimeseriesArgs): () => 
   const windowRef = `${refPrefix}/window` as VacpRef;
   const globalKey = createPrivateVacpGlobalKey(TIMESERIES_CHART_ID);
   const actions = new VacpActionRegistry();
+
+  actions.register(
+    createActionDescriptor(TIMESERIES_ACTIONS.navigateBack, refPrefix, "Return to this dataset's patient directory."),
+    () => {
+      args.navigateBack();
+      return { navigated: true, datasetId: args.datasetId, subjectId: args.subjectId };
+    },
+  );
 
   actions.register(
     createActionDescriptor(TIMESERIES_ACTIONS.channelNext, channelRef, "Select the next EEG channel."),
@@ -200,6 +210,11 @@ function buildCapabilitiesSnapshot(
         { from: refPrefix, to: windowRef, kind: "contains" },
       ],
       actions: [
+        createActionDescriptor(
+          TIMESERIES_ACTIONS.navigateBack,
+          refPrefix,
+          "Return to this dataset's patient directory.",
+        ),
         createActionDescriptor(TIMESERIES_ACTIONS.channelNext, channelRef, "Select the next EEG channel."),
         createActionDescriptor(TIMESERIES_ACTIONS.channelPrevious, channelRef, "Select the previous EEG channel."),
         createActionDescriptor(TIMESERIES_ACTIONS.channelSet, channelRef, "Select a specific EEG channel.", {
@@ -289,7 +304,7 @@ function createActionDescriptor(
   return {
     name,
     targetRef,
-    title: name.replace(/^patient_view\.timeseries\./, "").replace(/_/g, " "),
+    title: name.replace(/^patient_view\.(?:timeseries\.)?/, "").replace(/_/g, " "),
     description,
     parameters: {
       type: "object",

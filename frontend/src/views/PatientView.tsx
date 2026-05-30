@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 
 import {
@@ -22,6 +22,20 @@ export function PatientView() {
   const ts = useTimeseriesData({ datasetId, subjectId });
   const setSelectedScalpBand = useAppStore((state) => state.setSelectedScalpBand);
 
+  const returnToPatientDirectory = useCallback(() => {
+    if (!datasetId || !subjectId) {
+      return;
+    }
+
+    navigate("/", {
+      state: {
+        datasetId,
+        directoryLevel: "patients",
+        selectedSubjectId: subjectId,
+      },
+    });
+  }, [datasetId, navigate, subjectId]);
+
   useEffect(() => {
     if (!datasetId || !subjectId) {
       return;
@@ -39,6 +53,7 @@ export function PatientView() {
       hoveredPredictionWindowIndex: ts.hoveredPredictionWindowIndex,
       lockedPredictionWindowIndex: ts.lockedPredictionWindowIndex,
       selectedPredictionWindowIndex: ts.selectedPredictionWindowIndex,
+      navigateBack: returnToPatientDirectory,
       selectChannel: ts.handleSingleChannelSelect,
       selectWindow: ts.setLockedPredictionWindowIndex,
     });
@@ -54,6 +69,7 @@ export function PatientView() {
     ts.inferenceResult,
     ts.lockedPredictionWindowIndex,
     ts.modelInfo,
+    returnToPatientDirectory,
     ts.selectedPredictionWindowIndex,
     ts.setLockedPredictionWindowIndex,
     ts.source,
@@ -72,13 +88,7 @@ export function PatientView() {
 
       if (event.key === "ArrowLeft") {
         event.preventDefault();
-        navigate("/", {
-          state: {
-            datasetId,
-            directoryLevel: "patients",
-            selectedSubjectId: subjectId,
-          },
-        });
+        returnToPatientDirectory();
         return;
       }
 
@@ -127,7 +137,7 @@ export function PatientView() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [datasetId, navigate, setSelectedScalpBand, subjectId, ts]);
+  }, [datasetId, navigate, returnToPatientDirectory, setSelectedScalpBand, subjectId, ts]);
 
   useEffect(() => {
     if (!datasetId || !subjectId) {

@@ -35,6 +35,7 @@ const ACTION_NAMES = [
   "overview.patient_list.toggle_subject",
   "overview.patient_list.open_focused",
   "overview.patient_list.open_subject",
+  "patient_view.navigate_back",
   "patient_view.timeseries.channel_next",
   "patient_view.timeseries.channel_previous",
   "patient_view.timeseries.channel_set",
