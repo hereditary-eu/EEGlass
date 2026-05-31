@@ -215,6 +215,7 @@ export function PatientList({
               aria-pressed={selectedSubjectId === subject.id}
               style={classGridStyle}
               onClick={toggleSelectedSubject}
+              onDoubleClick={() => onOpenPatientView(subject)}
               onKeyDown={(event) => {
                 handlePatientNavigationKey(event, subjectIndex);
                 if (event.defaultPrevented) {

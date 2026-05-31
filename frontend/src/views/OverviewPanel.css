@@ -320,6 +320,7 @@
   padding: 0.3rem 0.4rem 0.46rem;
   background: transparent;
   cursor: pointer;
+  user-select: none;
 }
 
 .overview-patient-select:focus-visible {
