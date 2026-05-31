@@ -66,7 +66,8 @@ export function PatientList({
         prev !== null &&
         (typeof column === "string"
           ? prev.column === column
-          : typeof prev.column !== "string" && prev.column.classLabel === (column as { classLabel: string }).classLabel);
+          : typeof prev.column !== "string" &&
+            prev.column.classLabel === (column as { classLabel: string }).classLabel);
       if (!isSameColumn) return { column, direction: "asc" };
       if (prev!.direction === "asc") return { column, direction: "desc" };
       return null;

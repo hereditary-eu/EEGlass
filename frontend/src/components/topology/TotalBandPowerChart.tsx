@@ -144,8 +144,7 @@ export function TotalBandPowerChart({
   const hasStats = values.some((value) => value.lower2SigmaDb !== null && value.upper2SigmaDb !== null);
   const status = getBandPowerStatus({ bandPower, error, isLoading, isLoadingStats, statsError });
   const classLabels = useMemo(() => getModelClassLabels(modelClasses), [modelClasses]);
-  const displayedCohortLabel =
-    bandPowerStats?.mode === "inter_patient" ? (bandPowerStats.cohort_label ?? null) : null;
+  const displayedCohortLabel = bandPowerStats?.mode === "inter_patient" ? (bandPowerStats.cohort_label ?? null) : null;
   const rangeColors = useMemo(
     () => getRangeColors(displayedCohortLabel, modelClasses),
     [displayedCohortLabel, modelClasses],
@@ -694,11 +693,7 @@ function executeBandPowerAction(call: VacpActionCall, state: BandPowerInteractio
   return { callId: call.callId, ok: false, error: { message: `Unknown total band power action: ${call.name}` } };
 }
 
-function selectBandPowerChannel(
-  callId: string,
-  state: BandPowerInteractionState,
-  direction: 1 | -1,
-): VacpActionResult {
+function selectBandPowerChannel(callId: string, state: BandPowerInteractionState, direction: 1 | -1): VacpActionResult {
   const channel = getRelativeChannel(state, direction);
   if (!channel) {
     return { callId, ok: true, result: { channel: null, found: false } };
@@ -716,11 +711,7 @@ function getRelativeChannel(state: BandPowerInteractionState, direction: 1 | -1)
   return channels[nextIndex] ?? null;
 }
 
-function selectBandPowerWindow(
-  callId: string,
-  state: BandPowerInteractionState,
-  direction: 1 | -1,
-): VacpActionResult {
+function selectBandPowerWindow(callId: string, state: BandPowerInteractionState, direction: 1 | -1): VacpActionResult {
   const windowIndex = getRelativeWindowIndex(state, direction);
   if (windowIndex === null) {
     return { callId, ok: true, result: { windowIndex: null, found: false } };

@@ -298,7 +298,8 @@ export function BandActivationChart({
               error ? " classification-band-activation-chart-overlay--error" : ""
             }`}
           >
-            {error ?? (isLoading ? "Loading band activations..." : "Click a 4s prediction window to inspect activations.")}
+            {error ??
+              (isLoading ? "Loading band activations..." : "Click a 4s prediction window to inspect activations.")}
           </div>
         ) : null}
       </div>

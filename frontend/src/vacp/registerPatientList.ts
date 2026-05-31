@@ -1,9 +1,4 @@
-import type {
-  VacpActionDescriptor,
-  VacpCapabilitiesSnapshot,
-  VacpRef,
-  VacpStateSnapshot,
-} from "@vacp/core";
+import type { VacpActionDescriptor, VacpCapabilitiesSnapshot, VacpRef, VacpStateSnapshot } from "@vacp/core";
 import { nowIso, VACP_SCHEMA_VERSION } from "@vacp/core";
 import { installVacpRuntimeBridge, VacpActionRegistry } from "@vacp/gateway";
 
@@ -312,9 +307,7 @@ function getActionDescription(name: string): string {
 function getRelativeSubject(args: RegisterVacpPatientListArgs, direction: 1 | -1): TimeseriesSubjectInfo | null {
   if (!args.subjects.length) return null;
   const focusedSubjectId = args.getFocusedSubjectId() ?? args.hoveredSubjectId ?? args.selectedSubjectId;
-  const currentIndex = focusedSubjectId
-    ? args.subjects.findIndex((subject) => subject.id === focusedSubjectId)
-    : -1;
+  const currentIndex = focusedSubjectId ? args.subjects.findIndex((subject) => subject.id === focusedSubjectId) : -1;
   const nextIndex =
     currentIndex === -1
       ? direction === 1

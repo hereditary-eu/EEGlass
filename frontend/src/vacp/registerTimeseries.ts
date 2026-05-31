@@ -1,9 +1,4 @@
-import type {
-  VacpActionDescriptor,
-  VacpCapabilitiesSnapshot,
-  VacpRef,
-  VacpStateSnapshot,
-} from "@vacp/core";
+import type { VacpActionDescriptor, VacpCapabilitiesSnapshot, VacpRef, VacpStateSnapshot } from "@vacp/core";
 import { nowIso, VACP_SCHEMA_VERSION } from "@vacp/core";
 import { installVacpRuntimeBridge, VacpActionRegistry } from "@vacp/gateway";
 
@@ -374,7 +369,11 @@ function selectWindowByPrediction(
     };
   }
 
-  const selectedWindow = pickPredictionWindow(candidates, args.lockedPredictionWindowIndex, request.confidencePreference);
+  const selectedWindow = pickPredictionWindow(
+    candidates,
+    args.lockedPredictionWindowIndex,
+    request.confidencePreference,
+  );
   return {
     found: true,
     windowIndex: selectedWindow.window_index,
@@ -507,9 +506,7 @@ function levenshteinDistance(a: string, b: string): number {
     current[0] = i;
     for (let j = 1; j <= b.length; j += 1) {
       current[j] =
-        a[i - 1] === b[j - 1]
-          ? previous[j - 1]
-          : Math.min(previous[j - 1] + 1, previous[j] + 1, current[j - 1] + 1);
+        a[i - 1] === b[j - 1] ? previous[j - 1] : Math.min(previous[j - 1] + 1, previous[j] + 1, current[j - 1] + 1);
     }
     previous.splice(0, previous.length, ...current);
   }

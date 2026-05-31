@@ -88,7 +88,7 @@ def read_json(path: Path) -> dict[str, Any] | None:
     try:
         with path.open("r", encoding="utf-8") as file:
             data = json.load(file)
-    except (OSError, json.JSONDecodeError):
+    except OSError, json.JSONDecodeError:
         return None
     return data if isinstance(data, dict) else None
 

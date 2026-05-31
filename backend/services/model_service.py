@@ -460,7 +460,7 @@ def compute_band_power_stats_response(
                     model_spec, dataset_id, subject.id, source
                 )
                 relative_power_db = compute_subject_relative_band_power_db(subject_data)
-            except (ModelServiceError, TimeseriesServiceError):
+            except ModelServiceError, TimeseriesServiceError:
                 continue
             if relative_power_db.size == 0:
                 continue

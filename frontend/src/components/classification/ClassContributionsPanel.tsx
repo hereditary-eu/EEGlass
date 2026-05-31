@@ -93,9 +93,7 @@ export function ClassContributionsPanel({
   const modelClasses = modelInfo?.classes ?? null;
   const contributionRows = useMemo(
     () =>
-      evidence
-        ? createClassContributionRows(evidence, classLabels, modelClasses, displayMode, maxAbsContribution)
-        : [],
+      evidence ? createClassContributionRows(evidence, classLabels, modelClasses, displayMode, maxAbsContribution) : [],
     [classLabels, displayMode, evidence, maxAbsContribution, modelClasses],
   );
   const logitRows = useMemo(
@@ -112,7 +110,6 @@ export function ClassContributionsPanel({
           <h3 className="classification-evidence-title">Class contributions</h3>
         </div>
         <div className="classification-evidence-header-side">
-          
           <p className="classification-evidence-stage">
             Dense layer: <MathFormula tex={"Z_f"} /> mapped to class logits <MathFormula tex={"\\Omega"} />
             <ComponentStatusIndicator status={status.status} label={status.label} />

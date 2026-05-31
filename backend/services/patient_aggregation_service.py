@@ -85,9 +85,7 @@ class PatientAggregationService:
             ALZHEIMER_LABEL: resolved_settings.alzheimer_threshold,
             FTD_LABEL: resolved_settings.frontotemporal_dementia_threshold,
         }
-        passing_candidates = [
-            (label, share) for label, share in disease_candidates if share >= thresholds[label]
-        ]
+        passing_candidates = [(label, share) for label, share in disease_candidates if share >= thresholds[label]]
 
         if not passing_candidates:
             return HEALTHY_LABEL
