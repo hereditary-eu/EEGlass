@@ -46,5 +46,8 @@ save_screenshot("overview.pdf")
 driver.get("http://localhost:3000/datasets/ds004504/patients/sub-001")
 save_screenshot("patient_view.pdf")
 
+driver.get("http://localhost:8000/docs")
+save_screenshot("api-docs.pdf")
+
 driver.close()
 driver.quit()

@@ -15,7 +15,7 @@
   "scripts": {
     "dev": "bun frontend/index.ts",
     "dev:hot": "bun --hot frontend/index.ts",
-    "build": "bun build ./frontend/index.html --outdir=dist --public-path=./ --sourcemap --target=browser --minify --env='BUN_PUBLIC_*'",
+    "build": "bun build ./frontend/index.html --production --outdir=dist --public-path=./ --sourcemap --target=browser --minify --env='BUN_PUBLIC_*'",
     "start": "NODE_ENV=production bun frontend/index.ts"
   },
   "dependencies": {
