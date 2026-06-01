@@ -1,5 +1,4 @@
 from selfeeg.ssl import EarlyStopping
-import json
 import os
 from pathlib import Path
 
@@ -18,8 +17,6 @@ from backend.experiments_xeegnet.shallownetXAI_main.AllFnc.training import (
 )
 from backend.ml.model import build_xeegnet
 from backend.ml.model_vars import (
-    MODEL_INPUT_PROTOCOL_VERSION,
-    MODEL_INPUT_SOURCE,
     PARAMETERS_DEFAULT,
     TRAINING_PARAMETERS_DEFAULT,
     PRETRAINED_MODEL_DIR,
@@ -34,22 +31,6 @@ def save_model(model, model_path, df_metadata=None):
     model.to(device="cpu")
     resolved_model_path = Path(model_path)
     torch.save(model.state_dict(), resolved_model_path)
-    protocol_path = resolved_model_path.with_suffix(".model.json")
-    protocol_path.write_text(
-        json.dumps(
-            {
-                "input_source": MODEL_INPUT_SOURCE,
-                "input_protocol_version": MODEL_INPUT_PROTOCOL_VERSION,
-                "sampling_frequency": int(PARAMETERS_DEFAULT["srate"]),
-                "sample_length": int(PARAMETERS_DEFAULT["sample_length"]),
-                "window_size_seconds": float(PARAMETERS_DEFAULT["window"]),
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
     if df_metadata is not None:
         metadata_path = resolved_model_path.with_name(f"{resolved_model_path.stem}_metadata.csv")
         df_metadata.to_csv(metadata_path, index=True)

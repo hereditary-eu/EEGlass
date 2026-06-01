@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import json
 import os
-from pathlib import Path
-import tempfile
 import unittest
 
 import numpy as np
@@ -14,8 +11,7 @@ from backend.ml.data_utils.load_data import (
     preprocessed_raw_to_windows,
     preprocess_raw_for_xeegnet,
 )
-from backend.ml.model_registry import is_model_input_protocol_current
-from backend.ml.model_vars import MODEL_CHANNELS, MODEL_INPUT_PROTOCOL_VERSION, MODEL_INPUT_SOURCE, PARAMETERS_DEFAULT
+from backend.ml.model_vars import MODEL_CHANNELS
 from backend.services.model_errors import ModelValidationError
 from backend.services.model_service import validate_model_input_source
 from backend.services.prediction_cache_artifacts import PREPROCESSING_VERSION, is_manifest_valid
@@ -111,28 +107,6 @@ class DerivativeModelPipelineTest(unittest.TestCase):
                 checkpoint_key_value="checkpoint-key",
             )
         )
-
-    def test_old_checkpoint_without_derivative_protocol_is_ignored(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            checkpoint_path = Path(temp_dir) / "xeegnet_model_v999.pt"
-            checkpoint_path.write_bytes(b"not a real checkpoint")
-
-            self.assertFalse(is_model_input_protocol_current(checkpoint_path))
-
-            checkpoint_path.with_suffix(".model.json").write_text(
-                json.dumps(
-                    {
-                        "input_source": MODEL_INPUT_SOURCE,
-                        "input_protocol_version": MODEL_INPUT_PROTOCOL_VERSION,
-                        "sampling_frequency": int(PARAMETERS_DEFAULT["srate"]),
-                        "sample_length": int(PARAMETERS_DEFAULT["sample_length"]),
-                        "window_size_seconds": float(PARAMETERS_DEFAULT["window"]),
-                    }
-                ),
-                encoding="utf-8",
-            )
-
-            self.assertTrue(is_model_input_protocol_current(checkpoint_path))
 
 
 if __name__ == "__main__":
