@@ -1,12 +1,8 @@
 import { useCallback, useEffect } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 
-import {
-  BandActivationChart,
-  ClassContributionsPanel,
-  EegScalpTopologyPanel,
-  TotalBandPowerChart,
-} from "../components";
+import { BandActivationChart, ClassContributionsPanel } from "../components/classification";
+import { EegScalpTopologyPanel, TotalBandPowerChart } from "../components/topology";
 import { getModelBandIds } from "../constants/eegModel";
 import { useTimeseriesData } from "../hooks/useTimeseriesData";
 import type { PatientViewOutletContext } from "../layouts/AppLayout";
