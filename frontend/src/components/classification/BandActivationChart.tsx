@@ -6,7 +6,12 @@ import type { VisualizationSpec } from "vega-embed";
 
 import { formatCompactClassLabel, getModelBandLabel } from "../../constants/eegModel";
 import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../../constants/eegModelNotation";
-import type { ModelClassEvidenceContribution, ModelInfoResponse, TimeseriesSource } from "../../types";
+import type {
+  ModelClassEvidenceContribution,
+  ModelClassEvidenceResponse,
+  ModelInfoResponse,
+  TimeseriesSource,
+} from "../../types";
 import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
 import { useModelClassEvidence } from "./useModelClassEvidence";
@@ -84,6 +89,11 @@ export function BandActivationChart({
   );
   const valuesRef = useRef<typeof values>([]);
   const status = getActivationStatus({ error, evidence, isLoading });
+  const activationScaleDomain = useMemo(
+    () => (selectedClassLabel ? getSharedContributionDomain(evidence) : null),
+    [evidence, selectedClassLabel],
+  );
+  const activationScaleDomainKey = activationScaleDomain?.join(":") ?? "auto";
 
   useEffect(() => {
     valuesRef.current = values;
@@ -146,7 +156,7 @@ export function BandActivationChart({
               datum: 0,
               type: "quantitative",
               axis: createActivationAxis(),
-              scale: { nice: true, zero: true },
+              scale: createActivationScale(activationScaleDomain),
             },
           },
         },
@@ -170,7 +180,7 @@ export function BandActivationChart({
               field: "activation",
               type: "quantitative",
               axis: createActivationAxis(),
-              scale: { nice: true, zero: true },
+              scale: createActivationScale(activationScaleDomain),
             },
             tooltip: [
               { field: "band", type: "nominal", title: "Band" },
@@ -227,7 +237,7 @@ export function BandActivationChart({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [plotHeight]);
+  }, [activationScaleDomain, activationScaleDomainKey, plotHeight]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -349,6 +359,32 @@ function createActivationAxis() {
     gridColor: "#e8eef3",
     domain: false,
   };
+}
+
+function createActivationScale(domain: [number, number] | null) {
+  if (domain) {
+    return { domain };
+  }
+
+  return { nice: true, zero: true };
+}
+
+function getSharedContributionDomain(evidence: ModelClassEvidenceResponse | null): [number, number] | null {
+  const maxAbsContribution = evidence?.global_max_abs_contribution ?? 0;
+  if (Number.isFinite(maxAbsContribution) && maxAbsContribution > 0) {
+    return [-maxAbsContribution, maxAbsContribution];
+  }
+
+  const maxAbsFromBands =
+    evidence?.bands.reduce(
+      (maxAbs, band) =>
+        band.class_contributions.reduce(
+          (bandMaxAbs, contribution) => Math.max(bandMaxAbs, Math.abs(contribution.contribution)),
+          maxAbs,
+        ),
+      0,
+    ) ?? 0;
+  return maxAbsFromBands > 0 ? [-maxAbsFromBands, maxAbsFromBands] : null;
 }
 
 function formatActivation(value: number): string {
