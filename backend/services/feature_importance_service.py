@@ -136,6 +136,7 @@ class FeatureImportanceService:
             dataset_id=dataset_id,
             model_name=model_name,
             source=source,
+            include_raw_embeddings=True,
         )
         return cls.calculate_patient_embedding_feature_importance(
             response=response,
@@ -195,6 +196,7 @@ class FeatureImportanceService:
             subject_id=subject_id,
             model_name=model_name,
             source=source,
+            include_raw_embeddings=True,
         )
         return cls.calculate_window_embedding_feature_importance(
             response=response,

@@ -65,6 +65,10 @@ export const API_ROUTES = {
       buildApiUrl(
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/patient-embeddings`,
       ),
+    patientRawEmbeddings: (datasetId: string, modelName: string) =>
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/patient-embeddings/raw-embeddings`,
+      ),
     patientEmbeddingFeatureImportance: (datasetId: string, modelName: string) =>
       buildApiUrl(
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/patient-embeddings/feature-importance`,
@@ -72,6 +76,10 @@ export const API_ROUTES = {
     windowEmbeddings: (datasetId: string, subjectId: string, modelName: string) =>
       buildApiUrl(
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/window-embeddings`,
+      ),
+    windowRawEmbeddings: (datasetId: string, subjectId: string, modelName: string) =>
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/window-embeddings/raw-embeddings`,
       ),
     windowEmbeddingFeatureImportance: (datasetId: string, subjectId: string, modelName: string) =>
       buildApiUrl(

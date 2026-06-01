@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { DataTable } from "../data-table";
 import type { DataRow, ModelFeatureImportanceResponse, ShapleyValueItem } from "../../types";
+import { CorrelationHeatmap } from "../correlation-heatmap";
 import { EmbeddingPairwiseScatterplot } from "./EmbeddingPairwiseScatterplot";
 import "./EmbeddingIntrospectionPanel.css";
 
@@ -25,6 +26,7 @@ interface EmbeddingIntrospectionPanelProps {
   tableTitle?: string;
   tableSubtitle?: string;
   featureImportanceRequest?: EmbeddingFeatureImportanceRequest;
+  showCorrelationHeatmap?: boolean;
 }
 
 type TableViewMode = "numerical" | "heatmap";
@@ -41,6 +43,7 @@ export function EmbeddingIntrospectionPanel({
   tableTitle = "Band activations",
   tableSubtitle = "Select two activation columns to update the pairwise view.",
   featureImportanceRequest,
+  showCorrelationHeatmap = true,
 }: EmbeddingIntrospectionPanelProps) {
   const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
   const [selectedFeatureColumns, setSelectedFeatureColumns] = useState<string[] | null>(null);
@@ -117,10 +120,36 @@ export function EmbeddingIntrospectionPanel({
 
   const defaultPair = useMemo(() => featureColumns.slice(0, 2), [featureColumns]);
   const activeFeatureColumns = selectedFeatureColumns ?? (defaultPair.length === 2 ? defaultPair : []);
+  const activeFeaturePair: [string, string] | null =
+    activeFeatureColumns.length === 2 ? [activeFeatureColumns[0], activeFeatureColumns[1]] : null;
   const tableColumns = useMemo(
     () => [itemLabel, ...metadataColumns, PREDICTED_CLASS_COLUMN, ...featureColumns],
     [featureColumns, itemLabel, metadataColumns],
   );
+  const correlationRows = useMemo(
+    () =>
+      rows.map((row, rowIndex) => {
+        const datum: Record<string, string | number | boolean> = {
+          id: row.id,
+          record_id: rowIndex,
+        };
+
+        featureColumns.forEach((column, index) => {
+          const value = row.rawEmbedding?.[index];
+          datum[column] = typeof value === "number" && Number.isFinite(value) ? value : Number.NaN;
+        });
+
+        return datum;
+      }),
+    [featureColumns, rows],
+  );
+  const defaultCorrelationFeatures = useMemo(() => {
+    if (!activeFeaturePair) {
+      return featureColumns;
+    }
+
+    return Array.from(new Set([...activeFeaturePair, ...featureColumns]));
+  }, [activeFeaturePair, featureColumns]);
 
   useEffect(() => {
     if (!featureImportanceRequest) {
@@ -208,6 +237,10 @@ export function EmbeddingIntrospectionPanel({
     setSelectedFeatureColumns(featureSelection);
   };
 
+  const handleFeaturePairSelect = (featurePair: [string, string]) => {
+    setSelectedFeatureColumns(featurePair);
+  };
+
   const restoreHiddenColumn = (column: string) => {
     setHiddenColumns((current) => current.filter((item) => item !== column));
   };
@@ -226,25 +259,42 @@ export function EmbeddingIntrospectionPanel({
 
   return (
     <div className="embedding-introspection-panel">
-      <section className="embedding-introspection-table-section" aria-label="Raw embedding features">
-        <DataTable
-          title={tableTitle}
-          subtitle={resolvedTableSubtitle}
-          data={tableRows}
-          columns={tableColumns}
-          hiddenColumns={hiddenColumns}
-          selectedColumns={activeFeatureColumns}
-          onColumnHide={hideColumn}
-          onHiddenColumnRestore={restoreHiddenColumn}
-          onColumnSelect={handleColumnSelect}
-          isExpanded={isTableExpanded}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          onToggleExpanded={() => setIsTableExpanded((current) => !current)}
-          menuOptions={{ canSort: true, canHide: true }}
-          shapleyValues={shapleyValues}
-        />
-      </section>
+      <div
+        className={
+          showCorrelationHeatmap ? "embedding-introspection-left-stack" : "embedding-introspection-left-stack--single"
+        }
+      >
+        <section className="embedding-introspection-table-section" aria-label="Raw embedding features">
+          <DataTable
+            title={tableTitle}
+            subtitle={resolvedTableSubtitle}
+            data={tableRows}
+            columns={tableColumns}
+            hiddenColumns={hiddenColumns}
+            selectedColumns={activeFeatureColumns}
+            onColumnHide={hideColumn}
+            onHiddenColumnRestore={restoreHiddenColumn}
+            onColumnSelect={handleColumnSelect}
+            isExpanded={isTableExpanded}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onToggleExpanded={() => setIsTableExpanded((current) => !current)}
+            menuOptions={{ canSort: true, canHide: true }}
+            shapleyValues={shapleyValues}
+          />
+        </section>
+        {showCorrelationHeatmap && activeFeaturePair ? (
+          <section className="embedding-introspection-correlation-section" aria-label="Feature correlation heatmap">
+            <CorrelationHeatmap
+              patientsData={correlationRows}
+              covariateFeatures={featureColumns}
+              defaultSelectedCovariateFeatures={defaultCorrelationFeatures}
+              selectedFeaturePair={activeFeaturePair}
+              onSelectedFeaturePairChange={handleFeaturePairSelect}
+            />
+          </section>
+        ) : null}
+      </div>
       <section className="embedding-introspection-cluster-section" aria-label="Pairwise feature clustering">
         <div className="embedding-introspection-section-header">
           <div>

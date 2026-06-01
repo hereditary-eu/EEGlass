@@ -119,6 +119,17 @@ export class ModelService {
     );
   }
 
+  static async getPatientRawEmbeddings(
+    datasetId: string,
+    source: TimeseriesSource = "derivatives",
+    modelName?: string,
+  ): Promise<ModelPatientEmbeddingsResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
+    return ApiClient.get<ModelPatientEmbeddingsResponse>(
+      `${API_ROUTES.model.patientRawEmbeddings(datasetId, resolvedModelName)}?${this.toQueryString({ source })}`,
+    );
+  }
+
   static async getPatientEmbeddingFeatureImportance(
     datasetId: string,
     source: TimeseriesSource = "derivatives",
@@ -145,6 +156,18 @@ export class ModelService {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelWindowEmbeddingsResponse>(
       `${API_ROUTES.model.windowEmbeddings(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({ source })}`,
+    );
+  }
+
+  static async getWindowRawEmbeddings(
+    datasetId: string,
+    subjectId: string,
+    source: TimeseriesSource = "derivatives",
+    modelName?: string,
+  ): Promise<ModelWindowEmbeddingsResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
+    return ApiClient.get<ModelWindowEmbeddingsResponse>(
+      `${API_ROUTES.model.windowRawEmbeddings(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({ source })}`,
     );
   }
 

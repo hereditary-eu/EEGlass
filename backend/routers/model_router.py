@@ -261,12 +261,31 @@ async def get_patient_embeddings(
     source: TimeseriesSource = Query("derivatives"),
 ) -> ModelPatientEmbeddingsResponse:
     try:
-        response = PredictionCacheService.get_patient_embeddings(
+        return PredictionCacheService.get_patient_embeddings(
             dataset_id=dataset_id,
             model_name=model_name,
             source=source,
         )
-        _warm_patient_embedding_feature_importance(response)
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@model_router.get(
+    "/models/{model_name}/datasets/{dataset_id}/patient-embeddings/raw-embeddings",
+    response_model=ModelPatientEmbeddingsResponse,
+)
+async def get_patient_raw_embeddings(
+    dataset_id: str,
+    model_name: str = DEFAULT_MODEL_NAME,
+    source: TimeseriesSource = Query("derivatives"),
+) -> ModelPatientEmbeddingsResponse:
+    try:
+        response = PredictionCacheService.get_patient_embeddings(
+            dataset_id=dataset_id,
+            model_name=model_name,
+            source=source,
+            include_raw_embeddings=True,
+        )
         return response
     except ModelServiceError as exc:
         raise _http_error(exc) from exc
@@ -306,13 +325,34 @@ async def get_window_embeddings(
     source: TimeseriesSource = Query("derivatives"),
 ) -> ModelWindowEmbeddingsResponse:
     try:
-        response = PredictionCacheService.get_subject_window_embeddings(
+        return PredictionCacheService.get_subject_window_embeddings(
             dataset_id=dataset_id,
             subject_id=subject_id,
             model_name=model_name,
             source=source,
         )
-        _warm_window_embedding_feature_importance(response)
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@model_router.get(
+    "/models/{model_name}/datasets/{dataset_id}/subjects/{subject_id}/window-embeddings/raw-embeddings",
+    response_model=ModelWindowEmbeddingsResponse,
+)
+async def get_window_raw_embeddings(
+    dataset_id: str,
+    subject_id: str,
+    model_name: str = DEFAULT_MODEL_NAME,
+    source: TimeseriesSource = Query("derivatives"),
+) -> ModelWindowEmbeddingsResponse:
+    try:
+        response = PredictionCacheService.get_subject_window_embeddings(
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            model_name=model_name,
+            source=source,
+            include_raw_embeddings=True,
+        )
         return response
     except ModelServiceError as exc:
         raise _http_error(exc) from exc

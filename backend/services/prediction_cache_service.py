@@ -228,6 +228,7 @@ class PredictionCacheService:
         dataset_id: str,
         model_name: str = DEFAULT_MODEL_NAME,
         source: TimeseriesSource = "derivatives",
+        include_raw_embeddings: bool = False,
     ) -> ModelPatientEmbeddingsResponse:
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
         checkpoint_key = cls._checkpoint_key(checkpoint_signature)
@@ -286,7 +287,7 @@ class PredictionCacheService:
                 subject_id=summary.subject_id,
                 x=float(coordinate[0]),
                 y=float(coordinate[1]),
-                raw_embedding=list(vector),
+                raw_embedding=list(vector) if include_raw_embeddings else None,
                 true_label=summary.true_label,
                 predicted_label=summary.predicted_label,
                 mean_confidence=summary.mean_confidence,
@@ -451,6 +452,7 @@ class PredictionCacheService:
         subject_id: str,
         model_name: str = DEFAULT_MODEL_NAME,
         source: TimeseriesSource = "derivatives",
+        include_raw_embeddings: bool = False,
     ) -> ModelWindowEmbeddingsResponse:
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
         checkpoint_key = cls._checkpoint_key(checkpoint_signature)
@@ -493,6 +495,7 @@ class PredictionCacheService:
             checkpoint_key=checkpoint_key,
             artifact=artifact,
             clustering_artifact=clustering_artifact,
+            include_raw_embeddings=include_raw_embeddings,
         )
 
     @classmethod
@@ -816,6 +819,7 @@ class PredictionCacheService:
         checkpoint_key: str,
         artifact: dict[str, Any] | None,
         clustering_artifact: dict[str, Any] | None,
+        include_raw_embeddings: bool,
     ) -> ModelWindowEmbeddingsResponse:
         if not artifact or not isinstance(artifact.get("response"), dict):
             return ModelWindowEmbeddingsResponse(
@@ -899,7 +903,7 @@ class PredictionCacheService:
                     end_time=prediction.end_time,
                     x=float(coordinate[0]),
                     y=float(coordinate[1]),
-                    raw_embedding=[float(value) for value in embedding_row],
+                    raw_embedding=[float(value) for value in embedding_row] if include_raw_embeddings else None,
                     predicted_label=prediction.predicted_label,
                     confidence=prediction.confidence,
                     cluster_id=cluster_ids[index] if index < len(cluster_ids) else None,

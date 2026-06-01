@@ -58,6 +58,9 @@ export function PatientEmbeddingScatterplot({
   const [legendHighlightTarget, setLegendHighlightTarget] = useState<LegendHighlightTarget | null>(null);
   const [isMisclassifiedHighlightActive, setIsMisclassifiedHighlightActive] = useState(false);
   const [brushSelectedSubjectIds, setBrushSelectedSubjectIds] = useState<string[] | null>(null);
+  const [rawEmbeddings, setRawEmbeddings] = useState<ModelPatientEmbeddingsResponse | null>(null);
+  const [isLoadingRawEmbeddings, setIsLoadingRawEmbeddings] = useState(false);
+  const [rawEmbeddingsError, setRawEmbeddingsError] = useState<string | null>(null);
   const modelClasses = modelInfo?.classes ?? [];
   const modelClassLabels = useMemo(() => getModelClassLabels(modelClasses), [modelClasses]);
   const status = getPatientEmbeddingStatus({ embeddings, isLoading, error });
@@ -103,7 +106,7 @@ export function PatientEmbeddingScatterplot({
   );
   const introspectionRows = useMemo(
     () =>
-      (embeddings?.points ?? []).map((point) => ({
+      (rawEmbeddings?.points ?? []).map((point) => ({
         id: point.subject_id,
         rawEmbedding: point.raw_embedding,
         predictedClass: point.predicted_label ?? null,
@@ -111,32 +114,32 @@ export function PatientEmbeddingScatterplot({
           "True label": point.true_label ?? null,
         },
       })),
-    [embeddings],
+    [rawEmbeddings],
   );
   const featureImportanceRequest = useMemo(
     () =>
-      embeddings && modelInfo?.name
+      rawEmbeddings && modelInfo?.name
         ? {
             requestKey: [
               "patient-embedding",
-              embeddings.dataset_id,
+              rawEmbeddings.dataset_id,
               modelInfo.name,
-              embeddings.source,
-              embeddings.checkpoint_key,
+              rawEmbeddings.source,
+              rawEmbeddings.checkpoint_key,
               "true_label",
               "shap",
             ].join(":"),
             load: () =>
               ModelService.getPatientEmbeddingFeatureImportance(
-                embeddings.dataset_id,
-                embeddings.source,
+                rawEmbeddings.dataset_id,
+                rawEmbeddings.source,
                 modelInfo.name,
                 "true_label",
                 "shap",
               ),
           }
         : undefined,
-    [embeddings, modelInfo?.name],
+    [modelInfo?.name, rawEmbeddings],
   );
   const legendClassLabels = useMemo(
     () =>
@@ -180,6 +183,9 @@ export function PatientEmbeddingScatterplot({
     setBrushSelectedSubjectIds(null);
     setIsMisclassifiedHighlightActive(false);
     setLegendHighlightTarget(null);
+    setRawEmbeddings(null);
+    setIsLoadingRawEmbeddings(false);
+    setRawEmbeddingsError(null);
   }, [embeddings?.dataset_id, embeddings?.checkpoint_key]);
 
   useEffect(() => {
@@ -220,6 +226,22 @@ export function PatientEmbeddingScatterplot({
   const selectBrushSubjects = (subjectIds: string[] | null) => {
     setBrushSelectedSubjectIds(subjectIds);
   };
+  const loadRawEmbeddings = useCallback(() => {
+    if (!embeddings || !modelInfo?.name || rawEmbeddings || isLoadingRawEmbeddings) {
+      return;
+    }
+
+    setIsLoadingRawEmbeddings(true);
+    setRawEmbeddingsError(null);
+
+    ModelService.getPatientRawEmbeddings(embeddings.dataset_id, embeddings.source, modelInfo.name)
+      .then((response) => setRawEmbeddings(response))
+      .catch((loadError) => {
+        setRawEmbeddings(null);
+        setRawEmbeddingsError(getPatientRawEmbeddingError(loadError));
+      })
+      .finally(() => setIsLoadingRawEmbeddings(false));
+  }, [embeddings, isLoadingRawEmbeddings, modelInfo?.name, rawEmbeddings]);
   const registerVacpChart = useCallback(
     ({ root, view, spec }: EmbeddingScatterplotVegaViewArgs) =>
       registerVacpVegaLiteChart({
@@ -275,16 +297,24 @@ export function PatientEmbeddingScatterplot({
               : undefined
           }
           renderIntrospectionContent={() => (
-            <EmbeddingIntrospectionPanel
-              rows={introspectionRows}
-              sourceDimension={embeddings?.reduction.source_dimension}
-              featureNames={embeddings?.feature_names}
-              itemLabel="Patient"
-              tableTitle="Mean band activations"
-              tableSubtitle="Patient rows show feature-wise mean activations across all prediction windows. Select two activation columns to update the pairwise view."
-              featureImportanceRequest={featureImportanceRequest}
-            />
+            isLoadingRawEmbeddings ? (
+              <div className="embedding-introspection-empty">Loading raw embeddings...</div>
+            ) : rawEmbeddingsError ? (
+              <div className="embedding-introspection-empty">{rawEmbeddingsError}</div>
+            ) : (
+              <EmbeddingIntrospectionPanel
+                rows={introspectionRows}
+                sourceDimension={rawEmbeddings?.reduction.source_dimension ?? embeddings?.reduction.source_dimension}
+                featureNames={rawEmbeddings?.feature_names ?? embeddings?.feature_names}
+                itemLabel="Patient"
+                tableTitle="Mean band activations"
+                tableSubtitle="Patient rows show feature-wise mean activations across all prediction windows. Select two activation columns to update the pairwise view."
+                featureImportanceRequest={featureImportanceRequest}
+                showCorrelationHeatmap
+              />
+            )
           )}
+          onIntrospectionOpen={loadRawEmbeddings}
           onPointClick={(point) => {
             if (typeof point.subjectId === "string") {
               onOpenSubject(point.subjectId);
@@ -363,6 +393,14 @@ export function PatientEmbeddingScatterplot({
       ) : null}
     </section>
   );
+}
+
+function getPatientRawEmbeddingError(error: unknown): string {
+  if (error instanceof Error) {
+    return `Unable to load raw patient embeddings: ${error.message}`;
+  }
+
+  return "Unable to load raw patient embeddings.";
 }
 
 function getPatientEmbeddingStatus({

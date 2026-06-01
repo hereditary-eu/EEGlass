@@ -47,6 +47,7 @@ interface EmbeddingScatterplotProps {
   showIntrospectionButton?: boolean;
   introspectionButtonLabel?: string;
   renderIntrospectionContent?: () => ReactNode;
+  onIntrospectionOpen?: () => void;
   onPointClick?: (point: EmbeddingScatterplotPoint) => void;
   onSelectionChange?: (selectedPointIds: string[] | null) => void;
   onVegaViewReady?: (args: EmbeddingScatterplotVegaViewArgs) => void | (() => void);
@@ -67,6 +68,7 @@ export function EmbeddingScatterplot({
   showIntrospectionButton = false,
   introspectionButtonLabel = "Inspect features",
   renderIntrospectionContent,
+  onIntrospectionOpen,
   onPointClick,
   onSelectionChange,
   onVegaViewReady,
@@ -260,7 +262,10 @@ export function EmbeddingScatterplot({
           type="button"
           className="embedding-introspection-trigger"
           aria-label={introspectionButtonLabel}
-          onClick={() => setIsIntrospectionOpen(true)}
+          onClick={() => {
+            onIntrospectionOpen?.();
+            setIsIntrospectionOpen(true);
+          }}
         >
           {introspectionButtonLabel}
         </button>

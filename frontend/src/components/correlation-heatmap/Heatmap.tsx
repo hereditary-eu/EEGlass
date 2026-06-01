@@ -2,9 +2,10 @@ import { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import * as Plot from "@observablehq/plot";
 
-import type { NeuroPatient } from "../../types/neuro";
 import { pearsonCorrelation } from "../../utils/neurodegenvis/pearsonCorrelation";
 import { NEURO_FONT_SIZE } from "../../utils/neurodegenvis/visVariables";
+
+export type CorrelationHeatmapDatum = Record<string, string | number | boolean | null | undefined>;
 
 interface CorrelationCell {
   a: string;
@@ -13,7 +14,7 @@ interface CorrelationCell {
 }
 
 interface NeuroHeatmapPlotProps {
-  patientsData: NeuroPatient[];
+  patientsData: CorrelationHeatmapDatum[];
   covariateFeatures: string[];
   selectedFeatures: [string, string];
   onSelectedFeaturesChange: (selectedFeatures: [string, string]) => void;

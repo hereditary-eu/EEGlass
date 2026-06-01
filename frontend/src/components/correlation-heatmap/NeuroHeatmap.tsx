@@ -1,6 +1,5 @@
 import "../pca-biplot/NeurodegenVis.css";
 import type { FeatureId, FeaturePair } from "../../types";
-import type { NeuroPatient } from "../../types/neuro";
 import { useControllableState } from "../../utils/useControllableState";
 import {
   createMockNeuroDataset,
@@ -9,9 +8,10 @@ import {
   NEURO_INITIAL_SCATTER_FEATURES,
 } from "../../utils/neurodegenvis/mockData";
 import { NeuroHeatmapPlot } from "./Heatmap";
+import type { CorrelationHeatmapDatum } from "./Heatmap";
 
 export interface CorrelationHeatmapProps {
-  patientsData: NeuroPatient[];
+  patientsData: CorrelationHeatmapDatum[];
   covariateFeatures?: FeatureId[];
   selectedCovariateFeatures?: FeatureId[];
   selectedFeaturePair?: FeaturePair;

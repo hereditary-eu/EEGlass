@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ComponentStatusIndicator, EmbeddingIntrospectionPanel, EmbeddingScatterplot, MathFormula } from "../components";
 import type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from "../components";
@@ -46,6 +46,9 @@ export function WindowEmbeddingPanel({
   onHoveredWindowIndexChange,
 }: WindowEmbeddingPanelProps) {
   const [embeddings, setEmbeddings] = useState<ModelWindowEmbeddingsResponse | null>(null);
+  const [rawEmbeddings, setRawEmbeddings] = useState<ModelWindowEmbeddingsResponse | null>(null);
+  const [isLoadingRawEmbeddings, setIsLoadingRawEmbeddings] = useState(false);
+  const [rawEmbeddingsError, setRawEmbeddingsError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [legendHighlightTarget, setLegendHighlightTarget] = useState<WindowEmbeddingLegendTarget | null>(null);
@@ -89,6 +92,29 @@ export function WindowEmbeddingPanel({
     };
   }, [datasetId, modelInfo?.name, source, subjectId]);
 
+  useEffect(() => {
+    setRawEmbeddings(null);
+    setIsLoadingRawEmbeddings(false);
+    setRawEmbeddingsError(null);
+  }, [datasetId, modelInfo?.name, source, subjectId]);
+
+  const loadRawEmbeddings = useCallback(() => {
+    if (!datasetId || !subjectId || !modelInfo?.name || rawEmbeddings || isLoadingRawEmbeddings) {
+      return;
+    }
+
+    setIsLoadingRawEmbeddings(true);
+    setRawEmbeddingsError(null);
+
+    ModelService.getWindowRawEmbeddings(datasetId, subjectId, source, modelInfo.name)
+      .then((response) => setRawEmbeddings(response))
+      .catch((loadError) => {
+        setRawEmbeddings(null);
+        setRawEmbeddingsError(getWindowRawEmbeddingError(loadError));
+      })
+      .finally(() => setIsLoadingRawEmbeddings(false));
+  }, [datasetId, isLoadingRawEmbeddings, modelInfo?.name, rawEmbeddings, source, subjectId]);
+
   const values = useMemo<WindowEmbeddingDatum[]>(
     () =>
       (embeddings?.points ?? []).map((point) => {
@@ -121,39 +147,39 @@ export function WindowEmbeddingPanel({
   );
   const introspectionRows = useMemo(
     () =>
-      (embeddings?.points ?? []).map((point) => ({
+      (rawEmbeddings?.points ?? []).map((point) => ({
         id: `Window ${point.window_index + 1}`,
         rawEmbedding: point.raw_embedding,
         predictedClass: point.predicted_label,
       })),
-    [embeddings],
+    [rawEmbeddings],
   );
   const featureImportanceRequest = useMemo(
     () =>
-      embeddings && modelInfo?.name
+      rawEmbeddings && modelInfo?.name
         ? {
             requestKey: [
               "window-embedding",
-              embeddings.dataset_id,
-              embeddings.subject_id,
+              rawEmbeddings.dataset_id,
+              rawEmbeddings.subject_id,
               modelInfo.name,
-              embeddings.source,
-              embeddings.checkpoint_signature,
+              rawEmbeddings.source,
+              rawEmbeddings.checkpoint_signature,
               "predicted_label",
               "shap",
             ].join(":"),
             load: () =>
               ModelService.getWindowEmbeddingFeatureImportance(
-                embeddings.dataset_id,
-                embeddings.subject_id,
-                embeddings.source,
+                rawEmbeddings.dataset_id,
+                rawEmbeddings.subject_id,
+                rawEmbeddings.source,
                 modelInfo.name,
                 "predicted_label",
                 "shap",
               ),
           }
         : undefined,
-    [embeddings, modelInfo?.name],
+    [modelInfo?.name, rawEmbeddings],
   );
   const visibleClassLabels = useMemo(
     () => classLabels.filter((label) => values.some((value) => value.predictedLabel === label)),
@@ -201,16 +227,23 @@ export function WindowEmbeddingPanel({
               : undefined
           }
           renderIntrospectionContent={() => (
-            <EmbeddingIntrospectionPanel
-              rows={introspectionRows}
-              sourceDimension={embeddings?.reduction.source_dimension}
-              featureNames={embeddings?.feature_names}
-              itemLabel="Window"
-              tableTitle="Window band activations"
-              tableSubtitle="Window rows show per-window encoder activations. Select two activation columns to update the pairwise view."
-              featureImportanceRequest={featureImportanceRequest}
-            />
+            isLoadingRawEmbeddings ? (
+              <div className="embedding-introspection-empty">Loading raw embeddings...</div>
+            ) : rawEmbeddingsError ? (
+              <div className="embedding-introspection-empty">{rawEmbeddingsError}</div>
+            ) : (
+              <EmbeddingIntrospectionPanel
+                rows={introspectionRows}
+                sourceDimension={rawEmbeddings?.reduction.source_dimension ?? embeddings?.reduction.source_dimension}
+                featureNames={rawEmbeddings?.feature_names ?? embeddings?.feature_names}
+                itemLabel="Window"
+                tableTitle="Window band activations"
+                tableSubtitle="Window rows show per-window encoder activations. Select two activation columns to update the pairwise view."
+                featureImportanceRequest={featureImportanceRequest}
+              />
+            )
           )}
+          onIntrospectionOpen={loadRawEmbeddings}
           onPointClick={(point) => {
             if (typeof point.windowIndex === "number") {
               onSelectedWindowIndexChange(point.windowIndex);
@@ -254,6 +287,14 @@ function getWindowEmbeddingError(error: unknown): string {
   }
 
   return "Unable to load window embeddings.";
+}
+
+function getWindowRawEmbeddingError(error: unknown): string {
+  if (error instanceof Error) {
+    return `Unable to load raw window embeddings: ${error.message}`;
+  }
+
+  return "Unable to load raw window embeddings.";
 }
 
 function getWindowEmbeddingStatus({
