@@ -6,5 +6,5 @@ export type {
   EmbeddingScatterplotTooltipField,
   EmbeddingScatterplotVegaViewArgs,
 } from "./EmbeddingScatterplot";
-export type { EmbeddingIntrospectionRow } from "./EmbeddingIntrospectionPanel";
+export type { EmbeddingFeatureImportanceRequest, EmbeddingIntrospectionRow } from "./EmbeddingIntrospectionPanel";
 export type { EmbeddingPairwiseScatterplotPoint } from "./EmbeddingPairwiseScatterplot";

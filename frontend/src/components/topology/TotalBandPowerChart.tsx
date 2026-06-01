@@ -11,6 +11,7 @@ import {
   getModelBandLabel,
   getModelClassLabels,
 } from "../../constants/eegModel";
+import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../../constants/eegModelNotation";
 import type {
   ChannelId,
   ModelBandPowerResponse,
@@ -416,7 +417,7 @@ export function TotalBandPowerChart({
         </div>
         <div className="topology-bandpower-header-static">
           <span className="topology-bandpower-header-stage">
-            Filter bank: band-power features from <MathFormula tex={"W_{c,f}(t)"} />
+            {EEG_MODEL_NOTATION_LABELS.filterBank} <MathFormula tex={EEG_MODEL_NOTATION.bandPowerFeature} />
             <ComponentStatusIndicator status={status.status} label={status.label} />
           </span>
           {bandPower ? <strong>{bandPower.sampling_frequency.toFixed(0)} Hz</strong> : null}

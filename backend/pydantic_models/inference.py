@@ -30,6 +30,13 @@ from backend.pydantic_models.embeddings import (
     ModelWindowEmbeddingPoint,
     ModelWindowEmbeddingsResponse,
 )
+from backend.pydantic_models.feature_importance import (
+    FeatureImportanceMethod,
+    FeatureImportanceStatus,
+    FeatureImportanceTargetColumn,
+    ModelFeatureImportanceItem,
+    ModelFeatureImportanceResponse,
+)
 from backend.pydantic_models.model_info import (
     ModelBandPresentation,
     ModelClassPresentation,
@@ -112,6 +119,11 @@ __all__ = [
     "ModelClassWeightsResponse",
     "ModelBandPresentation",
     "ModelClassPresentation",
+    "FeatureImportanceMethod",
+    "FeatureImportanceStatus",
+    "FeatureImportanceTargetColumn",
+    "ModelFeatureImportanceItem",
+    "ModelFeatureImportanceResponse",
     "ModelInfoResponse",
     "ModelInferenceRequest",
     "ModelInferenceResponse",

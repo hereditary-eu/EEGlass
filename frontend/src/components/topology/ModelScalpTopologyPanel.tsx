@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 
+import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../../constants/eegModelNotation";
 import type { ModelBandPresentation, TimeseriesBandFilter } from "../../types";
 import { MathFormula } from "../ui";
 import { ScalpTopologyPlot } from "./ScalpTopologyPlot";
@@ -44,7 +45,7 @@ export function ModelScalpTopologyPanel({ modelName, compact = false }: ModelSca
       <div className="topology-panel-header">
         <h3 className="topology-panel-title">{compact ? "Spatial weights" : "Model scalp view"}</h3>
         <p className="topology-panel-stage">
-          Spatial layer: learned channel weights <MathFormula tex={"w_{f,c}"} />
+          {EEG_MODEL_NOTATION_LABELS.spatialLayer} <MathFormula tex={EEG_MODEL_NOTATION.spatialWeight} />
         </p>
       </div>
 

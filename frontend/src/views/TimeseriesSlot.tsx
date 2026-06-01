@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ComponentStatusIndicator, EegTimeseries, MathFormula } from "../components";
 import type { TimeseriesWindowAnnotationRow, TimeseriesWindowAnnotationValue } from "../components";
 import { getAnnotationClassColor } from "../constants/eegModel";
+import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../constants/eegModelNotation";
 import type { TimeseriesDataController } from "../hooks/useTimeseriesData";
 import type { ChannelId, ModelClassPresentation, ModelInferenceResponse, TimeseriesSource } from "../types";
 import "./TimeseriesSlot.css";
@@ -88,7 +89,7 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
 
         <div className="timeseries-slot-right">
           <p className="timeseries-slot-model-stage">
-            Input layer: selected EEG window <MathFormula tex={"V_c(t)"} />
+            {EEG_MODEL_NOTATION_LABELS.inputLayer} <MathFormula tex={EEG_MODEL_NOTATION.inputWindow} />
             <ComponentStatusIndicator status={status.status} label={status.label} />
           </p>
           <div className="timeseries-slot-actions">

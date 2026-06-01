@@ -8,6 +8,7 @@ import type {
 } from "../../components";
 import type { ComponentStatus } from "../../components/ui";
 import { getAnnotationClassColor, getEmbeddingClassColors, getModelClassLabels } from "../../constants/eegModel";
+import { ModelService } from "../../services/ModelService";
 import type { ModelInfoResponse, ModelPatientEmbeddingsResponse } from "../../types";
 import { registerVacpVegaLiteChart } from "../../vacp/registerVegaLiteChart";
 
@@ -111,6 +112,31 @@ export function PatientEmbeddingScatterplot({
         },
       })),
     [embeddings],
+  );
+  const featureImportanceRequest = useMemo(
+    () =>
+      embeddings && modelInfo?.name
+        ? {
+            requestKey: [
+              "patient-embedding",
+              embeddings.dataset_id,
+              modelInfo.name,
+              embeddings.source,
+              embeddings.checkpoint_key,
+              "true_label",
+              "shap",
+            ].join(":"),
+            load: () =>
+              ModelService.getPatientEmbeddingFeatureImportance(
+                embeddings.dataset_id,
+                embeddings.source,
+                modelInfo.name,
+                "true_label",
+                "shap",
+              ),
+          }
+        : undefined,
+    [embeddings, modelInfo?.name],
   );
   const legendClassLabels = useMemo(
     () =>
@@ -256,6 +282,7 @@ export function PatientEmbeddingScatterplot({
               itemLabel="Patient"
               tableTitle="Mean band activations"
               tableSubtitle="Patient rows show feature-wise mean activations across all prediction windows. Select two activation columns to update the pairwise view."
+              featureImportanceRequest={featureImportanceRequest}
             />
           )}
           onPointClick={(point) => {

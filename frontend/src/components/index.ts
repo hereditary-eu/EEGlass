@@ -14,6 +14,7 @@ export { EegTimeseries } from "./timeseries";
 export type { EegTimeseriesProps, TimeseriesWindowAnnotationRow, TimeseriesWindowAnnotationValue } from "./timeseries";
 export { EmbeddingIntrospectionPanel, EmbeddingScatterplot } from "./embedding";
 export type {
+  EmbeddingFeatureImportanceRequest,
   EmbeddingIntrospectionRow,
   EmbeddingScatterplotPoint,
   EmbeddingScatterplotTooltipField,

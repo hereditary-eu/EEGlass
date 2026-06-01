@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ComponentStatusIndicator, EmbeddingIntrospectionPanel, EmbeddingScatterplot, MathFormula } from "../components";
 import type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from "../components";
 import { getEmbeddingClassColors, getModelClassLabels } from "../constants/eegModel";
+import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../constants/eegModelNotation";
 import { ModelService } from "../services/ModelService";
 import type { ModelInfoResponse, ModelWindowEmbeddingsResponse, TimeseriesSource } from "../types";
 import "./WindowEmbeddingPanel.css";
@@ -127,6 +128,33 @@ export function WindowEmbeddingPanel({
       })),
     [embeddings],
   );
+  const featureImportanceRequest = useMemo(
+    () =>
+      embeddings && modelInfo?.name
+        ? {
+            requestKey: [
+              "window-embedding",
+              embeddings.dataset_id,
+              embeddings.subject_id,
+              modelInfo.name,
+              embeddings.source,
+              embeddings.checkpoint_signature,
+              "predicted_label",
+              "shap",
+            ].join(":"),
+            load: () =>
+              ModelService.getWindowEmbeddingFeatureImportance(
+                embeddings.dataset_id,
+                embeddings.subject_id,
+                embeddings.source,
+                modelInfo.name,
+                "predicted_label",
+                "shap",
+              ),
+          }
+        : undefined,
+    [embeddings, modelInfo?.name],
+  );
   const visibleClassLabels = useMemo(
     () => classLabels.filter((label) => values.some((value) => value.predictedLabel === label)),
     [classLabels, values],
@@ -149,7 +177,7 @@ export function WindowEmbeddingPanel({
           </p>
         </div>
         <span>
-          Encoder output: penultimate representation before <MathFormula tex={"\\Omega"} />
+          {EEG_MODEL_NOTATION_LABELS.windowEmbeddingPrefix} <MathFormula tex={EEG_MODEL_NOTATION.classLogits} />
           <ComponentStatusIndicator status={status.status} label={status.label} />
         </span>
       </div>
@@ -180,6 +208,7 @@ export function WindowEmbeddingPanel({
               itemLabel="Window"
               tableTitle="Window band activations"
               tableSubtitle="Window rows show per-window encoder activations. Select two activation columns to update the pairwise view."
+              featureImportanceRequest={featureImportanceRequest}
             />
           )}
           onPointClick={(point) => {

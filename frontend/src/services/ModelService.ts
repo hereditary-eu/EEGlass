@@ -8,6 +8,7 @@ import type {
   ModelClassEvidenceRequest,
   ModelClassEvidenceResponse,
   ModelClassWeightsResponse,
+  ModelFeatureImportanceResponse,
   ModelInfoResponse,
   ModelInferenceResponse,
   ModelListResponse,
@@ -118,6 +119,23 @@ export class ModelService {
     );
   }
 
+  static async getPatientEmbeddingFeatureImportance(
+    datasetId: string,
+    source: TimeseriesSource = "derivatives",
+    modelName?: string,
+    target: "true_label" | "predicted_label" = "true_label",
+    method: "shap" = "shap",
+  ): Promise<ModelFeatureImportanceResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
+    return ApiClient.get<ModelFeatureImportanceResponse>(
+      `${API_ROUTES.model.patientEmbeddingFeatureImportance(datasetId, resolvedModelName)}?${this.toQueryString({
+        source,
+        method,
+        target,
+      })}`,
+    );
+  }
+
   static async getWindowEmbeddings(
     datasetId: string,
     subjectId: string,
@@ -127,6 +145,24 @@ export class ModelService {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelWindowEmbeddingsResponse>(
       `${API_ROUTES.model.windowEmbeddings(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({ source })}`,
+    );
+  }
+
+  static async getWindowEmbeddingFeatureImportance(
+    datasetId: string,
+    subjectId: string,
+    source: TimeseriesSource = "derivatives",
+    modelName?: string,
+    target: "true_label" | "predicted_label" = "predicted_label",
+    method: "shap" = "shap",
+  ): Promise<ModelFeatureImportanceResponse> {
+    const resolvedModelName = await this.resolveModelName(modelName);
+    return ApiClient.get<ModelFeatureImportanceResponse>(
+      `${API_ROUTES.model.windowEmbeddingFeatureImportance(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({
+        source,
+        method,
+        target,
+      })}`,
     );
   }
 

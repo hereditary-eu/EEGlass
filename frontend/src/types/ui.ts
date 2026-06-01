@@ -263,6 +263,24 @@ export interface ModelWindowEmbeddingsResponse {
   points: ModelWindowEmbeddingPoint[];
 }
 
+export type FeatureImportanceMethod = "shap";
+export type FeatureImportanceStatus = "ok" | "insufficient_data" | "insufficient_classes";
+export type FeatureImportanceTargetColumn = "true_label" | "predicted_label";
+
+export interface ModelFeatureImportanceItem {
+  feature: string;
+  importance: number;
+}
+
+export interface ModelFeatureImportanceResponse {
+  status: FeatureImportanceStatus;
+  method: FeatureImportanceMethod;
+  backend_model: string;
+  target_column: FeatureImportanceTargetColumn;
+  unit_label: string;
+  feature_importances: ModelFeatureImportanceItem[];
+}
+
 export interface ModelClassEvidenceRequest {
   dataset_id: string;
   subject_id: string;

@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { DataTable } from "../data-table";
-import type { DataRow } from "../../types";
+import type { DataRow, ModelFeatureImportanceResponse, ShapleyValueItem } from "../../types";
 import { EmbeddingPairwiseScatterplot } from "./EmbeddingPairwiseScatterplot";
 import "./EmbeddingIntrospectionPanel.css";
 
@@ -12,6 +12,11 @@ export interface EmbeddingIntrospectionRow {
   metadata?: Record<string, string | number | null | undefined>;
 }
 
+export interface EmbeddingFeatureImportanceRequest {
+  requestKey: string;
+  load: () => Promise<ModelFeatureImportanceResponse>;
+}
+
 interface EmbeddingIntrospectionPanelProps {
   rows: EmbeddingIntrospectionRow[];
   sourceDimension?: number;
@@ -19,11 +24,14 @@ interface EmbeddingIntrospectionPanelProps {
   itemLabel: string;
   tableTitle?: string;
   tableSubtitle?: string;
+  featureImportanceRequest?: EmbeddingFeatureImportanceRequest;
 }
 
 type TableViewMode = "numerical" | "heatmap";
 const PREDICTED_CLASS_COLUMN = "Predicted class";
 const UNKNOWN_PREDICTED_CLASS = "Unknown";
+const featureImportanceResponseCache = new Map<string, ModelFeatureImportanceResponse>();
+const featureImportancePromiseCache = new Map<string, Promise<ModelFeatureImportanceResponse>>();
 
 export function EmbeddingIntrospectionPanel({
   rows,
@@ -32,11 +40,17 @@ export function EmbeddingIntrospectionPanel({
   itemLabel,
   tableTitle = "Band activations",
   tableSubtitle = "Select two activation columns to update the pairwise view.",
+  featureImportanceRequest,
 }: EmbeddingIntrospectionPanelProps) {
   const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
   const [selectedFeatureColumns, setSelectedFeatureColumns] = useState<string[] | null>(null);
   const [isTableExpanded, setIsTableExpanded] = useState(true);
   const [viewMode, setViewMode] = useState<TableViewMode>("numerical");
+  const [featureImportanceResponse, setFeatureImportanceResponse] = useState<ModelFeatureImportanceResponse | null>(
+    null,
+  );
+  const [isLoadingFeatureImportance, setIsLoadingFeatureImportance] = useState(false);
+  const [featureImportanceError, setFeatureImportanceError] = useState<string | null>(null);
 
   const featureColumns = useMemo(() => {
     const inferredDimension = rows.reduce(
@@ -75,6 +89,31 @@ export function EmbeddingIntrospectionPanel({
       }),
     [featureColumns, itemLabel, metadataColumns, rows],
   );
+  const shapleyValues = useMemo<ShapleyValueItem[] | null>(() => {
+    if (featureImportanceResponse?.status !== "ok" || !featureImportanceResponse.feature_importances.length) {
+      return null;
+    }
+
+    return featureImportanceResponse.feature_importances.map((item) => ({
+      feature: item.feature,
+      "SHAP Value": item.importance,
+    }));
+  }, [featureImportanceResponse]);
+  const resolvedTableSubtitle = useMemo(() => {
+    if (isLoadingFeatureImportance) {
+      return `${tableSubtitle} Calculating SHAP feature importance...`;
+    }
+    if (featureImportanceError) {
+      return `${tableSubtitle} Feature importance unavailable: ${featureImportanceError}`;
+    }
+    if (featureImportanceResponse?.status === "insufficient_data") {
+      return `${tableSubtitle} Feature importance needs more labeled rows.`;
+    }
+    if (featureImportanceResponse?.status === "insufficient_classes") {
+      return `${tableSubtitle} Feature importance needs at least two target classes.`;
+    }
+    return tableSubtitle;
+  }, [featureImportanceError, featureImportanceResponse?.status, isLoadingFeatureImportance, tableSubtitle]);
 
   const defaultPair = useMemo(() => featureColumns.slice(0, 2), [featureColumns]);
   const activeFeatureColumns = selectedFeatureColumns ?? (defaultPair.length === 2 ? defaultPair : []);
@@ -82,6 +121,57 @@ export function EmbeddingIntrospectionPanel({
     () => [itemLabel, ...metadataColumns, PREDICTED_CLASS_COLUMN, ...featureColumns],
     [featureColumns, itemLabel, metadataColumns],
   );
+
+  useEffect(() => {
+    if (!featureImportanceRequest) {
+      setFeatureImportanceResponse(null);
+      setIsLoadingFeatureImportance(false);
+      setFeatureImportanceError(null);
+      return;
+    }
+
+    const cachedResponse = featureImportanceResponseCache.get(featureImportanceRequest.requestKey);
+    if (cachedResponse) {
+      setFeatureImportanceResponse(cachedResponse);
+      setIsLoadingFeatureImportance(false);
+      setFeatureImportanceError(null);
+      return;
+    }
+
+    let isCurrent = true;
+    setIsLoadingFeatureImportance(true);
+    setFeatureImportanceError(null);
+
+    let promise = featureImportancePromiseCache.get(featureImportanceRequest.requestKey);
+    if (!promise) {
+      promise = featureImportanceRequest.load();
+      featureImportancePromiseCache.set(featureImportanceRequest.requestKey, promise);
+    }
+
+    promise
+      .then((response) => {
+        featureImportanceResponseCache.set(featureImportanceRequest.requestKey, response);
+        if (isCurrent) {
+          setFeatureImportanceResponse(response);
+        }
+      })
+      .catch((error) => {
+        if (isCurrent) {
+          setFeatureImportanceResponse(null);
+          setFeatureImportanceError(error instanceof Error ? error.message : "request failed");
+        }
+      })
+      .finally(() => {
+        featureImportancePromiseCache.delete(featureImportanceRequest.requestKey);
+        if (isCurrent) {
+          setIsLoadingFeatureImportance(false);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [featureImportanceRequest]);
 
   const scatterData = useMemo(() => {
     if (activeFeatureColumns.length !== 2) {
@@ -139,7 +229,7 @@ export function EmbeddingIntrospectionPanel({
       <section className="embedding-introspection-table-section" aria-label="Raw embedding features">
         <DataTable
           title={tableTitle}
-          subtitle={tableSubtitle}
+          subtitle={resolvedTableSubtitle}
           data={tableRows}
           columns={tableColumns}
           hiddenColumns={hiddenColumns}
@@ -152,6 +242,7 @@ export function EmbeddingIntrospectionPanel({
           onViewModeChange={setViewMode}
           onToggleExpanded={() => setIsTableExpanded((current) => !current)}
           menuOptions={{ canSort: true, canHide: true }}
+          shapleyValues={shapleyValues}
         />
       </section>
       <section className="embedding-introspection-cluster-section" aria-label="Pairwise feature clustering">

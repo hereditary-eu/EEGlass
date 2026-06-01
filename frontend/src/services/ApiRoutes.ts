@@ -65,9 +65,17 @@ export const API_ROUTES = {
       buildApiUrl(
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/patient-embeddings`,
       ),
+    patientEmbeddingFeatureImportance: (datasetId: string, modelName: string) =>
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/patient-embeddings/feature-importance`,
+      ),
     windowEmbeddings: (datasetId: string, subjectId: string, modelName: string) =>
       buildApiUrl(
         `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/window-embeddings`,
+      ),
+    windowEmbeddingFeatureImportance: (datasetId: string, subjectId: string, modelName: string) =>
+      buildApiUrl(
+        `/models/${encodeURIComponent(modelName)}/datasets/${encodeURIComponent(datasetId)}/subjects/${encodeURIComponent(subjectId)}/window-embeddings/feature-importance`,
       ),
     windowScalpTopologies: (datasetId: string, subjectId: string, modelName: string) =>
       buildApiUrl(

@@ -4,6 +4,7 @@ import { ModelService } from "../../services/ModelService";
 import { useAppStore } from "../../stores/useAppStore";
 import { registerVacpScalpTopology } from "../../vacp/registerScalpTopology";
 import { getModelBandLabel } from "../../constants/eegModel";
+import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../../constants/eegModelNotation";
 import type {
   ChannelId,
   ModelInfoResponse,
@@ -166,8 +167,10 @@ export function EegScalpTopologyPanel({
         </div>
         <p className="topology-panel-stage">
           <span className="topology-panel-stage-text">
-            Spatial layer evidence from <MathFormula tex={"w_{f,c}"} /> and window band power before{" "}
-            <MathFormula tex={"X_f(t)=\\sum_c w_{f,c}W_{c,f}(t)"} />
+            {EEG_MODEL_NOTATION_LABELS.spatialEvidencePrefix}{" "}
+            <MathFormula tex={EEG_MODEL_NOTATION.spatialWeight} />{" "}
+            {EEG_MODEL_NOTATION_LABELS.spatialEvidenceConnector}{" "}
+            <MathFormula tex={EEG_MODEL_NOTATION.spatialEvidence} />
           </span>
           <ComponentStatusIndicator status={status.status} label={status.label} />
         </p>

@@ -4,6 +4,8 @@ PRETRAINED_MODEL_DIR = Path(__file__).resolve().parent / "pretrained_models"
 
 DEFAULT_MODEL_NAME = "xeegnet_model_v200"  # 200-204 for different train/val/test splits
 
+DEFAULT_FEATURE_IMPORTANCE_METHOD = "shap"
+DEFAULT_FEATURE_IMPORTANCE_BACKEND_MODEL = "xgboost"
 
 PARAMETERS_DEFAULT = {
     "nb_classes": 3,

@@ -5,6 +5,7 @@ import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
 import { formatCompactClassLabel, getModelBandLabel } from "../../constants/eegModel";
+import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../../constants/eegModelNotation";
 import type { ModelClassEvidenceContribution, ModelInfoResponse, TimeseriesSource } from "../../types";
 import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
@@ -174,7 +175,12 @@ export function BandActivationChart({
             tooltip: [
               { field: "band", type: "nominal", title: "Band" },
               { field: "classLabel", type: "nominal", title: "View" },
-              { field: "rawActivation", type: "quantitative", title: "Activation Z_f", format: ".4f" },
+              {
+                field: "rawActivation",
+                type: "quantitative",
+                title: `Activation ${EEG_MODEL_NOTATION.encoderOutput}`,
+                format: ".4f",
+              },
               { field: "multiplier", type: "quantitative", title: "Class multiplier", format: "+.4f" },
               { field: "activation", type: "quantitative", title: "Displayed value", format: "+.4f" },
               { field: "activationText", type: "nominal", title: "Displayed" },
@@ -259,11 +265,14 @@ export function BandActivationChart({
         <span className="classification-band-activation-chart-stage">
           {selectedClassLabel ? (
             <>
-              <MathFormula tex={"Z_f"} /> x dense multiplier
+              <MathFormula tex={EEG_MODEL_NOTATION.encoderOutput} />{" "}
+              {EEG_MODEL_NOTATION_LABELS.bandActivationDenseMultiplier}
             </>
           ) : (
             <>
-              Encoder output <MathFormula tex={"Z_f"} /> before dense weights
+              {EEG_MODEL_NOTATION_LABELS.encoderOutputPrefix}{" "}
+              <MathFormula tex={EEG_MODEL_NOTATION.encoderOutput} />{" "}
+              {EEG_MODEL_NOTATION_LABELS.encoderBeforeDenseWeights}
             </>
           )}
           <ComponentStatusIndicator status={status.status} label={status.label} />

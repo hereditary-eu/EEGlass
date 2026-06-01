@@ -4,6 +4,7 @@ import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
 import { formatCompactClassLabel } from "../../constants/eegModel";
+import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../../constants/eegModelNotation";
 import type { ModelClassEvidenceResponse, ModelInfoResponse, TimeseriesSource } from "../../types";
 import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
@@ -111,7 +112,8 @@ export function ClassContributionsPanel({
         </div>
         <div className="classification-evidence-header-side">
           <p className="classification-evidence-stage">
-            Dense layer: <MathFormula tex={"Z_f"} /> mapped to class logits <MathFormula tex={"\\Omega"} />
+            {EEG_MODEL_NOTATION_LABELS.denseLayerPrefix} <MathFormula tex={EEG_MODEL_NOTATION.encoderOutput} />{" "}
+            {EEG_MODEL_NOTATION_LABELS.denseLayerConnector} <MathFormula tex={EEG_MODEL_NOTATION.classLogits} />
             <ComponentStatusIndicator status={status.status} label={status.label} />
           </p>
         </div>
@@ -159,8 +161,8 @@ export function ClassContributionsPanel({
               {decision ? (
                 <div className="classification-evidence-decision">
                   <span className="classification-evidence-decision-kicker">
-                    Decision = argmax(
-                    <MathFormula tex={"\\Omega"} />)
+                    {EEG_MODEL_NOTATION_LABELS.decisionArgmaxPrefix}
+                    <MathFormula tex={EEG_MODEL_NOTATION.classLogits} />)
                   </span>
                   <strong>{decision.label}</strong>
                   <span>{Math.round(decision.confidence * 100)}%</span>
