@@ -1,19 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { ScatterHistogram } from "./NeuroScatterHistogram";
 import { ModelService } from "../../services/ModelService";
+import { MODEL_INPUT_SOURCE } from "../../hooks/timeseries/shared";
 import type { ModelPatientEmbeddingsResponse } from "../../types/ui";
-import type { TimeseriesSource } from "../../types/ui";
 
 interface RealScatterHistogramProps {
   datasetId?: string;
   modelName?: string;
-  source?: TimeseriesSource;
 }
 
 export function RealScatterHistogram({
   datasetId = "ds004504",
   modelName,
-  source = "derivatives",
 }: RealScatterHistogramProps) {
   const [embeddings, setEmbeddings] = useState<ModelPatientEmbeddingsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +22,7 @@ export function RealScatterHistogram({
     setIsLoading(true);
     setError(null);
 
-    ModelService.getPatientEmbeddings(datasetId, source, modelName)
+    ModelService.getPatientEmbeddings(datasetId, MODEL_INPUT_SOURCE, modelName)
       .then((resp) => {
         if (!mounted) return;
         setEmbeddings(resp);
@@ -41,7 +39,7 @@ export function RealScatterHistogram({
     return () => {
       mounted = false;
     };
-  }, [datasetId, modelName, source]);
+  }, [datasetId, modelName]);
 
   if (isLoading) return <div>Loading patient embeddings…</div>;
   if (error) return <div>Error loading embeddings: {error}</div>;

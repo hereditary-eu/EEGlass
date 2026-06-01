@@ -1,18 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ModelService } from "../../services/ModelService";
-import type {
-  ModelBandPowerResponse,
-  ModelBandPowerStatsMode,
-  ModelBandPowerStatsResponse,
-  TimeseriesSource,
-} from "../../types";
-import { getBandPowerErrorMessage, getErrorStatusCode } from "./shared";
+import type { ModelBandPowerResponse, ModelBandPowerStatsMode, ModelBandPowerStatsResponse } from "../../types";
+import { getBandPowerErrorMessage, getErrorStatusCode, MODEL_INPUT_SOURCE } from "./shared";
 
 interface UseTimeseriesBandPowerOptions {
   datasetId: string;
   subjectId: string;
-  source: TimeseriesSource;
   modelName: string | null | undefined;
   lockedPredictionWindowIndex: number | null;
 }
@@ -20,7 +14,6 @@ interface UseTimeseriesBandPowerOptions {
 export function useTimeseriesBandPower({
   datasetId,
   subjectId,
-  source,
   modelName,
   lockedPredictionWindowIndex,
 }: UseTimeseriesBandPowerOptions) {
@@ -58,7 +51,7 @@ export function useTimeseriesBandPower({
       return;
     }
 
-    const requestSource = source;
+    const requestSource = MODEL_INPUT_SOURCE;
     const requestWindowIndex = lockedPredictionWindowIndex;
     const cacheKey = `${modelName}::${datasetId}::${subjectId}::${requestSource}::${requestWindowIndex}`;
     const cachedBandPower = bandPowerCacheRef.current.get(cacheKey);
@@ -99,7 +92,7 @@ export function useTimeseriesBandPower({
     return () => {
       isCurrent = false;
     };
-  }, [datasetId, lockedPredictionWindowIndex, modelName, source, subjectId]);
+  }, [datasetId, lockedPredictionWindowIndex, modelName, subjectId]);
 
   useEffect(() => {
     const requestModelName = modelName;
@@ -111,7 +104,7 @@ export function useTimeseriesBandPower({
       return;
     }
 
-    const requestSource = source;
+    const requestSource = MODEL_INPUT_SOURCE;
     const requestMode = bandPowerStatsMode;
     const requestCohortLabel = requestMode === "inter_patient" ? bandPowerStatsCohortLabel : null;
     const cacheKey = `${requestModelName}::${datasetId}::${subjectId}::${requestSource}::${requestMode}::${requestCohortLabel ?? "all"}`;
@@ -170,7 +163,7 @@ export function useTimeseriesBandPower({
     return () => {
       isCurrent = false;
     };
-  }, [bandPowerStatsCohortLabel, bandPowerStatsMode, canLoadBandPowerStats, datasetId, modelName, source, subjectId]);
+  }, [bandPowerStatsCohortLabel, bandPowerStatsMode, canLoadBandPowerStats, datasetId, modelName, subjectId]);
 
   const updateBandPowerStatsMode = useCallback((mode: ModelBandPowerStatsMode) => {
     setBandPowerStatsMode(mode);

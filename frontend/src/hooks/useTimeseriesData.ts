@@ -120,7 +120,6 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
   } = useTimeseriesBandPower({
     datasetId,
     subjectId,
-    source,
     modelName,
     lockedPredictionWindowIndex,
   });
@@ -139,7 +138,6 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
   } = useTimeseriesPredictions({
     datasetId,
     subjectId,
-    source,
     modelName,
     signal,
     activeChannels,
@@ -161,10 +159,8 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
       setSelectedTimeseriesSource(nextSource);
       setSelectedTimeRange(null);
       resetSignal();
-      resetPredictions();
-      clearBandPowerData();
     },
-    [clearBandPowerData, resetPredictions, resetSignal, setSelectedTimeRange, setSelectedTimeseriesSource],
+    [resetSignal, setSelectedTimeRange, setSelectedTimeseriesSource],
   );
 
   return {

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 
 import { ModelService } from "../../services/ModelService";
-import type { ModelClassEvidenceResponse, ModelInfoResponse, TimeseriesSource } from "../../types";
+import type { ModelClassEvidenceResponse, ModelInfoResponse } from "../../types";
+import { MODEL_INPUT_SOURCE } from "../../hooks/timeseries/shared";
 
 interface UseModelClassEvidenceArgs {
   datasetId: string;
   subjectId: string;
-  source: TimeseriesSource;
   modelInfo: ModelInfoResponse | null;
   windowIndex: number | null;
 }
@@ -23,14 +23,13 @@ const evidencePromises = new Map<string, Promise<ModelClassEvidenceResponse>>();
 export function useModelClassEvidence({
   datasetId,
   subjectId,
-  source,
   modelInfo,
   windowIndex,
 }: UseModelClassEvidenceArgs): UseModelClassEvidenceResult {
   const modelName = modelInfo?.name;
   const cacheKey =
     datasetId && subjectId && modelName && windowIndex !== null
-      ? `${modelName}::${datasetId}::${subjectId}::${source}::${windowIndex}`
+      ? `${modelName}::${datasetId}::${subjectId}::${MODEL_INPUT_SOURCE}::${windowIndex}`
       : null;
   const [evidence, setEvidence] = useState<ModelClassEvidenceResponse | null>(() =>
     cacheKey ? (evidenceCache.get(cacheKey) ?? null) : null,
@@ -61,10 +60,12 @@ export function useModelClassEvidence({
 
     const evidencePromise =
       evidencePromises.get(cacheKey) ??
-      ModelService.computeClassEvidence(datasetId, subjectId, windowIndex, source, modelName).catch((loadError) => {
-        evidencePromises.delete(cacheKey);
-        throw loadError;
-      });
+      ModelService.computeClassEvidence(datasetId, subjectId, windowIndex, MODEL_INPUT_SOURCE, modelName).catch(
+        (loadError) => {
+          evidencePromises.delete(cacheKey);
+          throw loadError;
+        },
+      );
     evidencePromises.set(cacheKey, evidencePromise);
 
     evidencePromise
@@ -93,7 +94,7 @@ export function useModelClassEvidence({
     return () => {
       isCurrent = false;
     };
-  }, [cacheKey, datasetId, modelName, source, subjectId, windowIndex]);
+  }, [cacheKey, datasetId, modelName, subjectId, windowIndex]);
 
   return { evidence, isLoading, error };
 }

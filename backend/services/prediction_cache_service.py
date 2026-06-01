@@ -57,6 +57,7 @@ from backend.services.model_service import (
     ModelService,
     ModelServiceError,
     ModelValidationError,
+    validate_model_input_source,
 )
 from backend.services.timeseries_service import (
     TimeseriesNotFoundError,
@@ -92,6 +93,7 @@ class PredictionCacheService:
         model_name: str = DEFAULT_MODEL_NAME,
         source: TimeseriesSource = "derivatives",
     ) -> ModelPredictionCacheJobResponse:
+        validate_model_input_source(source)
         # Validate model/checkpoint before creating a job.
         ModelService.get_checkpoint_signature(model_name)
         cls._list_subjects(dataset_id)
@@ -118,6 +120,7 @@ class PredictionCacheService:
         model_name: str = DEFAULT_MODEL_NAME,
         source: TimeseriesSource = "derivatives",
     ) -> ModelPredictionCacheProgress | None:
+        validate_model_input_source(source)
         active_job = next(
             (
                 job
@@ -164,6 +167,7 @@ class PredictionCacheService:
         model_name: str = DEFAULT_MODEL_NAME,
         source: TimeseriesSource = "derivatives",
     ) -> ModelPredictionCacheStatus:
+        validate_model_input_source(source)
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
         checkpoint_key = cls._checkpoint_key(checkpoint_signature)
         cls._cleanup_stale_temp_files(cls._cache_dir(dataset_id, model_name, checkpoint_key))
@@ -230,6 +234,7 @@ class PredictionCacheService:
         source: TimeseriesSource = "derivatives",
         include_raw_embeddings: bool = False,
     ) -> ModelPatientEmbeddingsResponse:
+        validate_model_input_source(source)
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
         checkpoint_key = cls._checkpoint_key(checkpoint_signature)
         subjects = cls._list_subjects(dataset_id)
@@ -315,6 +320,7 @@ class PredictionCacheService:
         model_name: str = DEFAULT_MODEL_NAME,
         source: TimeseriesSource = "derivatives",
     ) -> ModelPredictionCacheStatus:
+        validate_model_input_source(source)
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
         checkpoint_key = cls._checkpoint_key(checkpoint_signature)
         cls._list_subjects(dataset_id)
@@ -344,6 +350,7 @@ class PredictionCacheService:
         model_name: str = DEFAULT_MODEL_NAME,
         source: TimeseriesSource = "derivatives",
     ) -> ModelInferenceResponse:
+        validate_model_input_source(source)
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
         checkpoint_key = cls._checkpoint_key(checkpoint_signature)
         subjects = cls._list_subjects(dataset_id)
@@ -376,6 +383,7 @@ class PredictionCacheService:
         mode: Literal["intra_patient", "inter_patient"] = "intra_patient",
         cohort_label: str | None = None,
     ) -> ModelBandPowerStatsResponse:
+        validate_model_input_source(source)
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
         checkpoint_key = cls._checkpoint_key(checkpoint_signature)
         subjects = cls._list_subjects(dataset_id)
@@ -454,6 +462,7 @@ class PredictionCacheService:
         source: TimeseriesSource = "derivatives",
         include_raw_embeddings: bool = False,
     ) -> ModelWindowEmbeddingsResponse:
+        validate_model_input_source(source)
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
         checkpoint_key = cls._checkpoint_key(checkpoint_signature)
         artifact = cls._read_prediction_artifact(dataset_id, model_name, checkpoint_key, subject_id, source)
@@ -506,6 +515,7 @@ class PredictionCacheService:
         model_name: str = DEFAULT_MODEL_NAME,
         source: TimeseriesSource = "derivatives",
     ) -> ModelInferenceResponse:
+        validate_model_input_source(source)
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
         checkpoint_key = cls._checkpoint_key(checkpoint_signature)
         subjects = cls._list_subjects(dataset_id)

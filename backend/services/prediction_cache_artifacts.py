@@ -10,10 +10,10 @@ from typing import Any
 import numpy as np
 
 from backend.config import CONFIG
-from backend.ml.model_vars import MODEL_BANDS, MODEL_CHANNELS
+from backend.ml.model_vars import MODEL_BANDS, MODEL_CHANNELS, MODEL_INPUT_PROTOCOL_VERSION
 from backend.pydantic_models.timeseries import TimeseriesSource
 
-PREPROCESSING_VERSION = "xeegnet-preprocessing-v3-band-power-stats"
+PREPROCESSING_VERSION = MODEL_INPUT_PROTOCOL_VERSION
 PENULTIMATE_EMBEDDING_LAYER = "encoder"
 PENULTIMATE_EMBEDDING_LABEL = "penultimate embedding"
 WINDOW_EMBEDDING_CLUSTERING_METHOD = "dbscan"

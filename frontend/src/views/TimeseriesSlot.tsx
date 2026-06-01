@@ -112,6 +112,9 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
             {ts.selectedTimeseriesBandFilter ? (
               <span className="timeseries-slot-status">Filter: {ts.selectedTimeseriesBandFilter}</span>
             ) : null}
+            {ts.source === "raw" ? (
+              <span className="timeseries-slot-status">Predictions use derivatives</span>
+            ) : null}
             <button
               type="button"
               className="timeseries-slot-button"

@@ -29,6 +29,15 @@ export const createModelSlice: StateCreator<AppStoreState, [], [], ModelSlice> =
     set({ isLoadingModels: true, modelError: null });
     try {
       const modelList = await ModelService.getModelList();
+      if (!modelList.models.length || !modelList.current_model_name) {
+        set({
+          availableModels: modelList.models,
+          modelInfo: null,
+          isLoadingModels: false,
+          modelError: "No derivative-trained xEEGNet checkpoints are available.",
+        });
+        return;
+      }
       const modelInfo = await ModelService.getModelInfo(modelList.current_model_name);
       set({
         availableModels: modelList.models,

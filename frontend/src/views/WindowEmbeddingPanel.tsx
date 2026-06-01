@@ -5,13 +5,13 @@ import type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from
 import { getEmbeddingClassColors, getModelClassLabels } from "../constants/eegModel";
 import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../constants/eegModelNotation";
 import { ModelService } from "../services/ModelService";
-import type { ModelInfoResponse, ModelWindowEmbeddingsResponse, TimeseriesSource } from "../types";
+import { MODEL_INPUT_SOURCE } from "../hooks/timeseries/shared";
+import type { ModelInfoResponse, ModelWindowEmbeddingsResponse } from "../types";
 import "./WindowEmbeddingPanel.css";
 
 interface WindowEmbeddingPanelProps {
   datasetId: string;
   subjectId: string;
-  source: TimeseriesSource;
   modelInfo: ModelInfoResponse | null;
   selectedWindowIndex: number | null;
   hoveredWindowIndex: number | null;
@@ -38,7 +38,6 @@ const WINDOW_EMBEDDING_TOOLTIP_FIELDS: EmbeddingScatterplotTooltipField[] = [
 export function WindowEmbeddingPanel({
   datasetId,
   subjectId,
-  source,
   modelInfo,
   selectedWindowIndex,
   hoveredWindowIndex,
@@ -67,7 +66,7 @@ export function WindowEmbeddingPanel({
     setIsLoading(true);
     setError(null);
 
-    ModelService.getWindowEmbeddings(datasetId, subjectId, source, modelInfo.name)
+    ModelService.getWindowEmbeddings(datasetId, subjectId, MODEL_INPUT_SOURCE, modelInfo.name)
       .then((response) => {
         if (isCurrent) {
           setEmbeddings(response);
@@ -90,13 +89,13 @@ export function WindowEmbeddingPanel({
     return () => {
       isCurrent = false;
     };
-  }, [datasetId, modelInfo?.name, source, subjectId]);
+  }, [datasetId, modelInfo?.name, subjectId]);
 
   useEffect(() => {
     setRawEmbeddings(null);
     setIsLoadingRawEmbeddings(false);
     setRawEmbeddingsError(null);
-  }, [datasetId, modelInfo?.name, source, subjectId]);
+  }, [datasetId, modelInfo?.name, subjectId]);
 
   const loadRawEmbeddings = useCallback(() => {
     if (!datasetId || !subjectId || !modelInfo?.name || rawEmbeddings || isLoadingRawEmbeddings) {
@@ -106,14 +105,14 @@ export function WindowEmbeddingPanel({
     setIsLoadingRawEmbeddings(true);
     setRawEmbeddingsError(null);
 
-    ModelService.getWindowRawEmbeddings(datasetId, subjectId, source, modelInfo.name)
+    ModelService.getWindowRawEmbeddings(datasetId, subjectId, MODEL_INPUT_SOURCE, modelInfo.name)
       .then((response) => setRawEmbeddings(response))
       .catch((loadError) => {
         setRawEmbeddings(null);
         setRawEmbeddingsError(getWindowRawEmbeddingError(loadError));
       })
       .finally(() => setIsLoadingRawEmbeddings(false));
-  }, [datasetId, isLoadingRawEmbeddings, modelInfo?.name, rawEmbeddings, source, subjectId]);
+  }, [datasetId, isLoadingRawEmbeddings, modelInfo?.name, rawEmbeddings, subjectId]);
 
   const values = useMemo<WindowEmbeddingDatum[]>(
     () =>

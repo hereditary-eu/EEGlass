@@ -1,8 +1,9 @@
 import os
 import mne
+import numpy as np
 import pandas as pd
 
-from backend.ml.model_vars import MODEL_CHANNELS, PARAMETERS_DEFAULT
+from backend.ml.model_vars import MODEL_CHANNELS, MODEL_INPUT_SOURCE, PARAMETERS_DEFAULT
 from backend.utils.mne_logging import configure_mne_logging
 
 configure_mne_logging()
@@ -27,12 +28,33 @@ def gen_filename(participant_id):
     return os.path.join(f"sub-{participant_id}", "eeg", f"sub-{participant_id}_task-eyesclosed_eeg.set")
 
 
+def gen_derivative_filename(participant_id):
+    """
+    Generates the derivative EEG path for a participant.
+    """
+    return os.path.join(
+        "derivatives",
+        f"sub-{participant_id}",
+        "eeg",
+        f"sub-{participant_id}_task-eyesclosed_eeg.set",
+    )
+
+
 def gen_participant_id_long(participant_id_int):
     """
     Generates the long participant ID format used in the EEG data from the integer participant ID.
     For example, if participant_id_int is 1, it will return 'sub-001'.
     """
     return f"sub-{get_participant_id(participant_id_int)}"
+
+
+def gen_model_input_filename(participant_id):
+    """
+    Generates the canonical model-input EEG path. Model workflows use derivatives only.
+    """
+    if MODEL_INPUT_SOURCE != "derivatives":
+        raise ValueError(f"Unsupported model input source: {MODEL_INPUT_SOURCE}")
+    return gen_derivative_filename(participant_id)
 
 
 def load_eeg_df(dir_data: str, participant_id_int: int, gen_path_func: callable):
@@ -57,6 +79,75 @@ def load_eeg_df(dir_data: str, participant_id_int: int, gen_path_func: callable)
     df_eeg["participant_id"] = participant_id_long
 
     return df_eeg
+
+
+def load_model_windows_for_participant(
+    dir_data: str,
+    participant_id_int: int,
+    sample_length: int | None = None,
+    n_max: int | None = None,
+):
+    """
+    Loads derivative EEG for one participant and returns xEEGNet-ready windows.
+
+    Derivative files are the source of truth for model workflows. They are downsampled to the
+    paper/model sampling rate in PARAMETERS_DEFAULT, then split into fixed 4-second windows.
+    """
+    participant_id = get_participant_id(participant_id_int)
+    data_path = os.path.join(dir_data, gen_model_input_filename(participant_id))
+    raw = load_preprocessed_raw_from_file(data_path)
+    windows, sampling_frequency, prediction_ranges = preprocessed_raw_to_windows(raw, sample_length=sample_length)
+
+    if n_max is not None:
+        resolved_sample_length = int(sample_length or PARAMETERS_DEFAULT["sample_length"])
+        max_windows = int(n_max) // resolved_sample_length
+        if max_windows < 1:
+            raise ValueError(
+                f"n_max={n_max} is too small for one model window of {resolved_sample_length} samples."
+            )
+        windows = windows[:max_windows]
+        prediction_ranges = prediction_ranges[:max_windows]
+
+    return windows, sampling_frequency, prediction_ranges
+
+
+def load_multiple_eeg_windows(
+    dir_data: str,
+    participant_ids: list[int],
+    df_metadata: pd.DataFrame,
+    sample_length: int | None = None,
+    n_max: int | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Loads derivative EEG windows for multiple participants and matching class labels.
+    """
+    participant_dis_map = dict(zip(df_metadata["participant_id"], df_metadata["group_encoded"]))
+    windows_by_subject = []
+    labels_by_subject = []
+
+    for participant_id_int in participant_ids:
+        participant_id_long = gen_participant_id_long(participant_id_int)
+        windows, _sampling_frequency, _prediction_ranges = load_model_windows_for_participant(
+            dir_data,
+            participant_id_int,
+            sample_length=sample_length,
+            n_max=n_max,
+        )
+        if participant_id_long not in participant_dis_map:
+            raise ValueError(f"Missing diagnosis metadata for participant '{participant_id_long}'.")
+
+        windows_by_subject.append(windows)
+        labels_by_subject.append(
+            np.full((windows.shape[0],), int(participant_dis_map[participant_id_long]), dtype=np.int64)
+        )
+
+    if not windows_by_subject:
+        raise ValueError("At least one participant is required to load model windows.")
+
+    x = np.concatenate(windows_by_subject, axis=0).astype("float32", copy=False)
+    y = np.concatenate(labels_by_subject, axis=0).astype(np.int64, copy=False)
+    print(f"Loaded derivative model windows: x shape {x.shape}, y shape {y.shape}")
+    return x, y
 
 
 def load_preprocessed_raw_from_file(data_path: str):

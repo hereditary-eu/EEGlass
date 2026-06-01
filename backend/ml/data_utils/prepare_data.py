@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
 
@@ -173,6 +173,12 @@ def get_data_loader(df, Chans, sample_length, batchsize, workers, x_columns, y_c
     x, y = reshape_eeg_multipl(df, x_columns=x_columns, y_column=y_column, Chans=Chans, sample_length=sample_length)
     dataloader = DataLoader(list(zip(x, y)), batch_size=batchsize, shuffle=True, num_workers=workers)
     return dataloader
+
+
+def get_window_data_loader(x, y, batchsize, workers, shuffle=True):
+    x_tensor = torch.as_tensor(x, dtype=torch.float32)
+    y_tensor = torch.as_tensor(y, dtype=torch.long)
+    return DataLoader(TensorDataset(x_tensor, y_tensor), batch_size=batchsize, shuffle=shuffle, num_workers=workers)
 
 
 def get_data_loaders(

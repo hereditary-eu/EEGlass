@@ -13,6 +13,7 @@ from backend.ml.model import build_xeegnet
 from backend.ml.model_registry import ModelSpec, get_model_spec, list_model_specs
 from backend.ml.model_vars import (
     DEFAULT_MODEL_NAME,
+    MODEL_INPUT_SOURCE,
     MODEL_BANDS,
     MODEL_CHANNELS,
     MODEL_CLASS_LABELS,
@@ -87,6 +88,13 @@ def validate_window_index(window_index: int, window_count: int) -> None:
         )
 
 
+def validate_model_input_source(source: TimeseriesSource) -> None:
+    if source != MODEL_INPUT_SOURCE:
+        raise ModelValidationError(
+            "Model workflows use derivatives only. The raw source is available for timeseries visualization."
+        )
+
+
 @dataclass
 class PreparedSubjectData:
     windows: np.ndarray
@@ -124,6 +132,7 @@ class SubjectPreprocessingService:
         subject_id: str,
         source: TimeseriesSource,
     ) -> PreparedSubjectData:
+        validate_model_input_source(source)
         cache_key = (model_spec.name, dataset_id, subject_id, source)
         cached_subject_data = cls._subject_data_cache.get(cache_key)
         if cached_subject_data is not None:
@@ -900,8 +909,10 @@ class ModelService:
     @classmethod
     def list_models(cls) -> ModelListResponse:
         model_specs = list_model_specs()
-        if not any(model_spec.name == cls._current_model_name for model_spec in model_specs):
-            cls._current_model_name = DEFAULT_MODEL_NAME
+        if model_specs and not any(model_spec.name == cls._current_model_name for model_spec in model_specs):
+            cls._current_model_name = model_specs[0].name
+        if not model_specs:
+            cls._current_model_name = ""
 
         return ModelListResponse(
             current_model_name=cls._current_model_name,
@@ -930,6 +941,7 @@ class ModelService:
         source: TimeseriesSource = "derivatives",
         model_name: str = DEFAULT_MODEL_NAME,
     ) -> ModelInferenceResponse:
+        validate_model_input_source(source)
         return cls._infer_subject_result(
             dataset_id=dataset_id,
             subject_id=subject_id,
@@ -946,6 +958,7 @@ class ModelService:
         source: TimeseriesSource = "derivatives",
         model_name: str = DEFAULT_MODEL_NAME,
     ) -> ModelInferenceResult:
+        validate_model_input_source(source)
         return cls._infer_subject_result(
             dataset_id=dataset_id,
             subject_id=subject_id,
@@ -962,6 +975,7 @@ class ModelService:
         source: TimeseriesSource = "derivatives",
         model_name: str = DEFAULT_MODEL_NAME,
     ) -> ModelWindowEmbeddingsResponse:
+        validate_model_input_source(source)
         cls._ensure_inference_available()
         model_spec = cls._get_model_spec(model_name)
         subject_data = SubjectPreprocessingService.get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
@@ -1036,6 +1050,7 @@ class ModelService:
         model_name: str,
         include_penultimate_embedding: bool,
     ) -> ModelInferenceResult:
+        validate_model_input_source(source)
         cls._ensure_inference_available()
         model_spec = cls._get_model_spec(model_name)
         checkpoint_signature = ModelRuntime.checkpoint_signature(model_spec)
@@ -1091,6 +1106,7 @@ class ModelService:
         window_index: int = 0,
         model_name: str = DEFAULT_MODEL_NAME,
     ) -> ModelClassEvidenceResponse:
+        validate_model_input_source(source)
         cls._ensure_inference_available()
         model_spec = cls._get_model_spec(model_name)
         checkpoint_signature = ModelRuntime.checkpoint_signature(model_spec)
@@ -1136,6 +1152,7 @@ class ModelService:
         window_index: int = 0,
         model_name: str = DEFAULT_MODEL_NAME,
     ) -> ModelBandPowerResponse:
+        validate_model_input_source(source)
         model_spec = cls._get_model_spec(model_name)
         cache_key = (model_spec.name, dataset_id, subject_id, source, window_index)
         cached_response = cls._band_power_cache.get(cache_key)
@@ -1164,6 +1181,7 @@ class ModelService:
         mode: Literal["intra_patient", "inter_patient"] = "intra_patient",
         model_name: str = DEFAULT_MODEL_NAME,
     ) -> ModelBandPowerStatsResponse:
+        validate_model_input_source(source)
         model_spec = cls._get_model_spec(model_name)
         cache_key = (model_spec.name, dataset_id, subject_id, source, mode)
         cached_response = cls._band_power_stats_cache.get(cache_key)
@@ -1214,6 +1232,7 @@ class ModelService:
         window_index: int = 0,
         model_name: str = DEFAULT_MODEL_NAME,
     ) -> ModelWindowScalpTopologyResponse:
+        validate_model_input_source(source)
         cls._ensure_inference_available()
         model_spec = cls._get_model_spec(model_name)
         checkpoint_signature = ModelRuntime.checkpoint_signature(model_spec)

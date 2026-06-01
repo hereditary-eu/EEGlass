@@ -1,4 +1,5 @@
 from selfeeg.ssl import EarlyStopping
+import json
 import os
 from pathlib import Path
 
@@ -6,11 +7,10 @@ import torch
 
 from backend.ml.data_utils.load_data import (
     load_metadata,
-    load_multiple_eegfiles,
-    gen_filename,
+    load_multiple_eeg_windows,
     gen_participant_id_long,
 )
-from backend.ml.data_utils.prepare_data import get_data_loader
+from backend.ml.data_utils.prepare_data import get_window_data_loader
 from backend.experiments_xeegnet.shallownetXAI_main.AllFnc.training import (
     lossBinary,
     lossMulti,
@@ -18,6 +18,8 @@ from backend.experiments_xeegnet.shallownetXAI_main.AllFnc.training import (
 )
 from backend.ml.model import build_xeegnet
 from backend.ml.model_vars import (
+    MODEL_INPUT_PROTOCOL_VERSION,
+    MODEL_INPUT_SOURCE,
     PARAMETERS_DEFAULT,
     TRAINING_PARAMETERS_DEFAULT,
     PRETRAINED_MODEL_DIR,
@@ -32,6 +34,22 @@ def save_model(model, model_path, df_metadata=None):
     model.to(device="cpu")
     resolved_model_path = Path(model_path)
     torch.save(model.state_dict(), resolved_model_path)
+    protocol_path = resolved_model_path.with_suffix(".model.json")
+    protocol_path.write_text(
+        json.dumps(
+            {
+                "input_source": MODEL_INPUT_SOURCE,
+                "input_protocol_version": MODEL_INPUT_PROTOCOL_VERSION,
+                "sampling_frequency": int(PARAMETERS_DEFAULT["srate"]),
+                "sample_length": int(PARAMETERS_DEFAULT["sample_length"]),
+                "window_size_seconds": float(PARAMETERS_DEFAULT["window"]),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     if df_metadata is not None:
         metadata_path = resolved_model_path.with_name(f"{resolved_model_path.stem}_metadata.csv")
         df_metadata.to_csv(metadata_path, index=True)
@@ -51,7 +69,7 @@ def train_save_model(
     n_max=None,
 ):
     """
-    Trains the model and saves it to the specified path. The function loads the EEG data for the specified participants, prepares the data loaders, defines the optimizer, loss function and learning rate scheduler, and then trains the model using the train_model function from shallownetXAI_main. Finally, it saves the trained model to the specified path.
+    Trains the model and saves it to the specified path. The function loads derivative EEG data for the specified participants, prepares the data loaders, defines the optimizer, loss function and learning rate scheduler, and then trains the model using the train_model function from shallownetXAI_main. Finally, it saves the trained model to the specified path.
     There are default parameters for the model and training, which can be overridden.
     - model_path: Path to save the trained model.
     - dir_data: Path to the data directory containing the EEG data and metadata.
@@ -83,35 +101,35 @@ def train_save_model(
         # df_metadata = df_metadata.loc[df_metadata['datasplit'].isin(['train', 'val']), :]
         df_metadata.reset_index(inplace=True, drop=False)
 
-    df_eeg = load_multiple_eegfiles(
-        dir_data, participant_ids_train + participant_ids_val, gen_filename, df_metadata, n_max=n_max
+    x_train, y_train = load_multiple_eeg_windows(
+        dir_data,
+        participant_ids_train,
+        df_metadata,
+        sample_length=parameters["sample_length"],
+        n_max=n_max,
+    )
+    x_val, y_val = load_multiple_eeg_windows(
+        dir_data,
+        participant_ids_val,
+        df_metadata,
+        sample_length=parameters["sample_length"],
+        n_max=n_max,
     )
 
-    if "participant_id" in df_eeg.columns:
-        df_metadata.set_index("participant_id", inplace=True)
-
-    df_train = df_eeg[df_eeg["participant_id"].isin(participant_ids_train_str)]
-    df_val = df_eeg[df_eeg["participant_id"].isin(participant_ids_val_str)]
-
-    del df_eeg
-
-    trainloader = get_data_loader(
-        df_train,
-        parameters["Chans"],
-        parameters["sample_length"],
+    trainloader = get_window_data_loader(
+        x_train,
+        y_train,
         parameters["batchsize"],
         parameters["workers"],
-        x_columns=parameters["x_columns"],
     )
-    valloader = get_data_loader(
-        df_val,
-        parameters["Chans"],
-        parameters["sample_length"],
+    valloader = get_window_data_loader(
+        x_val,
+        y_val,
         parameters["batchsize"],
         parameters["workers"],
-        x_columns=parameters["x_columns"],
+        shuffle=False,
     )
-    del df_train, df_val
+    del x_train, y_train, x_val, y_val
 
     # define optimizer, loss function and learning rate scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=training_parameters["lr"])

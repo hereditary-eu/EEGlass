@@ -13,6 +13,7 @@ import {
   getInferenceErrorMessage,
   getPredictionCacheErrorMessage,
   isAbortError,
+  MODEL_INPUT_SOURCE,
   PREDICTION_CACHE_RETRY_COUNT,
   PREDICTION_CACHE_RETRY_DELAY_MS,
   wait,
@@ -21,7 +22,6 @@ import {
 interface UseTimeseriesPredictionsOptions {
   datasetId: string;
   subjectId: string;
-  source: TimeseriesSource;
   modelName: string | null | undefined;
   signal: TimeseriesSignalResponse | null;
   activeChannels: ChannelId[];
@@ -35,7 +35,6 @@ interface UseTimeseriesPredictionsOptions {
 export function useTimeseriesPredictions({
   datasetId,
   subjectId,
-  source,
   modelName,
   signal,
   activeChannels,
@@ -50,13 +49,13 @@ export function useTimeseriesPredictions({
   const [activePredictionCacheProgress, setActivePredictionCacheProgress] =
     useState<ModelPredictionCacheProgress | null>(null);
   const [inferenceError, setInferenceError] = useState<string | null>(null);
-  const activeContextRef = useRef({ datasetId, subjectId, source, modelName });
+  const activeContextRef = useRef({ datasetId, subjectId, source: MODEL_INPUT_SOURCE, modelName });
   const cachedPredictionRequestIdRef = useRef(0);
   const computePredictionRequestIdRef = useRef(0);
   const computeAbortControllerRef = useRef<AbortController | null>(null);
   const isDatasetPredictionJobRunning = isPredictionCacheJobRunning(activePredictionCacheProgress);
 
-  activeContextRef.current = { datasetId, subjectId, source, modelName };
+  activeContextRef.current = { datasetId, subjectId, source: MODEL_INPUT_SOURCE, modelName };
 
   const isCurrentContext = useCallback(
     (context: {
@@ -109,7 +108,7 @@ export function useTimeseriesPredictions({
     }
 
     computeAbortControllerRef.current?.abort();
-    const requestContext = { datasetId, subjectId, source, modelName };
+    const requestContext = { datasetId, subjectId, source: MODEL_INPUT_SOURCE, modelName };
     const requestId = computePredictionRequestIdRef.current + 1;
     computePredictionRequestIdRef.current = requestId;
     const abortController = new AbortController();
@@ -126,9 +125,15 @@ export function useTimeseriesPredictions({
     onPredictionReset();
 
     try {
-      const response = await ModelService.computeAndCachePredictions(datasetId, subjectId, source, modelName, {
-        signal: abortController.signal,
-      });
+      const response = await ModelService.computeAndCachePredictions(
+        datasetId,
+        subjectId,
+        MODEL_INPUT_SOURCE,
+        modelName,
+        {
+          signal: abortController.signal,
+        },
+      );
       if (!isActiveRequest()) {
         return;
       }
@@ -161,7 +166,6 @@ export function useTimeseriesPredictions({
     setLockedPredictionWindowIndex,
     modelName,
     signal,
-    source,
     subjectId,
   ]);
 
@@ -175,7 +179,7 @@ export function useTimeseriesPredictions({
     let socket: WebSocket | null = null;
     const abortController = new AbortController();
 
-    ModelService.getActivePredictionCacheJob(datasetId, source, modelName, {
+    ModelService.getActivePredictionCacheJob(datasetId, MODEL_INPUT_SOURCE, modelName, {
       signal: abortController.signal,
     })
       .then((progress) => {
@@ -223,7 +227,7 @@ export function useTimeseriesPredictions({
       abortController.abort();
       socket?.close();
     };
-  }, [datasetId, modelName, source]);
+  }, [datasetId, modelName]);
 
   useEffect(() => {
     if (!datasetId || !subjectId || !modelName) {
@@ -243,7 +247,7 @@ export function useTimeseriesPredictions({
     }
 
     let isCurrent = true;
-    const requestContext = { datasetId, subjectId, source, modelName };
+    const requestContext = { datasetId, subjectId, source: MODEL_INPUT_SOURCE, modelName };
     const requestId = cachedPredictionRequestIdRef.current + 1;
     cachedPredictionRequestIdRef.current = requestId;
     const abortController = new AbortController();
@@ -259,7 +263,7 @@ export function useTimeseriesPredictions({
     clearSelectedPredictionWindow();
     onPredictionReset();
 
-    getCachedPredictionsWithRetry(datasetId, subjectId, source, modelName, abortController.signal)
+    getCachedPredictionsWithRetry(datasetId, subjectId, MODEL_INPUT_SOURCE, modelName, abortController.signal)
       .then((response) => {
         if (isActiveRequest()) {
           setInferenceResult(response);
@@ -293,7 +297,6 @@ export function useTimeseriesPredictions({
     modelName,
     onPredictionReset,
     setLockedPredictionWindowIndex,
-    source,
     subjectId,
   ]);
 

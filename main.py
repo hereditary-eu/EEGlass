@@ -12,6 +12,7 @@ from backend.ml.model_vars import DEFAULT_MODEL_NAME
 
 DEFAULT_DATASET_ID = "ds004504"
 DEFAULT_SOURCE = "derivatives"
+MODEL_SPLIT_COUNT = 5
 
 
 def main():
@@ -22,43 +23,56 @@ def main():
     # model = load_model()
 
 
-def train():
+def train(model_version: int = 200):
     """
-    Trains the xeegmodel.
+    Trains one xeegmodel split.
     Saves the model.
     """
     from backend.ml.data_utils.load_data import load_metadata
-    from backend.ml.data_utils.prepare_data import split_participants_min_per_class
     from backend.ml.model_vars import PRETRAINED_MODEL_DIR
     from backend.ml.train import train_save_model
 
     dir_data = os.path.join("data", "datasets", "ds004504")
-
-    # probably add timestamp to the model name to keep track of different runs
-    modelname = "xeegnet_model_v1.pt"
+    split_index = model_version - 200
+    participants_split = load_participant_splits()[str(split_index)]
+    modelname = f"xeegnet_model_v{model_version}.pt"
     model_path = PRETRAINED_MODEL_DIR / modelname
 
     df_metadata = load_metadata(dir_data=dir_data)
-    participants_ids_train, participants_ids_val, participants_ids_test = split_participants_min_per_class(
-        df_metadata, ratios=(0.6, 0.2, 0.2), id_col="participant_id_int", random_state=42
-    )
+    df_metadata["datasplit"] = "test"
+    df_metadata.loc[df_metadata["participant_id_int"].isin(participants_split["train"]), "datasplit"] = "train"
+    df_metadata.loc[df_metadata["participant_id_int"].isin(participants_split["val"]), "datasplit"] = "val"
 
     model, df_metadata = train_save_model(
         model_path=model_path,
         dir_data=dir_data,
         df_metadata=df_metadata,
-        participant_ids_train=participants_ids_train,
-        participant_ids_val=participants_ids_val,
-        # n_max=1000,
+        participant_ids_train=participants_split["train"],
+        participant_ids_val=participants_split["val"],
     )
     return model, df_metadata
+
+
+def train_models():
+    """
+    Trains all production xEEGNet splits with the derivative-only input protocol.
+    """
+    for model_version in range(200, 200 + MODEL_SPLIT_COUNT):
+        print(f"Training xeegnet_model_v{model_version}...")
+        train(model_version)
+
+
+def load_participant_splits() -> dict[str, dict[str, list[int]]]:
+    split_path = Path("backend") / "ml" / "data_splits.json"
+    with split_path.open("r", encoding="utf-8") as file:
+        return json.load(file)
 
 
 def load_model():
     from backend.ml.model_vars import PRETRAINED_MODEL_DIR
     from backend.ml.train import load_model_weights
 
-    modelname = "xeegnet_model_v1.pt"
+    modelname = f"{DEFAULT_MODEL_NAME}.pt"
     model_path = PRETRAINED_MODEL_DIR / modelname
     model = load_model_weights(model_path)
     return model
@@ -157,7 +171,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.action == "train":
-        train()
+        train_models()
     elif args.action == "load-model":
         load_model()
     elif args.action == "export-patient-embeddings":

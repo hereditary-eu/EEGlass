@@ -53,7 +53,6 @@ export function BandActivationChart({
   const { evidence, isLoading, error } = useModelClassEvidence({
     datasetId,
     subjectId,
-    source,
     modelInfo,
     windowIndex,
   });

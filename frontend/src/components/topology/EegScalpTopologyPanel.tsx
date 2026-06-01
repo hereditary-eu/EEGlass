@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { ModelService } from "../../services/ModelService";
 import { useAppStore } from "../../stores/useAppStore";
+import { MODEL_INPUT_SOURCE } from "../../hooks/timeseries/shared";
 import { registerVacpScalpTopology } from "../../vacp/registerScalpTopology";
 import { getModelBandLabel } from "../../constants/eegModel";
 import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../../constants/eegModelNotation";
@@ -59,7 +60,7 @@ export function EegScalpTopologyPanel({
 
     setIsLoading(true);
     setError(null);
-    ModelService.getWindowScalpTopologies(datasetId, subjectId, windowIndex, source, modelName)
+    ModelService.getWindowScalpTopologies(datasetId, subjectId, windowIndex, MODEL_INPUT_SOURCE, modelName)
       .then((response) => {
         if (!isCurrent) {
           return;
@@ -84,7 +85,7 @@ export function EegScalpTopologyPanel({
     return () => {
       isCurrent = false;
     };
-  }, [datasetId, modelName, source, subjectId, windowIndex]);
+  }, [datasetId, modelName, subjectId, windowIndex]);
 
   const activeMode = useMemo(
     () => scalpTopologies?.modes.find((mode) => mode.mode === "weighted_contribution") ?? null,

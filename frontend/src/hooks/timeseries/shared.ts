@@ -3,6 +3,7 @@ import type { ChannelId, TimeseriesSource } from "../../types";
 export const DEFAULT_DATASET_ID = "ds004504";
 export const DEFAULT_SUBJECT_ID = "sub-001";
 export const DEFAULT_SOURCE: TimeseriesSource = "derivatives";
+export const MODEL_INPUT_SOURCE: TimeseriesSource = "derivatives";
 export const DEFAULT_PREVIEW_MAX_POINTS = 5000;
 export const PREDICTION_CACHE_RETRY_COUNT = 4;
 export const PREDICTION_CACHE_RETRY_DELAY_MS = 650;

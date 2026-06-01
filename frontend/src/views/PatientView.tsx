@@ -178,7 +178,6 @@ export function PatientView() {
         <WindowEmbeddingPanel
           datasetId={ts.datasetId}
           subjectId={ts.subjectId}
-          source={ts.source}
           modelInfo={ts.modelInfo}
           selectedWindowIndex={ts.lockedPredictionWindowIndex}
           hoveredWindowIndex={ts.hoveredPredictionWindowIndex}

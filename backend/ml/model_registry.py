@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 import re
 
@@ -8,6 +9,8 @@ from backend.ml.model_vars import (
     MODEL_BANDS,
     MODEL_CHANNELS,
     MODEL_CLASS_LABELS,
+    MODEL_INPUT_PROTOCOL_VERSION,
+    MODEL_INPUT_SOURCE,
     PARAMETERS_DEFAULT,
     PRETRAINED_MODEL_DIR,
 )
@@ -65,11 +68,40 @@ def build_xeegnet_model_spec(model_name: str, checkpoint_filename: str) -> Model
     )
 
 
+def model_protocol_path(checkpoint_path: Path) -> Path:
+    return checkpoint_path.with_suffix(".model.json")
+
+
+def read_model_input_protocol(checkpoint_path: Path) -> dict[str, object]:
+    protocol_path = model_protocol_path(checkpoint_path)
+    if not protocol_path.is_file():
+        return {}
+
+    try:
+        data = json.loads(protocol_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+    return data if isinstance(data, dict) else {}
+
+
+def is_model_input_protocol_current(checkpoint_path: Path) -> bool:
+    protocol = read_model_input_protocol(checkpoint_path)
+    return (
+        protocol.get("input_source") == MODEL_INPUT_SOURCE
+        and protocol.get("input_protocol_version") == MODEL_INPUT_PROTOCOL_VERSION
+        and protocol.get("sampling_frequency") == int(PARAMETERS_DEFAULT["srate"])
+        and protocol.get("sample_length") == int(PARAMETERS_DEFAULT["sample_length"])
+        and protocol.get("window_size_seconds") == float(PARAMETERS_DEFAULT["window"])
+    )
+
+
 def discover_xeegnet_checkpoints() -> dict[str, str]:
     return {
         checkpoint_path.stem: checkpoint_path.name
         for checkpoint_path in sorted(PRETRAINED_MODEL_DIR.glob("*.pt"))
         if MODEL_CHECKPOINT_PATTERN.match(checkpoint_path.name)
+        and is_model_input_protocol_current(checkpoint_path)
     }
 
 
