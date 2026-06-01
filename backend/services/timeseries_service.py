@@ -4,6 +4,7 @@ import csv
 import json
 import math
 import re
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,25 @@ _SUBJECT_GROUP_LABELS = {
     "F": "Frontotemporal Dementia",
     "C": "Healthy",
 }
+
+
+@dataclass(frozen=True)
+class TimeseriesSignalData:
+    dataset_id: str
+    subject_id: str
+    source: TimeseriesSource
+    band_filter: TimeseriesBandFilter | None
+    preview: bool
+    channels: list[str]
+    sampling_frequency: float
+    duration: float
+    start_time: float
+    end_time: float
+    start_sample: int
+    end_sample: int
+    sample_count: int
+    decimation: int
+    samples: np.ndarray
 
 
 class TimeseriesServiceError(Exception):
@@ -159,6 +179,40 @@ class TimeseriesService:
         preview: bool = False,
         max_points: int = 5000,
     ) -> TimeseriesSignalResponse:
+        signal_data = cls.get_signal_data(
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            channels=channels,
+            source=source,
+            start_time=start_time,
+            end_time=end_time,
+            band_filter=band_filter,
+            preview=preview,
+            max_points=max_points,
+        )
+        samples = {
+            channel: [float(value) for value in signal_data.samples[channel_index].tolist()]
+            for channel_index, channel in enumerate(signal_data.channels)
+        }
+
+        return TimeseriesSignalResponse(
+            **cls.signal_data_metadata(signal_data),
+            samples=samples,
+        )
+
+    @classmethod
+    def get_signal_data(
+        cls,
+        dataset_id: str,
+        subject_id: str,
+        channels: list[str],
+        source: TimeseriesSource = "derivatives",
+        start_time: float | None = None,
+        end_time: float | None = None,
+        band_filter: TimeseriesBandFilter | None = None,
+        preview: bool = False,
+        max_points: int = 5000,
+    ) -> TimeseriesSignalData:
         if not channels:
             raise TimeseriesValidationError("At least one channel must be requested.")
         if preview and max_points < 2:
@@ -192,12 +246,7 @@ class TimeseriesService:
             data = data[:, indices]
             decimation = max(1, math.ceil(selected_sample_count / max_points))
 
-        samples = {
-            channel: [float(value) for value in data[channel_index].tolist()]
-            for channel_index, channel in enumerate(channels)
-        }
-
-        return TimeseriesSignalResponse(
+        return TimeseriesSignalData(
             dataset_id=dataset_id,
             subject_id=subject_id,
             source=source,
@@ -212,8 +261,27 @@ class TimeseriesService:
             end_sample=end_sample,
             sample_count=int(data.shape[1]),
             decimation=decimation,
-            samples=samples,
+            samples=data,
         )
+
+    @staticmethod
+    def signal_data_metadata(signal_data: TimeseriesSignalData) -> dict[str, Any]:
+        return {
+            "dataset_id": signal_data.dataset_id,
+            "subject_id": signal_data.subject_id,
+            "source": signal_data.source,
+            "band_filter": signal_data.band_filter,
+            "preview": signal_data.preview,
+            "channels": signal_data.channels,
+            "sampling_frequency": signal_data.sampling_frequency,
+            "duration": signal_data.duration,
+            "start_time": signal_data.start_time,
+            "end_time": signal_data.end_time,
+            "start_sample": int(signal_data.start_sample),
+            "end_sample": int(signal_data.end_sample),
+            "sample_count": int(signal_data.sample_count),
+            "decimation": int(signal_data.decimation),
+        }
 
     @staticmethod
     def _apply_band_filter(

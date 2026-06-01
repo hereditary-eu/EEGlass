@@ -1,6 +1,8 @@
+import json
 from typing import cast
 
-from fastapi import APIRouter, HTTPException, Query
+import numpy as np
+from fastapi import APIRouter, HTTPException, Query, Response
 
 from backend.ml.model_vars import DEFAULT_MODEL_NAME, MODEL_BANDS
 from backend.pydantic_models.timeseries import (
@@ -100,8 +102,30 @@ async def get_timeseries_signal(
     band_filter: str | None = Query(None, description="Optional display bandpass filter."),
     start_time: float | None = Query(None, ge=0),
     end_time: float | None = Query(None, gt=0),
-) -> TimeseriesSignalResponse:
+    format: str = Query("json", pattern="^(json|float32)$"),
+) -> TimeseriesSignalResponse | Response:
     try:
+        if format == "float32":
+            signal_data = TimeseriesService.get_signal_data(
+                dataset_id=dataset_id,
+                subject_id=subject_id,
+                channels=_parse_channels(channels),
+                source=_parse_source(source),
+                start_time=start_time,
+                end_time=end_time,
+                band_filter=_parse_band_filter(band_filter),
+                preview=False,
+            )
+            metadata = TimeseriesService.signal_data_metadata(signal_data)
+            samples = np.asarray(signal_data.samples, dtype="<f4", order="C")
+            return Response(
+                content=samples.tobytes(order="C"),
+                media_type="application/vnd.all-in-on-eeg.timeseries.float32",
+                headers={
+                    "X-Timeseries-Signal-Metadata": json.dumps(metadata, separators=(",", ":")),
+                },
+            )
+
         return TimeseriesService.get_signal(
             dataset_id=dataset_id,
             subject_id=subject_id,

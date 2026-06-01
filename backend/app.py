@@ -24,6 +24,7 @@ def create_app():
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["X-Timeseries-Signal-Metadata"],
     )
     app.add_middleware(GZipMiddleware, minimum_size=CONFIG.GZIP_MINIMUM_SIZE)
 
