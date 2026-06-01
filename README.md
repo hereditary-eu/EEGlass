@@ -1,4 +1,11 @@
-# All In On(e) EEG
+# EEGlas
+
+To make clinical diagnoses more understandable, we present EEGlas, a visual interactive dashboard on top of the efficient xEEGNet classifier network architecture, which puts a special emphasis on explainability of the model and outcome.
+This dataset and model focuses on Alzheimer’s Disease (AD) and Frontotemporal Dementia (FTD); every step in the classification is presented in a visual and understandable way, on top of an integrated Electroencephalography (EEG) database viewer.
+
+![EEGlas Preview](./frontend/screenshot-rocks.png)
+
+## Contribute
 
 Combination of all frontend and backend utilities, and baseline for xEEG dashboard development.
 
@@ -48,19 +55,3 @@ The compose setup starts three services:
 - `frontend`: serves the UI on <http://localhost:3000>.
 
 The default dataset is large. `docker-compose.yml` also contains a commented smaller dataset URL (only 5 patients instead of 88) that can be swapped into `DATASET_URL` to test the download flow without downloading the full 4.2 GB dataset.
-
-Stop the running containers:
-
-```bash
-docker compose down
-```
-
-`docker compose down` removes containers and the compose network, but it does not remove named volumes. This means the downloaded dataset stays available in the `datasets` volume and will be reused on the next `docker compose up`.
-
-To remove containers and volumes, including the downloaded dataset and model outputs:
-
-```bash
-docker compose down -v
-```
-
-Use `-v` only when you intentionally want to delete the persisted Docker volumes and force the dataset to be downloaded again.
