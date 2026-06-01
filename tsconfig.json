@@ -21,17 +21,16 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
 
-    "baseUrl": ".",
     "paths": {
-      "@vacp/core": ["frontend/src/vacp/protocol/core/src/index.ts"],
-      "@vacp/debug-ui": ["frontend/src/vacp/tooling/debug-ui/src/index.ts"],
-      "@vacp/debug-ui/*": ["frontend/src/vacp/tooling/debug-ui/src/*"],
-      "@vacp/diagrams": ["frontend/src/vacp/protocol/diagrams/src/index.ts"],
-      "@vacp/gateway": ["frontend/src/vacp/protocol/gateway/src/index.ts"],
-      "@vacp/kit": ["frontend/src/vacp/protocol/kit/src/index.ts"],
-      "@vacp/vega-lite": ["frontend/src/vacp/providers/vega-lite/src/index.ts"],
-      "@vacp/agent-client": ["frontend/src/vacp/transports/agent-client/src/index.ts"],
-      "@/*": ["frontend/*"]
+      "@vacp/core": ["./frontend/src/vacp/protocol/core/src/index.ts"],
+      "@vacp/debug-ui": ["./frontend/src/vacp/tooling/debug-ui/src/index.ts"],
+      "@vacp/debug-ui/*": ["./frontend/src/vacp/tooling/debug-ui/src/*"],
+      "@vacp/diagrams": ["./frontend/src/vacp/protocol/diagrams/src/index.ts"],
+      "@vacp/gateway": ["./frontend/src/vacp/protocol/gateway/src/index.ts"],
+      "@vacp/kit": ["./frontend/src/vacp/protocol/kit/src/index.ts"],
+      "@vacp/vega-lite": ["./frontend/src/vacp/providers/vega-lite/src/index.ts"],
+      "@vacp/agent-client": ["./frontend/src/vacp/transports/agent-client/src/index.ts"],
+      "@/*": ["./frontend/*"]
     },
 
     // Some stricter flags (disabled by default)
