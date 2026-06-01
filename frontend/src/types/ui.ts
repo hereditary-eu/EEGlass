@@ -188,6 +188,7 @@ export interface ModelPatientEmbeddingPoint {
   subject_id: string;
   x: number;
   y: number;
+  raw_embedding?: number[] | null;
   true_label?: string | null;
   predicted_label?: string | null;
   mean_confidence?: number | null;

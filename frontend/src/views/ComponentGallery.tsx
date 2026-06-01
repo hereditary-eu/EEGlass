@@ -6,6 +6,7 @@ import {
   SimilarityMatrixViewerMock,
 } from "../components";
 import { DataTableMock } from "../components/data-table";
+import { RealScatterHistogram } from "../components/scatter-histogram/RealScatterHistogram";
 
 export function ComponentGallery() {
   return (
@@ -18,6 +19,11 @@ export function ComponentGallery() {
       <section className="app-section">
         <h2 className="app-section-title">Correlation Heatmap</h2>
         <CorrelationHeatmapMock />
+      </section>
+
+      <section className="app-section">
+        <h2 className="app-section-title">Scatterplot / Histogram</h2>
+        <RealScatterHistogram datasetId="ds004504" />
       </section>
 
       <section className="app-section">
