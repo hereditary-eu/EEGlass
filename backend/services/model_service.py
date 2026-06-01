@@ -17,6 +17,7 @@ from backend.ml.model_vars import (
     MODEL_CHANNELS,
     MODEL_CLASS_LABELS,
     PARAMETERS_DEFAULT,
+    get_embedding_feature_names,
 )
 from backend.pydantic_models.inference import (
     ModelBandPowerResponse,
@@ -282,6 +283,15 @@ def build_model_info_response(model_spec: ModelSpec) -> ModelInfoResponse:
             }
             for class_spec in model_spec.classes
         ],
+        bands=[
+            {
+                "band": band_name,
+                "label": band_name,
+                "start_hz": start_hz,
+                "end_hz": end_hz,
+            }
+            for band_name, start_hz, end_hz in model_spec.bands
+        ],
         metadata={
             "API name": model_spec.name,
             "Architecture": model_spec.architecture,
@@ -460,7 +470,7 @@ def compute_band_power_stats_response(
                     model_spec, dataset_id, subject.id, source
                 )
                 relative_power_db = compute_subject_relative_band_power_db(subject_data)
-            except (ModelServiceError, TimeseriesServiceError):
+            except ModelServiceError, TimeseriesServiceError:
                 continue
             if relative_power_db.size == 0:
                 continue
@@ -984,11 +994,14 @@ class ModelService:
                     end_time=prediction.end_time,
                     x=float(coordinate[0]),
                     y=float(coordinate[1]),
+                    raw_embedding=[float(value) for value in embedding_row],
                     predicted_label=prediction.predicted_label,
                     confidence=prediction.confidence,
                     cluster_id=cluster_ids[index] if index < len(cluster_ids) else None,
                 )
-                for index, (prediction, coordinate) in enumerate(zip(response.predictions, coordinates, strict=True))
+                for index, (prediction, coordinate, embedding_row) in enumerate(
+                    zip(response.predictions, coordinates, penultimate_embeddings, strict=True)
+                )
             ]
             if reduction_status == "ok"
             else []
@@ -1002,6 +1015,7 @@ class ModelService:
             checkpoint_signature=ModelRuntime.checkpoint_signature(model_spec),
             embedding_layer="encoder",
             embedding_label="window penultimate embedding",
+            feature_names=get_embedding_feature_names(source_dimension),
             reduction=ModelPatientEmbeddingReduction(
                 method="pca",
                 status=reduction_status,

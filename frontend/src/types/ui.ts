@@ -105,12 +105,20 @@ export interface ModelClassPresentation {
   compact_label: string;
 }
 
+export interface ModelBandPresentation {
+  band: TimeseriesBandFilter;
+  label: string;
+  start_hz: number;
+  end_hz: number;
+}
+
 export interface ModelInfoResponse {
   name: string;
   display_name: string;
   architecture: string;
   model_summary: string;
   classes: ModelClassPresentation[];
+  bands: ModelBandPresentation[];
   metadata: Record<string, ModelMetadataValue>;
 }
 
@@ -126,10 +134,23 @@ export interface ModelListResponse {
   models: ModelListItem[];
 }
 
-export interface PatientAggregationSettings {
+export type PatientAggregationThresholdField = "alzheimer_threshold" | "frontotemporal_dementia_threshold";
+
+export interface PatientAggregationThresholdSetting {
+  field: PatientAggregationThresholdField;
+  class_label: string;
+  compact_label: string;
+}
+
+export interface PatientAggregationSettingsPayload {
   strategy: "disease_threshold";
   alzheimer_threshold: number;
   frontotemporal_dementia_threshold: number;
+}
+
+export interface PatientAggregationSettings extends PatientAggregationSettingsPayload {
+  thresholds: PatientAggregationThresholdSetting[];
+  defaults: PatientAggregationSettingsPayload;
 }
 
 export interface ModelPredictionCacheJobResponse {
@@ -212,6 +233,7 @@ export interface ModelPatientEmbeddingsResponse {
   preprocessing_version: string;
   embedding_layer: string;
   embedding_label: string;
+  feature_names: string[];
   reduction: ModelPatientEmbeddingReduction;
   points: ModelPatientEmbeddingPoint[];
 }
@@ -222,6 +244,7 @@ export interface ModelWindowEmbeddingPoint {
   end_time: number;
   x: number;
   y: number;
+  raw_embedding?: number[] | null;
   predicted_label: string;
   confidence: number;
   cluster_id?: number | null;
@@ -235,6 +258,7 @@ export interface ModelWindowEmbeddingsResponse {
   checkpoint_signature: string;
   embedding_layer: string;
   embedding_label: string;
+  feature_names: string[];
   reduction: ModelPatientEmbeddingReduction;
   points: ModelWindowEmbeddingPoint[];
 }
@@ -259,7 +283,7 @@ export interface ModelClassWeight {
 }
 
 export interface ModelClassEvidenceBand {
-  band: string;
+  band: TimeseriesBandFilter;
   feature_value: number;
   class_contributions: ModelClassEvidenceContribution[];
 }
@@ -303,7 +327,7 @@ export interface ModelBandPowerRequest {
 }
 
 export interface ModelBandPowerValue {
-  band: string;
+  band: TimeseriesBandFilter;
   start_hz: number;
   end_hz: number;
   absolute_power: number;
@@ -329,7 +353,7 @@ export interface ModelBandPowerResponse {
 export type ModelBandPowerStatsMode = "intra_patient" | "inter_patient";
 
 export interface ModelBandPowerStatsValue {
-  band: string;
+  band: TimeseriesBandFilter;
   start_hz: number;
   end_hz: number;
   mean_db: number;
@@ -348,6 +372,7 @@ export interface ModelBandPowerStatsResponse {
   subject_id: string;
   source: TimeseriesSource;
   mode: ModelBandPowerStatsMode;
+  cohort_label?: string | null;
   unit_label: string;
   subject_count: number;
   window_count: number;
@@ -362,7 +387,7 @@ export interface ModelScalpTopologyChannel {
 }
 
 export interface ModelScalpTopologyBand {
-  band: string;
+  band: TimeseriesBandFilter;
   channels: ModelScalpTopologyChannel[];
   grid_values: number[];
 }

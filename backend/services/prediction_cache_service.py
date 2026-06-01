@@ -11,7 +11,7 @@ from typing import Any, Literal
 import numpy as np
 
 from backend.config import CONFIG
-from backend.ml.model_vars import DEFAULT_MODEL_NAME
+from backend.ml.model_vars import DEFAULT_MODEL_NAME, get_embedding_feature_names
 from backend.pydantic_models.inference import (
     ModelBandPowerStatsResponse,
     ModelInferenceResponse,
@@ -286,7 +286,7 @@ class PredictionCacheService:
                 subject_id=summary.subject_id,
                 x=float(coordinate[0]),
                 y=float(coordinate[1]),
-                raw_embedding=list(vector),  # NEW
+                raw_embedding=list(vector),
                 true_label=summary.true_label,
                 predicted_label=summary.predicted_label,
                 mean_confidence=summary.mean_confidence,
@@ -373,6 +373,7 @@ class PredictionCacheService:
         model_name: str = DEFAULT_MODEL_NAME,
         source: TimeseriesSource = "derivatives",
         mode: Literal["intra_patient", "inter_patient"] = "intra_patient",
+        cohort_label: str | None = None,
     ) -> ModelBandPowerStatsResponse:
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
         checkpoint_key = cls._checkpoint_key(checkpoint_signature)
@@ -413,6 +414,7 @@ class PredictionCacheService:
         if not available_subject_ids or not set(available_subject_ids).issubset(completed_subjects):
             raise ModelNotFoundError("Inter-patient band-power statistics require a completed dataset compute job.")
 
+        normalized_cohort_label = cohort_label.strip() if cohort_label else None
         patient_mean_values: list[np.ndarray] = []
         for cohort_subject_id in available_subject_ids:
             artifact = cls._read_prediction_artifact(dataset_id, model_name, checkpoint_key, cohort_subject_id, source)
@@ -426,12 +428,19 @@ class PredictionCacheService:
                 checkpoint_key=checkpoint_key,
             ):
                 raise ModelNotFoundError("Inter-patient band-power statistics require a completed dataset compute job.")
+
+            if normalized_cohort_label:
+                summary = ModelPredictionSummary(**artifact["summary"])
+                if summary.true_label != normalized_cohort_label:
+                    continue
+
             patient_mean_values.append(extract_band_power_mean_values(artifact["band_power_stats"]))
 
         return build_inter_patient_band_power_stats_response(
             dataset_id=dataset_id,
             subject_id=subject_id,
             source=source,
+            cohort_label=normalized_cohort_label,
             patient_mean_values=patient_mean_values,
         )
 
@@ -784,6 +793,7 @@ class PredictionCacheService:
             preprocessing_version=PREPROCESSING_VERSION,
             embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
             embedding_label=PENULTIMATE_EMBEDDING_LABEL,
+            feature_names=get_embedding_feature_names(source_dimension),
             reduction=ModelPatientEmbeddingReduction(
                 method="pca",
                 status=reduction_status,
@@ -816,6 +826,7 @@ class PredictionCacheService:
                 checkpoint_signature=checkpoint_signature,
                 embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
                 embedding_label=PENULTIMATE_EMBEDDING_LABEL,
+                feature_names=[],
                 reduction=ModelPatientEmbeddingReduction(
                     method="pca",
                     status="insufficient_data",
@@ -854,6 +865,7 @@ class PredictionCacheService:
                 checkpoint_signature=checkpoint_signature,
                 embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
                 embedding_label=PENULTIMATE_EMBEDDING_LABEL,
+                feature_names=get_embedding_feature_names(source_dimension),
                 reduction=ModelPatientEmbeddingReduction(
                     method="pca",
                     status="insufficient_data",
@@ -887,11 +899,14 @@ class PredictionCacheService:
                     end_time=prediction.end_time,
                     x=float(coordinate[0]),
                     y=float(coordinate[1]),
+                    raw_embedding=[float(value) for value in embedding_row],
                     predicted_label=prediction.predicted_label,
                     confidence=prediction.confidence,
                     cluster_id=cluster_ids[index] if index < len(cluster_ids) else None,
                 )
-                for index, (prediction, coordinate) in enumerate(zip(response.predictions, coordinates, strict=True))
+                for index, (prediction, coordinate, embedding_row) in enumerate(
+                    zip(response.predictions, coordinates, embedding_rows, strict=True)
+                )
             ]
             if reduction_status == "ok"
             else []
@@ -905,6 +920,7 @@ class PredictionCacheService:
             checkpoint_signature=checkpoint_signature,
             embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
             embedding_label=PENULTIMATE_EMBEDDING_LABEL,
+            feature_names=get_embedding_feature_names(source_dimension),
             reduction=ModelPatientEmbeddingReduction(
                 method="pca",
                 status=reduction_status,

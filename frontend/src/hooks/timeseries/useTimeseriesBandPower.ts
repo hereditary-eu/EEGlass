@@ -27,6 +27,7 @@ export function useTimeseriesBandPower({
   const [bandPower, setBandPower] = useState<ModelBandPowerResponse | null>(null);
   const [bandPowerStats, setBandPowerStats] = useState<ModelBandPowerStatsResponse | null>(null);
   const [bandPowerStatsMode, setBandPowerStatsMode] = useState<ModelBandPowerStatsMode>("intra_patient");
+  const [bandPowerStatsCohortLabel, setBandPowerStatsCohortLabel] = useState<string | null>(null);
   const [isLoadingBandPower, setIsLoadingBandPower] = useState(false);
   const [isLoadingBandPowerStats, setIsLoadingBandPowerStats] = useState(false);
   const [isInterBandPowerStatsUnavailable, setIsInterBandPowerStatsUnavailable] = useState(false);
@@ -41,6 +42,7 @@ export function useTimeseriesBandPower({
     bandPowerStatsCacheRef.current.clear();
     setBandPower(null);
     setBandPowerStats(null);
+    setBandPowerStatsCohortLabel(null);
     setIsLoadingBandPower(false);
     setIsLoadingBandPowerStats(false);
     setIsInterBandPowerStatsUnavailable(false);
@@ -111,7 +113,8 @@ export function useTimeseriesBandPower({
 
     const requestSource = source;
     const requestMode = bandPowerStatsMode;
-    const cacheKey = `${requestModelName}::${datasetId}::${subjectId}::${requestSource}::${requestMode}`;
+    const requestCohortLabel = requestMode === "inter_patient" ? bandPowerStatsCohortLabel : null;
+    const cacheKey = `${requestModelName}::${datasetId}::${subjectId}::${requestSource}::${requestMode}::${requestCohortLabel ?? "all"}`;
     const cachedBandPowerStats = bandPowerStatsCacheRef.current.get(cacheKey);
     if (cachedBandPowerStats) {
       setBandPowerStats(cachedBandPowerStats);
@@ -124,7 +127,14 @@ export function useTimeseriesBandPower({
     setIsLoadingBandPowerStats(true);
     setBandPowerStatsError(null);
 
-    ModelService.getBandPowerStats(datasetId, subjectId, requestSource, requestMode, requestModelName)
+    ModelService.getBandPowerStats(
+      datasetId,
+      subjectId,
+      requestSource,
+      requestMode,
+      requestModelName,
+      requestCohortLabel,
+    )
       .then((response) => {
         if (!isCurrent) {
           return;
@@ -141,7 +151,7 @@ export function useTimeseriesBandPower({
           return;
         }
 
-        if (requestMode === "inter_patient" && getErrorStatusCode(loadError) === 404) {
+        if (requestMode === "inter_patient" && getErrorStatusCode(loadError) === 404 && !requestCohortLabel) {
           setIsInterBandPowerStatsUnavailable(true);
           setBandPowerStatsMode("intra_patient");
           setBandPowerStatsError(null);
@@ -160,18 +170,27 @@ export function useTimeseriesBandPower({
     return () => {
       isCurrent = false;
     };
-  }, [bandPowerStatsMode, canLoadBandPowerStats, datasetId, modelName, source, subjectId]);
+  }, [bandPowerStatsCohortLabel, bandPowerStatsMode, canLoadBandPowerStats, datasetId, modelName, source, subjectId]);
+
+  const updateBandPowerStatsMode = useCallback((mode: ModelBandPowerStatsMode) => {
+    setBandPowerStatsMode(mode);
+    if (mode !== "inter_patient") {
+      setBandPowerStatsCohortLabel(null);
+    }
+  }, []);
 
   return {
     bandPower,
     bandPowerStats,
     bandPowerStatsMode,
+    bandPowerStatsCohortLabel,
     isInterBandPowerStatsUnavailable,
     isLoadingBandPower,
     isLoadingBandPowerStats,
     bandPowerError,
     bandPowerStatsError,
-    setBandPowerStatsMode,
+    setBandPowerStatsMode: updateBandPowerStatsMode,
+    setBandPowerStatsCohortLabel,
     clearBandPowerData,
   };
 }

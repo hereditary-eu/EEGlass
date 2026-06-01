@@ -11,6 +11,7 @@ import type {
   ModelPredictionCacheProgress,
   ModelPredictionCacheStatus,
   PatientAggregationSettings,
+  PatientAggregationSettingsPayload,
   TimeseriesDatasetInfo,
   TimeseriesSubjectInfo,
 } from "../types";
@@ -55,8 +56,7 @@ export function OverviewPanel() {
   const [shouldFocusFirstPatient, setShouldFocusFirstPatient] = useState(false);
   const [isStartingCacheJob, setIsStartingCacheJob] = useState(false);
   const [isDeletingCache, setIsDeletingCache] = useState(false);
-  const [patientAggregationSettings, setPatientAggregationSettings] =
-    useState<PatientAggregationSettings | null>(null);
+  const [patientAggregationSettings, setPatientAggregationSettings] = useState<PatientAggregationSettings | null>(null);
   const [isLoadingPatientAggregationSettings, setIsLoadingPatientAggregationSettings] = useState(true);
   const [isSavingPatientAggregationSettings, setIsSavingPatientAggregationSettings] = useState(false);
   const [patientAggregationSettingsError, setPatientAggregationSettingsError] = useState<string | null>(null);
@@ -399,7 +399,7 @@ export function OverviewPanel() {
   );
 
   const savePatientAggregationSettings = useCallback(
-    async (settings: PatientAggregationSettings) => {
+    async (settings: PatientAggregationSettingsPayload) => {
       setIsSavingPatientAggregationSettings(true);
       setPatientAggregationSettingsError(null);
 
@@ -524,11 +524,7 @@ export function OverviewPanel() {
     setCacheError(null);
 
     try {
-      const nextStatus = await ModelService.deletePredictionCache(
-        selectedDatasetId,
-        "derivatives",
-        activeModelName,
-      );
+      const nextStatus = await ModelService.deletePredictionCache(selectedDatasetId, "derivatives", activeModelName);
       setCacheStatus(nextStatus);
       setCacheProgress(null);
     } catch (deleteError) {

@@ -2,7 +2,7 @@ from typing import cast
 
 from fastapi import APIRouter, HTTPException, Query
 
-from backend.ml.model_vars import DEFAULT_MODEL_NAME
+from backend.ml.model_vars import DEFAULT_MODEL_NAME, MODEL_BANDS
 from backend.pydantic_models.timeseries import (
     TimeseriesBandFilter,
     TimeseriesDatasetListResponse,
@@ -22,6 +22,7 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 timeseries_router = APIRouter(prefix="/data", tags=["data"])
+SUPPORTED_BAND_FILTERS = tuple(band_name for band_name, _, _ in MODEL_BANDS)
 
 
 @timeseries_router.get("/datasets", response_model=TimeseriesDatasetListResponse)
@@ -131,10 +132,10 @@ def _parse_source(source: str) -> TimeseriesSource:
 def _parse_band_filter(band_filter: str | None) -> TimeseriesBandFilter | None:
     if band_filter is None:
         return None
-    if band_filter not in ("delta", "theta", "alpha", "beta1", "beta2", "beta3", "gamma"):
+    if band_filter not in SUPPORTED_BAND_FILTERS:
         raise HTTPException(
             status_code=400,
-            detail="band_filter must be one of: delta, theta, alpha, beta1, beta2, beta3, gamma.",
+            detail=f"band_filter must be one of: {', '.join(SUPPORTED_BAND_FILTERS)}.",
         )
     return cast(TimeseriesBandFilter, band_filter)
 

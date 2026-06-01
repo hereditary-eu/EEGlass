@@ -15,30 +15,21 @@ dependencies = [
 
 [tool.ruff]
 line-length = 120
-exclude = [
-  "backend/experiments_xeegnet",
-  ".venv",
-]
+exclude = ["backend/experiments_xeegnet", ".venv"]
 
 [tool.uv]
-index = [
-  { name = "pytorch-cpu", url = "https://download.pytorch.org/whl/cpu", explicit = true },
-]
+index = [{ name = "pytorch-cpu", url = "https://download.pytorch.org/whl/cpu", explicit = true }]
 
 [tool.uv.sources]
-torch = [
-  { index = "pytorch-cpu", marker = "platform_system == 'Linux'" },
-]
-torchaudio = [
-  { index = "pytorch-cpu", marker = "platform_system == 'Linux'" },
-]
+torch = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
+torchaudio = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 
 [dependency-groups]
 dev = [
   "ipykernel>=7.2.0",
   "isort>=8.0.1",
   "mass-ts>=0.1.4",
-  "ruff>=0.15.14",
+  "ruff>=0.15.15",
   "selenium>=4.44.0",
   "selfeeg[interactive]>=0.2.1",
 ]

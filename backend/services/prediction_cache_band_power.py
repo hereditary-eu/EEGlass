@@ -26,9 +26,14 @@ def build_inter_patient_band_power_stats_response(
     dataset_id: str,
     subject_id: str,
     source: TimeseriesSource,
+    cohort_label: str | None = None,
     patient_mean_values: list[np.ndarray],
 ) -> ModelBandPowerStatsResponse:
     if not patient_mean_values:
+        if cohort_label:
+            raise ModelNotFoundError(
+                f"No inter-patient band-power statistics are available for cohort '{cohort_label}'."
+            )
         raise ModelNotFoundError("Inter-patient band-power statistics require a completed dataset compute job.")
 
     stats_values = np.stack(patient_mean_values, axis=0)
@@ -40,6 +45,7 @@ def build_inter_patient_band_power_stats_response(
         subject_id=subject_id,
         source=source,
         mode="inter_patient",
+        cohort_label=cohort_label,
         unit_label="dB re channel total band power",
         subject_count=len(patient_mean_values),
         window_count=0,

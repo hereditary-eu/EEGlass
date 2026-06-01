@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
 
-import type { TimeseriesBandFilter } from "../../types";
+import type { ModelBandPresentation, TimeseriesBandFilter } from "../../types";
 import { MathFormula } from "../ui";
 import { ScalpTopologyPlot } from "./ScalpTopologyPlot";
 import {
   findScalpBand,
   getRangeFromResponse,
-  SCALP_BAND_OPTIONS,
   type ScalpTopologyValueChannel,
 } from "./scalpTopologyUtils";
 import { useModelScalpTopologies } from "./useModelScalpTopologies";
@@ -18,9 +17,17 @@ interface ModelScalpTopologyPanelProps {
 }
 
 export function ModelScalpTopologyPanel({ modelName, compact = false }: ModelScalpTopologyPanelProps) {
-  const [selectedBand, setSelectedBand] = useState<TimeseriesBandFilter>(SCALP_BAND_OPTIONS[0]);
+  const [selectedBand, setSelectedBand] = useState<TimeseriesBandFilter | null>(null);
   const { scalpTopologies, isLoading, error } = useModelScalpTopologies(modelName);
   const activeBand = useMemo(() => findScalpBand(scalpTopologies, selectedBand), [scalpTopologies, selectedBand]);
+  const bandOptions = useMemo(
+    () =>
+      (scalpTopologies?.bands ?? []).map((band) => ({
+        band: band.band,
+        label: band.band,
+      })),
+    [scalpTopologies],
+  );
   const channels = useMemo<ScalpTopologyValueChannel[]>(
     () =>
       activeBand?.channels.map((channel) => ({
@@ -41,7 +48,12 @@ export function ModelScalpTopologyPanel({ modelName, compact = false }: ModelSca
         </p>
       </div>
 
-      <BandSelector selectedBand={selectedBand} onSelectedBandChange={setSelectedBand} compact={compact} />
+      <BandSelector
+        bands={bandOptions}
+        selectedBand={activeBand?.band ?? selectedBand}
+        onSelectedBandChange={setSelectedBand}
+        compact={compact}
+      />
 
       <div className="topology-panel-plot-shell">
         <ScalpTopologyPlot
@@ -63,25 +75,28 @@ export function ModelScalpTopologyPanel({ modelName, compact = false }: ModelSca
 }
 
 interface BandSelectorProps {
-  selectedBand: TimeseriesBandFilter;
+  bands: Array<Pick<ModelBandPresentation, "band" | "label">>;
+  selectedBand: TimeseriesBandFilter | null;
   onSelectedBandChange: (band: TimeseriesBandFilter) => void;
   compact?: boolean;
 }
 
-export function BandSelector({ selectedBand, onSelectedBandChange, compact = false }: BandSelectorProps) {
+export function BandSelector({ bands, selectedBand, onSelectedBandChange, compact = false }: BandSelectorProps) {
   return (
     <div
       className={`topology-panel-band-selector${compact ? " topology-panel-band-selector--compact" : ""}`}
       aria-label="Band selector"
     >
-      {SCALP_BAND_OPTIONS.map((band) => (
+      {bands.map((band) => (
         <button
-          key={band}
+          key={band.band}
           type="button"
-          className={`topology-panel-band-button${selectedBand === band ? " topology-panel-band-button--active" : ""}`}
-          onClick={() => onSelectedBandChange(band)}
+          className={`topology-panel-band-button${
+            selectedBand === band.band ? " topology-panel-band-button--active" : ""
+          }`}
+          onClick={() => onSelectedBandChange(band.band)}
         >
-          {band}
+          {band.label}
         </button>
       ))}
     </div>

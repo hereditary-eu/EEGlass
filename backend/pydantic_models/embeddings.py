@@ -35,6 +35,7 @@ class ModelPatientEmbeddingsResponse(BaseModel):
     preprocessing_version: str
     embedding_layer: str
     embedding_label: str
+    feature_names: List[str]
     reduction: ModelPatientEmbeddingReduction
     points: List[ModelPatientEmbeddingPoint]
 
@@ -45,6 +46,7 @@ class ModelWindowEmbeddingPoint(BaseModel):
     end_time: float
     x: float
     y: float
+    raw_embedding: List[float] | None = None
     predicted_label: str
     confidence: float
     cluster_id: int | None = None
@@ -58,5 +60,6 @@ class ModelWindowEmbeddingsResponse(BaseModel):
     checkpoint_signature: str
     embedding_layer: str
     embedding_label: str
+    feature_names: List[str]
     reduction: ModelPatientEmbeddingReduction
     points: List[ModelWindowEmbeddingPoint]

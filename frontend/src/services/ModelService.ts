@@ -217,12 +217,14 @@ export class ModelService {
     source: TimeseriesSource = "derivatives",
     mode: ModelBandPowerStatsMode = "intra_patient",
     modelName?: string,
+    cohortLabel?: string | null,
   ): Promise<ModelBandPowerStatsResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelBandPowerStatsResponse>(
       `${API_ROUTES.model.bandPowerStats(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({
         source,
         mode,
+        cohort_label: mode === "inter_patient" ? cohortLabel : undefined,
       })}`,
     );
   }
@@ -258,11 +260,11 @@ export class ModelService {
     return modelName ?? (await this.getModelList()).current_model_name;
   }
 
-  private static toQueryString(params: Record<string, string | number | undefined>): string {
+  private static toQueryString(params: Record<string, string | number | null | undefined>): string {
     const searchParams = new URLSearchParams();
 
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
+      if (value !== undefined && value !== null) {
         searchParams.set(key, String(value));
       }
     });

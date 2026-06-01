@@ -1,7 +1,4 @@
-import { MODEL_BANDS } from "../../constants/eegModel";
 import type { ChannelId, ModelScalpTopologyResponse, TimeseriesBandFilter } from "../../types";
-
-export const SCALP_BAND_OPTIONS = MODEL_BANDS;
 
 export interface ScalpTopologyValueChannel {
   name: ChannelId;
@@ -17,7 +14,10 @@ export interface ScalpTopologyValueRange {
 
 const DEFAULT_DIVERGING_RANGE: ScalpTopologyValueRange = { min: -1, max: 1 };
 
-export function findScalpBand(topologies: ModelScalpTopologyResponse | null, selectedBand: TimeseriesBandFilter) {
+export function findScalpBand(
+  topologies: ModelScalpTopologyResponse | null,
+  selectedBand: TimeseriesBandFilter | null,
+) {
   if (!topologies?.bands.length) {
     return null;
   }

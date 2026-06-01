@@ -177,7 +177,7 @@
 .overview-patient-select {
   display: grid;
   grid-template-columns:
-    minmax(4.6rem, 1.05fr) 2.55rem repeat(var(--model-class-count, 0), minmax(2.75rem, 0.55fr))
+    minmax(4rem, 0.6fr) 2.55rem repeat(var(--model-class-count, 0), minmax(2.75rem, 0.55fr))
     2.7rem 2.7rem 2.75rem;
   align-items: center;
 }
@@ -190,6 +190,26 @@
 .overview-patient-list-header > span:first-child,
 .overview-patient-select > span:first-child {
   border-right: 1px solid rgb(148 163 184 / 22%);
+}
+
+.overview-sort-header {
+  padding-inline: 0.18rem;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+.overview-sort-header:first-child {
+  border-right: 1px solid rgb(148 163 184 / 22%);
+}
+
+.overview-sort-header:hover {
+  color: #334155;
 }
 
 .overview-patient-list-header {
@@ -320,6 +340,7 @@
   padding: 0.3rem 0.4rem 0.46rem;
   background: transparent;
   cursor: pointer;
+  user-select: none;
 }
 
 .overview-patient-select:focus-visible {

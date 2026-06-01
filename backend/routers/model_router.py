@@ -141,6 +141,7 @@ async def get_model_band_power_stats(
     model_name: str = DEFAULT_MODEL_NAME,
     source: TimeseriesSource = Query("derivatives"),
     mode: str = Query("intra_patient"),
+    cohort_label: str | None = Query(None),
 ) -> ModelBandPowerStatsResponse:
     if mode not in ("intra_patient", "inter_patient"):
         raise HTTPException(status_code=400, detail="mode must be either 'intra_patient' or 'inter_patient'.")
@@ -152,6 +153,7 @@ async def get_model_band_power_stats(
             model_name=model_name,
             source=source,
             mode=mode,
+            cohort_label=cohort_label,
         )
     except ModelServiceError as exc:
         raise _http_error(exc) from exc
@@ -365,7 +367,7 @@ async def watch_prediction_cache_job(websocket: WebSocket, job_id: str, model_na
                 )
                 return
             await websocket.send_json(payload)
-    except (WebSocketDisconnect, ClientDisconnected):
+    except WebSocketDisconnect, ClientDisconnected:
         return
 
 

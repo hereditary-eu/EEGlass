@@ -13,12 +13,20 @@ class ModelClassPresentation(BaseModel):
     compact_label: str
 
 
+class ModelBandPresentation(BaseModel):
+    band: str
+    label: str
+    start_hz: float
+    end_hz: float
+
+
 class ModelInfoResponse(BaseModel):
     name: str
     display_name: str
     architecture: str
     model_summary: str
     classes: List[ModelClassPresentation]
+    bands: List[ModelBandPresentation]
     metadata: Dict[str, ModelMetadataValue]
 
 

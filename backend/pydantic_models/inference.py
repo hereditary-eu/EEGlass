@@ -31,6 +31,7 @@ from backend.pydantic_models.embeddings import (
     ModelWindowEmbeddingsResponse,
 )
 from backend.pydantic_models.model_info import (
+    ModelBandPresentation,
     ModelClassPresentation,
     ModelInfoResponse,
     ModelListItem,
@@ -109,6 +110,7 @@ __all__ = [
     "ModelClassWeight",
     "ModelClassWeightsBand",
     "ModelClassWeightsResponse",
+    "ModelBandPresentation",
     "ModelClassPresentation",
     "ModelInfoResponse",
     "ModelInferenceRequest",

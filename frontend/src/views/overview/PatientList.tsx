@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 
 import { ClassLabelCountCell, CompactGridSelectorRow, DrillButton } from "../../components/ui";
@@ -16,6 +16,14 @@ import {
 } from "./overviewUtils";
 
 type PatientNavigationKey = "ArrowDown" | "ArrowUp" | "ArrowRight" | "ArrowLeft" | "Home" | "End";
+
+type SortColumn = "id" | "split" | "true_label" | "predicted_label" | "mean_confidence" | { classLabel: string };
+type SortDirection = "asc" | "desc";
+
+interface SortConfig {
+  column: SortColumn;
+  direction: SortDirection;
+}
 
 interface PatientListProps {
   subjects: TimeseriesSubjectInfo[];
@@ -50,6 +58,59 @@ export function PatientList({
 }: PatientListProps) {
   const modelClasses = modelInfo?.classes ?? [];
   const classGridStyle = { "--model-class-count": modelClasses.length } as CSSProperties;
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+
+  const toggleSort = (column: SortColumn) => {
+    setSortConfig((prev) => {
+      const isSameColumn =
+        prev !== null &&
+        (typeof column === "string"
+          ? prev.column === column
+          : typeof prev.column !== "string" &&
+            prev.column.classLabel === (column as { classLabel: string }).classLabel);
+      if (!isSameColumn) return { column, direction: "asc" };
+      if (prev!.direction === "asc") return { column, direction: "desc" };
+      return null;
+    });
+  };
+
+  const sortedSubjects = useMemo(() => {
+    if (!sortConfig) return subjects;
+    return [...subjects].sort((a, b) => {
+      const summaryA = predictionSummariesBySubject.get(a.id) ?? null;
+      const summaryB = predictionSummariesBySubject.get(b.id) ?? null;
+      let cmp = 0;
+      const col = sortConfig.column;
+      if (col === "id") {
+        cmp = a.id.localeCompare(b.id);
+      } else if (col === "split") {
+        cmp = (a.subject_split ?? "").localeCompare(b.subject_split ?? "");
+      } else if (col === "true_label") {
+        cmp = (summaryA?.true_label ?? "").localeCompare(summaryB?.true_label ?? "");
+      } else if (col === "predicted_label") {
+        cmp = (summaryA?.predicted_label ?? "").localeCompare(summaryB?.predicted_label ?? "");
+      } else if (col === "mean_confidence") {
+        cmp = (summaryA?.mean_confidence ?? -1) - (summaryB?.mean_confidence ?? -1);
+      } else {
+        const label = (col as { classLabel: string }).classLabel;
+        const countA = summaryA?.windows_per_class.find((w) => w.class_label === label)?.count ?? 0;
+        const countB = summaryB?.windows_per_class.find((w) => w.class_label === label)?.count ?? 0;
+        cmp = countA - countB;
+      }
+      return sortConfig.direction === "asc" ? cmp : -cmp;
+    });
+  }, [subjects, sortConfig, predictionSummariesBySubject]);
+
+  const getSortIndicator = (column: SortColumn): string => {
+    if (!sortConfig) return "";
+    const isSameColumn =
+      typeof column === "string"
+        ? sortConfig.column === column
+        : typeof sortConfig.column !== "string" &&
+          sortConfig.column.classLabel === (column as { classLabel: string }).classLabel;
+    if (!isSameColumn) return "";
+    return sortConfig.direction === "asc" ? " ▲" : " ▼";
+  };
 
   useEffect(() => {
     if (!focusSubjectId || !subjects.some((subject) => subject.id === focusSubjectId)) {
@@ -125,7 +186,7 @@ export function PatientList({
   ]);
 
   const focusPatientRow = (subjectIndex: number) => {
-    const nextSubject = subjects[subjectIndex];
+    const nextSubject = sortedSubjects[subjectIndex];
     if (!nextSubject) {
       return;
     }
@@ -139,12 +200,12 @@ export function PatientList({
     }
 
     event.preventDefault();
-    if (!subjects.length) {
+    if (!sortedSubjects.length) {
       return;
     }
 
     if (event.key === "ArrowRight") {
-      onOpenPatientView(subjects[subjectIndex]);
+      onOpenPatientView(sortedSubjects[subjectIndex]);
       return;
     }
 
@@ -159,28 +220,46 @@ export function PatientList({
     }
 
     if (event.key === "End") {
-      focusPatientRow(subjects.length - 1);
+      focusPatientRow(sortedSubjects.length - 1);
       return;
     }
 
     const direction = event.key === "ArrowDown" ? 1 : -1;
-    const nextIndex = (subjectIndex + direction + subjects.length) % subjects.length;
+    const nextIndex = (subjectIndex + direction + sortedSubjects.length) % sortedSubjects.length;
     focusPatientRow(nextIndex);
   };
 
   return (
     <div className="overview-patient-list">
-      <div className="overview-patient-list-header" style={classGridStyle} aria-hidden="true">
-        <span>id</span>
-        <span>split</span>
+      <div className="overview-patient-list-header" style={classGridStyle}>
+        <button type="button" className="overview-sort-header" onClick={() => toggleSort("id")}>
+          id{getSortIndicator("id")}
+        </button>
+        <button type="button" className="overview-sort-header" onClick={() => toggleSort("split")}>
+          split{getSortIndicator("split")}
+        </button>
         {modelClasses.map((modelClass) => (
-          <span key={modelClass.label}>{formatCompactClassLabel(modelClass.label, modelClasses)}</span>
+          <button
+            key={modelClass.label}
+            type="button"
+            className="overview-sort-header"
+            onClick={() => toggleSort({ classLabel: modelClass.label })}
+          >
+            {formatCompactClassLabel(modelClass.label, modelClasses)}
+            {getSortIndicator({ classLabel: modelClass.label })}
+          </button>
         ))}
-        <span>true label</span>
-        <span>pred</span>
-        <span>conf</span>
+        <button type="button" className="overview-sort-header" onClick={() => toggleSort("true_label")}>
+          true label{getSortIndicator("true_label")}
+        </button>
+        <button type="button" className="overview-sort-header" onClick={() => toggleSort("predicted_label")}>
+          pred{getSortIndicator("predicted_label")}
+        </button>
+        <button type="button" className="overview-sort-header" onClick={() => toggleSort("mean_confidence")}>
+          conf{getSortIndicator("mean_confidence")}
+        </button>
       </div>
-      {subjects.map((subject, subjectIndex) => {
+      {sortedSubjects.map((subject, subjectIndex) => {
         const summary = predictionSummariesBySubject.get(subject.id) ?? null;
         const cardClasses = [
           "overview-patient-card",
@@ -215,6 +294,7 @@ export function PatientList({
               aria-pressed={selectedSubjectId === subject.id}
               style={classGridStyle}
               onClick={toggleSelectedSubject}
+              onDoubleClick={() => onOpenPatientView(subject)}
               onKeyDown={(event) => {
                 handlePatientNavigationKey(event, subjectIndex);
                 if (event.defaultPrevented) {

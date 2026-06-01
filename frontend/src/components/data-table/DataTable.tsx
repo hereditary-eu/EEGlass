@@ -8,6 +8,9 @@ const rootClass = "cif-data-table";
 const styles = {
   tablePanelContent: "tablePanelContent",
   panelHeader: "panelHeader",
+  panelTitleGroup: "panelTitleGroup",
+  panelTitle: "panelTitle",
+  panelSubtitle: "panelSubtitle",
   headerOptions: "headerOptions",
   hiddenColumnsTags: "hiddenColumnsTags",
   columnTag: "columnTag",
@@ -54,9 +57,11 @@ const styles = {
 
 export interface DataTableProps {
   title?: string;
+  subtitle?: string;
   data: DataRow[];
   columns: string[];
   hiddenColumns: string[];
+  selectedColumns?: string[];
   onColumnHide: (column: string) => void;
   onHiddenColumnRestore?: (column: string) => void;
   onColumnSelect: (selectedColumns: string[]) => void;
@@ -86,9 +91,11 @@ const VIRTUAL_OVERSCAN = 20;
 
 const DataTable: React.FC<DataTableProps> = ({
   title = "Data",
+  subtitle,
   data,
   columns,
   hiddenColumns,
+  selectedColumns,
   onColumnHide,
   onHiddenColumnRestore,
   onColumnSelect,
@@ -104,7 +111,7 @@ const DataTable: React.FC<DataTableProps> = ({
   },
   shapleyValues,
 }) => {
-  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [internalSelectedColumns, setInternalSelectedColumns] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ id: string; desc: boolean } | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
@@ -243,13 +250,16 @@ const DataTable: React.FC<DataTableProps> = ({
   }, [isExpanded]);
 
   const toggleColumnSelection = (colId: string) => {
-    const newSelected = selectedColumns.includes(colId)
-      ? selectedColumns.filter((col) => col !== colId)
-      : selectedColumns.length >= 2
-        ? [...selectedColumns.slice(1), colId]
-        : [...selectedColumns, colId];
+    const currentSelectedColumns = selectedColumns ?? internalSelectedColumns;
+    const newSelected = currentSelectedColumns.includes(colId)
+      ? currentSelectedColumns.filter((col) => col !== colId)
+      : currentSelectedColumns.length >= 2
+        ? [...currentSelectedColumns.slice(1), colId]
+        : [...currentSelectedColumns, colId];
 
-    setSelectedColumns(newSelected);
+    if (!selectedColumns) {
+      setInternalSelectedColumns(newSelected);
+    }
     onColumnSelect(newSelected);
   };
 
@@ -300,12 +310,16 @@ const DataTable: React.FC<DataTableProps> = ({
   const getFeatureImportance = (featureName: string) => {
     return featureImportanceMap?.get(featureName) ?? null;
   };
+  const resolvedSelectedColumns = selectedColumns ?? internalSelectedColumns;
 
   return (
     <div className={`${rootClass} ${styles.tablePanelContent}`}>
       {showPanelHeader && (
         <h2 className={styles.panelHeader}>
-          <div>{title}</div>
+          <div className={styles.panelTitleGroup}>
+            <span className={styles.panelTitle}>{title}</span>
+            {subtitle ? <span className={styles.panelSubtitle}>{subtitle}</span> : null}
+          </div>
           <div className={styles.headerOptions}>
             {isPanelActive && hiddenColumns.length > 0 && onHiddenColumnRestore && (
               <div className={styles.hiddenColumnsTags}>
@@ -371,7 +385,9 @@ const DataTable: React.FC<DataTableProps> = ({
                   <th
                     key={columnId}
                     onClick={() => toggleColumnSelection(columnId)}
-                    className={`${styles.headerCell} ${selectedColumns.includes(columnId) ? styles.headerCellSelected : ""}`}
+                    className={`${styles.headerCell} ${resolvedSelectedColumns.includes(columnId) ? styles.headerCellSelected : ""} ${
+                      columnId === visibleColumns[visibleColumns.length - 1] ? "headerCellLast" : ""
+                    }`}
                   >
                     <div
                       className={`${styles.columnHeader} ${
@@ -426,7 +442,7 @@ const DataTable: React.FC<DataTableProps> = ({
                       return (
                         <td
                           key={`${columnId}-${absoluteIndex}`}
-                          className={`${styles.dataCell} ${selectedColumns.includes(columnId) ? styles.selectedCell : ""} ${
+                          className={`${styles.dataCell} ${resolvedSelectedColumns.includes(columnId) ? styles.selectedCell : ""} ${
                             viewMode === "heatmap" ? styles.heatmapCell : ""
                           }`}
                           style={heatmapStyle}
@@ -473,7 +489,7 @@ const DataTable: React.FC<DataTableProps> = ({
                   return (
                     <tr key={col} className={rowParityClass}>
                       <td
-                        className={`${styles.columnName} ${selectedColumns.includes(col) ? styles.selectedCompressedColumn : ""}`}
+                        className={`${styles.columnName} ${resolvedSelectedColumns.includes(col) ? styles.selectedCompressedColumn : ""}`}
                         onClick={() => toggleColumnSelection(col)}
                       >
                         {col}

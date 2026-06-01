@@ -58,6 +58,7 @@ class ModelBandPowerStatsResponse(BaseModel):
     subject_id: str
     source: TimeseriesSource
     mode: Literal["intra_patient", "inter_patient"]
+    cohort_label: str | None = None
     unit_label: str
     subject_count: int
     window_count: int

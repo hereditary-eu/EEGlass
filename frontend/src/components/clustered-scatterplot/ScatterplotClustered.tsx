@@ -9,6 +9,8 @@ interface ScatterplotClusteredProps {
   xLabel: string;
   yLabel: string;
   k: number;
+  clusterLabel?: string;
+  clusterNames?: Record<number, string>;
   width?: string | number;
   height?: number;
   onClusterSelect?: (cluster: number) => void;
@@ -26,6 +28,8 @@ const ScatterplotClustered: React.FC<ScatterplotClusteredProps> = ({
   xLabel,
   yLabel,
   k,
+  clusterLabel = "Cluster",
+  clusterNames,
   width = "100%",
   height = 400,
   onClusterSelect,
@@ -87,7 +91,8 @@ const ScatterplotClustered: React.FC<ScatterplotClusteredProps> = ({
                       <strong>{yLabel}:</strong> {Number(payload[0]?.payload.y ?? 0).toFixed(4)}
                     </div>
                     <div className={styles.tooltipLine}>
-                      <strong>Cluster:</strong> {Number(payload[0]?.payload.cluster ?? 0) + 1}
+                      <strong>{clusterLabel}:</strong>{" "}
+                      {getClusterName(Number(payload[0]?.payload.cluster ?? 0), clusterNames)}
                     </div>
                   </div>
                 );
@@ -101,7 +106,7 @@ const ScatterplotClustered: React.FC<ScatterplotClusteredProps> = ({
             return (
               <Scatter
                 key={clusterId}
-                name={`Cluster ${clusterId + 1}`}
+                name={getClusterName(clusterId, clusterNames)}
                 data={cluster}
                 fill={colors[index % colors.length]}
                 fillOpacity={0.6}
@@ -120,3 +125,7 @@ const ScatterplotClustered: React.FC<ScatterplotClusteredProps> = ({
 };
 
 export default ScatterplotClustered;
+
+function getClusterName(clusterId: number, clusterNames?: Record<number, string>): string {
+  return clusterNames?.[clusterId] ?? String(clusterId + 1);
+}

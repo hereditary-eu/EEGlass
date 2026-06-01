@@ -33,6 +33,7 @@ class ModelSpec:
     window_size_seconds: float
     classes: tuple[ModelClassSpec, ...]
 
+
 MODEL_CHECKPOINT_PATTERN = re.compile(r"^xeegnet_model_v\d+\.pt$")
 
 DEFAULT_MODEL_CLASSES = tuple(

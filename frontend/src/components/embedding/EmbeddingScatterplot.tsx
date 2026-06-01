@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { View } from "vega";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
 import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
+import "./EmbeddingScatterplot.css";
 
 export interface EmbeddingScatterplotPoint {
   id: string;
@@ -40,6 +42,11 @@ interface EmbeddingScatterplotProps {
   overlayClassName?: string;
   minHeight?: number;
   showStatusOverlay?: boolean;
+  introspectionTitle?: string;
+  introspectionSubtitle?: string;
+  showIntrospectionButton?: boolean;
+  introspectionButtonLabel?: string;
+  renderIntrospectionContent?: () => ReactNode;
   onPointClick?: (point: EmbeddingScatterplotPoint) => void;
   onSelectionChange?: (selectedPointIds: string[] | null) => void;
   onVegaViewReady?: (args: EmbeddingScatterplotVegaViewArgs) => void | (() => void);
@@ -55,6 +62,11 @@ export function EmbeddingScatterplot({
   overlayClassName = "embedding-scatterplot-overlay",
   minHeight = 220,
   showStatusOverlay = true,
+  introspectionTitle = "Embedding introspection",
+  introspectionSubtitle,
+  showIntrospectionButton = false,
+  introspectionButtonLabel = "Inspect features",
+  renderIntrospectionContent,
   onPointClick,
   onSelectionChange,
   onVegaViewReady,
@@ -65,8 +77,10 @@ export function EmbeddingScatterplot({
   const onPointClickRef = useRef(onPointClick);
   const onSelectionChangeRef = useRef(onSelectionChange);
   const [plotHeight, setPlotHeight] = useState(280);
+  const [isIntrospectionOpen, setIsIntrospectionOpen] = useState(false);
   const hasPointClick = Boolean(onPointClick);
   const hasSelection = Boolean(onSelectionChange);
+  const canOpenIntrospection = showIntrospectionButton && points.length > 0 && !isLoading && !error;
   useVegaLayoutResize(viewRef);
 
   useEffect(() => {
@@ -80,6 +94,27 @@ export function EmbeddingScatterplot({
   useEffect(() => {
     onSelectionChangeRef.current = onSelectionChange;
   }, [onSelectionChange]);
+
+  useEffect(() => {
+    if (!canOpenIntrospection) {
+      setIsIntrospectionOpen(false);
+    }
+  }, [canOpenIntrospection]);
+
+  useEffect(() => {
+    if (!isIntrospectionOpen) {
+      return;
+    }
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsIntrospectionOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isIntrospectionOpen]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -220,11 +255,54 @@ export function EmbeddingScatterplot({
   return (
     <>
       <div className={className} ref={containerRef} />
+      {canOpenIntrospection ? (
+        <button
+          type="button"
+          className="embedding-introspection-trigger"
+          aria-label={introspectionButtonLabel}
+          onClick={() => setIsIntrospectionOpen(true)}
+        >
+          {introspectionButtonLabel}
+        </button>
+      ) : null}
       {showStatusOverlay && isLoading ? <div className={overlayClassName}>Loading embeddings...</div> : null}
       {showStatusOverlay && error ? (
         <div className={`${overlayClassName} ${overlayClassName}--error`}>{error}</div>
       ) : null}
       {!isLoading && !error && !points.length ? <div className={overlayClassName}>{emptyMessage}</div> : null}
+      {isIntrospectionOpen ? (
+        <div className="embedding-introspection-backdrop" onClick={() => setIsIntrospectionOpen(false)}>
+          <section
+            className="embedding-introspection-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="embedding-introspection-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="embedding-introspection-header">
+              <div>
+                <h2 id="embedding-introspection-title">{introspectionTitle}</h2>
+                {introspectionSubtitle ? <p>{introspectionSubtitle}</p> : null}
+              </div>
+              <button
+                type="button"
+                className="embedding-introspection-close"
+                aria-label="Close introspection overlay"
+                onClick={() => setIsIntrospectionOpen(false)}
+              >
+                Close
+              </button>
+            </header>
+            <div className="embedding-introspection-content">
+              {renderIntrospectionContent ? (
+                renderIntrospectionContent()
+              ) : (
+                <div className="embedding-introspection-placeholder">Detailed introspection will appear here.</div>
+              )}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }

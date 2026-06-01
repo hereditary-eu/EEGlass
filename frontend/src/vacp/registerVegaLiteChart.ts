@@ -45,12 +45,8 @@ export function registerVacpVegaLiteChart(args: RegisterVacpVegaLiteChartArgs): 
       ...capabilities,
       graph: {
         ...capabilities.graph,
-        nodes: args.extraNodes?.length
-          ? [...capabilities.graph.nodes, ...args.extraNodes]
-          : capabilities.graph.nodes,
-        edges: args.extraEdges?.length
-          ? [...capabilities.graph.edges, ...args.extraEdges]
-          : capabilities.graph.edges,
+        nodes: args.extraNodes?.length ? [...capabilities.graph.nodes, ...args.extraNodes] : capabilities.graph.nodes,
+        edges: args.extraEdges?.length ? [...capabilities.graph.edges, ...args.extraEdges] : capabilities.graph.edges,
         actions: args.extraActions?.length
           ? [...capabilities.graph.actions, ...args.extraActions]
           : capabilities.graph.actions,
@@ -70,11 +66,13 @@ export function registerVacpVegaLiteChart(args: RegisterVacpVegaLiteChartArgs): 
 
   bridge.execute = async (call) => {
     if (args.extraActions?.some((action) => action.name === call.name)) {
-      return args.executeExtraAction?.(call) ?? {
-        callId: call.callId,
-        ok: false,
-        error: { message: `No handler registered for ${call.name}.` },
-      };
+      return (
+        args.executeExtraAction?.(call) ?? {
+          callId: call.callId,
+          ok: false,
+          error: { message: `No handler registered for ${call.name}.` },
+        }
+      );
     }
 
     return originalExecute(call);

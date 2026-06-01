@@ -1,24 +1,4 @@
-import type { ModelClassPresentation, TimeseriesBandFilter } from "../types";
-
-export const MODEL_BANDS = [
-  "delta",
-  "theta",
-  "alpha",
-  "beta1",
-  "beta2",
-  "beta3",
-  "gamma",
-] as const satisfies readonly TimeseriesBandFilter[];
-
-export const MODEL_BAND_LABELS: Record<TimeseriesBandFilter, string> = {
-  delta: "delta",
-  theta: "theta",
-  alpha: "alpha",
-  beta1: "beta1",
-  beta2: "beta2",
-  beta3: "beta3",
-  gamma: "gamma",
-};
+import type { ModelBandPresentation, ModelClassPresentation, ModelInfoResponse, TimeseriesBandFilter } from "../types";
 
 export interface ModelClassColors {
   annotation: string;
@@ -75,6 +55,21 @@ export const MODEL_CLASS_COLORS: Record<string, ModelClassColors> = {
 
 export function getModelClassLabels(classes: ModelClassPresentation[] | null | undefined): string[] {
   return classes?.map((modelClass) => modelClass.label) ?? [];
+}
+
+export function getModelBands(modelInfo: ModelInfoResponse | null | undefined): ModelBandPresentation[] {
+  return modelInfo?.bands ?? [];
+}
+
+export function getModelBandIds(modelInfo: ModelInfoResponse | null | undefined): TimeseriesBandFilter[] {
+  return getModelBands(modelInfo).map((modelBand) => modelBand.band);
+}
+
+export function getModelBandLabel(
+  band: string,
+  bands: ModelBandPresentation[] | null | undefined,
+): string {
+  return bands?.find((modelBand) => modelBand.band === band)?.label ?? band;
 }
 
 export function getClassPresentation(

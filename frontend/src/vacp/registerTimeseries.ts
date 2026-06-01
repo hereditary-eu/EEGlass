@@ -1,9 +1,4 @@
-import type {
-  VacpActionDescriptor,
-  VacpCapabilitiesSnapshot,
-  VacpRef,
-  VacpStateSnapshot,
-} from "@vacp/core";
+import type { VacpActionDescriptor, VacpCapabilitiesSnapshot, VacpRef, VacpStateSnapshot } from "@vacp/core";
 import { nowIso, VACP_SCHEMA_VERSION } from "@vacp/core";
 import { installVacpRuntimeBridge, VacpActionRegistry } from "@vacp/gateway";
 
@@ -28,12 +23,14 @@ interface RegisterVacpTimeseriesArgs {
   hoveredPredictionWindowIndex: number | null;
   lockedPredictionWindowIndex: number | null;
   selectedPredictionWindowIndex: number | null;
+  navigateBack: () => void;
   selectChannel: (channel: ChannelId) => void;
   selectWindow: (windowIndex: number) => void;
 }
 
 const TIMESERIES_CHART_ID = "patient-view/timeseries";
 const TIMESERIES_ACTIONS = {
+  navigateBack: "patient_view.navigate_back",
   channelNext: "patient_view.timeseries.channel_next",
   channelPrevious: "patient_view.timeseries.channel_previous",
   channelSet: "patient_view.timeseries.channel_set",
@@ -49,6 +46,14 @@ export function registerVacpTimeseries(args: RegisterVacpTimeseriesArgs): () => 
   const windowRef = `${refPrefix}/window` as VacpRef;
   const globalKey = createPrivateVacpGlobalKey(TIMESERIES_CHART_ID);
   const actions = new VacpActionRegistry();
+
+  actions.register(
+    createActionDescriptor(TIMESERIES_ACTIONS.navigateBack, refPrefix, "Return to this dataset's patient directory."),
+    () => {
+      args.navigateBack();
+      return { navigated: true, datasetId: args.datasetId, subjectId: args.subjectId };
+    },
+  );
 
   actions.register(
     createActionDescriptor(TIMESERIES_ACTIONS.channelNext, channelRef, "Select the next EEG channel."),
@@ -200,6 +205,11 @@ function buildCapabilitiesSnapshot(
         { from: refPrefix, to: windowRef, kind: "contains" },
       ],
       actions: [
+        createActionDescriptor(
+          TIMESERIES_ACTIONS.navigateBack,
+          refPrefix,
+          "Return to this dataset's patient directory.",
+        ),
         createActionDescriptor(TIMESERIES_ACTIONS.channelNext, channelRef, "Select the next EEG channel."),
         createActionDescriptor(TIMESERIES_ACTIONS.channelPrevious, channelRef, "Select the previous EEG channel."),
         createActionDescriptor(TIMESERIES_ACTIONS.channelSet, channelRef, "Select a specific EEG channel.", {
@@ -289,7 +299,7 @@ function createActionDescriptor(
   return {
     name,
     targetRef,
-    title: name.replace(/^patient_view\.timeseries\./, "").replace(/_/g, " "),
+    title: name.replace(/^patient_view\.(?:timeseries\.)?/, "").replace(/_/g, " "),
     description,
     parameters: {
       type: "object",
@@ -359,7 +369,11 @@ function selectWindowByPrediction(
     };
   }
 
-  const selectedWindow = pickPredictionWindow(candidates, args.lockedPredictionWindowIndex, request.confidencePreference);
+  const selectedWindow = pickPredictionWindow(
+    candidates,
+    args.lockedPredictionWindowIndex,
+    request.confidencePreference,
+  );
   return {
     found: true,
     windowIndex: selectedWindow.window_index,
@@ -492,9 +506,7 @@ function levenshteinDistance(a: string, b: string): number {
     current[0] = i;
     for (let j = 1; j <= b.length; j += 1) {
       current[j] =
-        a[i - 1] === b[j - 1]
-          ? previous[j - 1]
-          : Math.min(previous[j - 1] + 1, previous[j] + 1, current[j - 1] + 1);
+        a[i - 1] === b[j - 1] ? previous[j - 1] : Math.min(previous[j - 1] + 1, previous[j] + 1, current[j - 1] + 1);
     }
     previous.splice(0, previous.length, ...current);
   }

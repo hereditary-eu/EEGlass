@@ -387,7 +387,9 @@ class TimeseriesService:
                     if (participant_id := row.get("participant_id"))
                 }
         except (OSError, csv.Error) as exc:
-            raise TimeseriesServiceError(f"Could not read participant metadata from '{participants_path}': {exc}") from exc
+            raise TimeseriesServiceError(
+                f"Could not read participant metadata from '{participants_path}': {exc}"
+            ) from exc
 
     @staticmethod
     @lru_cache(maxsize=16)
