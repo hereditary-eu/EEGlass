@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ComponentStatusIndicator, EmbeddingScatterplot } from "../../components";
+import { ComponentStatusIndicator, EmbeddingIntrospectionPanel, EmbeddingScatterplot } from "../../components";
 import type {
   EmbeddingScatterplotPoint,
   EmbeddingScatterplotTooltipField,
@@ -99,6 +99,18 @@ export function PatientEmbeddingScatterplot({
         };
       }),
     [embeddings, highlightedSubjectId, legendHighlightTarget, modelClasses],
+  );
+  const introspectionRows = useMemo(
+    () =>
+      (embeddings?.points ?? []).map((point) => ({
+        id: point.subject_id,
+        rawEmbedding: point.raw_embedding,
+        predictedClass: point.predicted_label ?? null,
+        metadata: {
+          "True label": point.true_label ?? null,
+        },
+      })),
+    [embeddings],
   );
   const legendClassLabels = useMemo(
     () =>
@@ -229,6 +241,20 @@ export function PatientEmbeddingScatterplot({
           tooltipFields={PATIENT_EMBEDDING_TOOLTIP_FIELDS}
           className="overview-embedding-plot"
           overlayClassName="overview-embedding-overlay"
+          showIntrospectionButton={Boolean(embeddings?.points.length)}
+          introspectionTitle="Patient embedding introspection"
+          introspectionSubtitle={
+            embeddings
+              ? `${embeddings.points.length} patients / ${embeddings.reduction.source_dimension}D source embedding`
+              : undefined
+          }
+          renderIntrospectionContent={() => (
+            <EmbeddingIntrospectionPanel
+              rows={introspectionRows}
+              sourceDimension={embeddings?.reduction.source_dimension}
+              itemLabel="Patient"
+            />
+          )}
           onPointClick={(point) => {
             if (typeof point.subjectId === "string") {
               onOpenSubject(point.subjectId);

@@ -26,6 +26,8 @@ export interface ClusteredScatterplotViewerProps {
   xLabel: string;
   yLabel: string;
   k: number;
+  clusterLabel?: string;
+  clusterNames?: Record<number, string>;
   height?: number;
   selectedCluster?: number | null;
   defaultSelectedCluster?: number | null;
@@ -37,6 +39,8 @@ export function ClusteredScatterplotViewer({
   xLabel,
   yLabel,
   k,
+  clusterLabel = "Cluster",
+  clusterNames,
   height = 420,
   selectedCluster,
   defaultSelectedCluster = null,
@@ -51,13 +55,16 @@ export function ClusteredScatterplotViewer({
   return (
     <div className="cif-scatterplot-card">
       <p className="cif-scatterplot-meta">
-        Selected cluster: <strong>{resolvedSelectedCluster !== null ? resolvedSelectedCluster + 1 : "none"}</strong>
+        Selected {clusterLabel.toLowerCase()}:{" "}
+        <strong>{resolvedSelectedCluster !== null ? getClusterName(resolvedSelectedCluster, clusterNames) : "none"}</strong>
       </p>
       <ScatterplotClustered
         data={data}
         xLabel={xLabel}
         yLabel={yLabel}
         k={k}
+        clusterLabel={clusterLabel}
+        clusterNames={clusterNames}
         height={height}
         onClusterSelect={setSelectedCluster}
       />
@@ -68,4 +75,8 @@ export function ClusteredScatterplotViewer({
 export function ClusteredScatterplotViewerMock() {
   const data = useMemo(() => createMockClusteredScatterData(), []);
   return <ClusteredScatterplotViewer data={data} xLabel="Feature 1" yLabel="Feature 2" k={3} />;
+}
+
+function getClusterName(clusterId: number, clusterNames?: Record<number, string>): string {
+  return clusterNames?.[clusterId] ?? String(clusterId + 1);
 }

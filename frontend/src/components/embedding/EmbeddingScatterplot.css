@@ -1,0 +1,124 @@
+.embedding-introspection-trigger {
+  position: absolute;
+  z-index: 4;
+  top: 0.5rem;
+  right: 0.5rem;
+  border: 1px solid rgb(15 23 42 / 12%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 86%);
+  color: #475569;
+  box-shadow: 0 6px 16px rgb(15 23 42 / 8%);
+  padding: 0.28rem 0.58rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.embedding-introspection-trigger:hover,
+.embedding-introspection-trigger:focus-visible {
+  border-color: rgb(14 116 144 / 34%);
+  background: #ffffff;
+  color: #0f5f76;
+}
+
+.embedding-introspection-trigger:focus-visible {
+  outline: 2px solid rgb(14 116 144 / 32%);
+  outline-offset: 2px;
+}
+
+.embedding-introspection-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(15 23 42 / 42%);
+  padding: 2vh 0.5vw;
+}
+
+.embedding-introspection-dialog {
+  width: min(99vw, 112rem);
+  height: 96vh;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid #c8d4de;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 26px 70px rgb(15 23 42 / 26%);
+}
+
+.embedding-introspection-header {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #e4ebf0;
+  padding: 0.85rem 1rem;
+}
+
+.embedding-introspection-header h2 {
+  margin: 0;
+  color: #17212b;
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.embedding-introspection-header p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.embedding-introspection-close {
+  flex: 0 0 auto;
+  border: 1px solid #c8d4de;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #334155;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.embedding-introspection-close:hover,
+.embedding-introspection-close:focus-visible {
+  border-color: #9fb0be;
+  background: #f8fbfd;
+}
+
+.embedding-introspection-close:focus-visible {
+  outline: 2px solid rgb(14 116 144 / 32%);
+  outline-offset: 2px;
+}
+
+.embedding-introspection-content {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.embedding-introspection-placeholder {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  border: 1px dashed #c8d4de;
+  border-radius: 8px;
+  background: #fbfdff;
+  color: #748391;
+  padding: 1rem;
+  font-size: 0.86rem;
+  text-align: center;
+}

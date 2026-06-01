@@ -12,8 +12,9 @@ export { DataTable, DataTableMock } from "./data-table";
 export type { DataTableMockProps, DataTableProps } from "./data-table";
 export { EegTimeseries } from "./timeseries";
 export type { EegTimeseriesProps, TimeseriesWindowAnnotationRow, TimeseriesWindowAnnotationValue } from "./timeseries";
-export { EmbeddingScatterplot } from "./embedding";
+export { EmbeddingIntrospectionPanel, EmbeddingScatterplot } from "./embedding";
 export type {
+  EmbeddingIntrospectionRow,
   EmbeddingScatterplotPoint,
   EmbeddingScatterplotTooltipField,
   EmbeddingScatterplotVegaViewArgs,

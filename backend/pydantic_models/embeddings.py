@@ -45,6 +45,7 @@ class ModelWindowEmbeddingPoint(BaseModel):
     end_time: float
     x: float
     y: float
+    raw_embedding: List[float] | None = None
     predicted_label: str
     confidence: float
     cluster_id: int | None = None

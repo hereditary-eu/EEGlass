@@ -23,6 +23,31 @@
   justify-content: flex-start;
 }
 
+.cif-data-table .panelTitleGroup {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.cif-data-table .panelTitle {
+  min-width: 0;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cif-data-table .panelSubtitle {
+  min-width: 0;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 500;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .cif-data-table .headerOptions {
   flex: 1;
   display: flex;

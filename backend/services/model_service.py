@@ -984,11 +984,14 @@ class ModelService:
                     end_time=prediction.end_time,
                     x=float(coordinate[0]),
                     y=float(coordinate[1]),
+                    raw_embedding=[float(value) for value in embedding_row],
                     predicted_label=prediction.predicted_label,
                     confidence=prediction.confidence,
                     cluster_id=cluster_ids[index] if index < len(cluster_ids) else None,
                 )
-                for index, (prediction, coordinate) in enumerate(zip(response.predictions, coordinates, strict=True))
+                for index, (prediction, coordinate, embedding_row) in enumerate(
+                    zip(response.predictions, coordinates, penultimate_embeddings, strict=True)
+                )
             ]
             if reduction_status == "ok"
             else []

@@ -286,7 +286,7 @@ class PredictionCacheService:
                 subject_id=summary.subject_id,
                 x=float(coordinate[0]),
                 y=float(coordinate[1]),
-                raw_embedding=list(vector),  # NEW
+                raw_embedding=list(vector),
                 true_label=summary.true_label,
                 predicted_label=summary.predicted_label,
                 mean_confidence=summary.mean_confidence,
@@ -896,11 +896,14 @@ class PredictionCacheService:
                     end_time=prediction.end_time,
                     x=float(coordinate[0]),
                     y=float(coordinate[1]),
+                    raw_embedding=[float(value) for value in embedding_row],
                     predicted_label=prediction.predicted_label,
                     confidence=prediction.confidence,
                     cluster_id=cluster_ids[index] if index < len(cluster_ids) else None,
                 )
-                for index, (prediction, coordinate) in enumerate(zip(response.predictions, coordinates, strict=True))
+                for index, (prediction, coordinate, embedding_row) in enumerate(
+                    zip(response.predictions, coordinates, embedding_rows, strict=True)
+                )
             ]
             if reduction_status == "ok"
             else []

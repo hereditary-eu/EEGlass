@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { ComponentStatusIndicator, EmbeddingScatterplot, MathFormula } from "../components";
+import { ComponentStatusIndicator, EmbeddingIntrospectionPanel, EmbeddingScatterplot, MathFormula } from "../components";
 import type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from "../components";
 import { getEmbeddingClassColors, getModelClassLabels } from "../constants/eegModel";
 import { ModelService } from "../services/ModelService";
@@ -118,6 +118,15 @@ export function WindowEmbeddingPanel({
       }),
     [embeddings, hoveredWindowIndex, legendHighlightTarget, modelClasses, selectedWindowIndex],
   );
+  const introspectionRows = useMemo(
+    () =>
+      (embeddings?.points ?? []).map((point) => ({
+        id: `Window ${point.window_index + 1}`,
+        rawEmbedding: point.raw_embedding,
+        predictedClass: point.predicted_label,
+      })),
+    [embeddings],
+  );
   const visibleClassLabels = useMemo(
     () => classLabels.filter((label) => values.some((value) => value.predictedLabel === label)),
     [classLabels, values],
@@ -156,6 +165,20 @@ export function WindowEmbeddingPanel({
           overlayClassName="window-embedding-overlay"
           minHeight={180}
           showStatusOverlay={false}
+          showIntrospectionButton={Boolean(embeddings?.points.length)}
+          introspectionTitle="Window embedding introspection"
+          introspectionSubtitle={
+            embeddings
+              ? `${embeddings.points.length} windows / ${embeddings.reduction.source_dimension}D source embedding`
+              : undefined
+          }
+          renderIntrospectionContent={() => (
+            <EmbeddingIntrospectionPanel
+              rows={introspectionRows}
+              sourceDimension={embeddings?.reduction.source_dimension}
+              itemLabel="Window"
+            />
+          )}
           onPointClick={(point) => {
             if (typeof point.windowIndex === "number") {
               onSelectedWindowIndexChange(point.windowIndex);
