@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { View } from "vega";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
@@ -18,7 +18,11 @@ interface EmbeddingPairwiseScatterplotProps {
   yLabel: string;
 }
 
-export function EmbeddingPairwiseScatterplot({ points, xLabel, yLabel }: EmbeddingPairwiseScatterplotProps) {
+export const EmbeddingPairwiseScatterplot = memo(function EmbeddingPairwiseScatterplot({
+  points,
+  xLabel,
+  yLabel,
+}: EmbeddingPairwiseScatterplotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
   const [plotHeight, setPlotHeight] = useState(420);
@@ -141,7 +145,7 @@ export function EmbeddingPairwiseScatterplot({ points, xLabel, yLabel }: Embeddi
   }, [plotHeight, points, xLabel, yLabel]);
 
   return <div className="embedding-pairwise-scatterplot" ref={containerRef} />;
-}
+});
 
 function createAxis(title: string) {
   return {

@@ -180,6 +180,11 @@
   color: #082f49;
 }
 
+.cif-data-table .headerCell:hover,
+.cif-data-table .headerCell:focus-within {
+  z-index: 50;
+}
+
 .cif-data-table .dataCell {
   padding-left: 2px;
   padding-right: 2px;
@@ -239,6 +244,11 @@
   z-index: 20;
   min-width: 120px;
   white-space: nowrap;
+}
+
+.cif-data-table .headerCellLast .columnDropdown {
+  right: 0;
+  left: auto;
 }
 
 .cif-data-table .columnHeader:hover .columnDropdown,

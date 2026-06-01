@@ -24,7 +24,7 @@ const UNKNOWN_PREDICTED_CLASS = "Unknown";
 
 export function EmbeddingIntrospectionPanel({ rows, sourceDimension, itemLabel }: EmbeddingIntrospectionPanelProps) {
   const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
-  const [selectedFeatureColumns, setSelectedFeatureColumns] = useState<string[]>([]);
+  const [selectedFeatureColumns, setSelectedFeatureColumns] = useState<string[] | null>(null);
   const [isTableExpanded, setIsTableExpanded] = useState(true);
   const [viewMode, setViewMode] = useState<TableViewMode>("numerical");
 
@@ -66,9 +66,12 @@ export function EmbeddingIntrospectionPanel({ rows, sourceDimension, itemLabel }
     [featureColumns, itemLabel, metadataColumns, rows],
   );
 
-  const defaultPair = featureColumns.slice(0, 2);
-  const activeFeatureColumns =
-    selectedFeatureColumns.length > 0 ? selectedFeatureColumns : defaultPair.length === 2 ? defaultPair : [];
+  const defaultPair = useMemo(() => featureColumns.slice(0, 2), [featureColumns]);
+  const activeFeatureColumns = selectedFeatureColumns ?? (defaultPair.length === 2 ? defaultPair : []);
+  const tableColumns = useMemo(
+    () => [itemLabel, ...metadataColumns, PREDICTED_CLASS_COLUMN, ...featureColumns],
+    [featureColumns, itemLabel, metadataColumns],
+  );
 
   const scatterData = useMemo(() => {
     if (activeFeatureColumns.length !== 2) {
@@ -129,7 +132,7 @@ export function EmbeddingIntrospectionPanel({ rows, sourceDimension, itemLabel }
           title="Raw embedding features"
           subtitle="Select two feature columns to update the pairwise view."
           data={tableRows}
-          columns={[itemLabel, ...metadataColumns, PREDICTED_CLASS_COLUMN, ...featureColumns]}
+          columns={tableColumns}
           hiddenColumns={hiddenColumns}
           selectedColumns={activeFeatureColumns}
           onColumnHide={hideColumn}

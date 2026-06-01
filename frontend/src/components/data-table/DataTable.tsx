@@ -385,7 +385,9 @@ const DataTable: React.FC<DataTableProps> = ({
                   <th
                     key={columnId}
                     onClick={() => toggleColumnSelection(columnId)}
-                    className={`${styles.headerCell} ${resolvedSelectedColumns.includes(columnId) ? styles.headerCellSelected : ""}`}
+                    className={`${styles.headerCell} ${resolvedSelectedColumns.includes(columnId) ? styles.headerCellSelected : ""} ${
+                      columnId === visibleColumns[visibleColumns.length - 1] ? "headerCellLast" : ""
+                    }`}
                   >
                     <div
                       className={`${styles.columnHeader} ${

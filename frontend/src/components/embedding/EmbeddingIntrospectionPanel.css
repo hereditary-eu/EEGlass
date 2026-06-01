@@ -90,6 +90,17 @@
   box-shadow: none;
 }
 
+.embedding-introspection-table-section .cif-data-table .tableContainer {
+  overflow-y: visible;
+}
+
+.embedding-introspection-table-section .cif-data-table .columnDropdown {
+  z-index: 40;
+  min-width: max-content;
+  border-color: #c8d4de;
+  box-shadow: 0 10px 22px rgb(15 23 42 / 14%);
+}
+
 .embedding-introspection-table-section .cif-data-table .table {
   font-size: 0.72rem;
 }
