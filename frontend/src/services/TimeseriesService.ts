@@ -3,6 +3,7 @@ import { API_ROUTES } from "./ApiRoutes";
 import type { ApiClientError } from "../types/cif";
 import type {
   ChannelId,
+  TimeseriesSamples,
   TimeseriesDatasetInfo,
   TimeseriesBandFilter,
   TimeseriesSignalResponse,
@@ -122,11 +123,11 @@ export class TimeseriesService {
       );
     }
 
-    const samples: Record<ChannelId, number[]> = {};
+    const samples: TimeseriesSamples = {};
     metadata.channels.forEach((channel, channelIndex) => {
       const start = channelIndex * metadata.sample_count;
       const end = start + metadata.sample_count;
-      samples[channel] = Array.from(values.subarray(start, end));
+      samples[channel] = values.subarray(start, end);
     });
 
     return {

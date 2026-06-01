@@ -75,8 +75,11 @@ export interface TimeseriesSignalResponse {
   end_sample: number;
   sample_count: number;
   decimation: number;
-  samples: Record<ChannelId, number[]>;
+  samples: TimeseriesSamples;
 }
+
+export type TimeseriesSampleArray = number[] | Float32Array;
+export type TimeseriesSamples = Record<ChannelId, TimeseriesSampleArray>;
 
 export interface WindowPrediction {
   window_index: number;

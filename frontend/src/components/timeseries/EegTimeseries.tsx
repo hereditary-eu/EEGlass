@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 
-import type { ChannelId, TimeRange } from "../../types";
+import type { ChannelId, TimeRange, TimeseriesSampleArray, TimeseriesSamples } from "../../types";
 import { useControllableState } from "../../utils/useControllableState";
 import "./EegTimeseries.css";
 
@@ -43,7 +43,7 @@ export interface TimeseriesWindowAnnotationRow {
 }
 
 export interface EegTimeseriesProps {
-  samples: Record<ChannelId, number[]>;
+  samples: TimeseriesSamples;
   samplingFrequency: number;
   channels: ChannelId[];
   windowSizeSeconds?: number;
@@ -488,7 +488,7 @@ function renderTimeseries({
   lockedPredictionWindowIndex,
 }: {
   canvas: HTMLCanvasElement;
-  samples: Record<ChannelId, number[]>;
+  samples: TimeseriesSamples;
   channels: ChannelId[];
   samplingFrequency: number;
   view: TimeseriesView;
@@ -719,7 +719,7 @@ function getDefaultAnnotationColor(rowIndex: number, windowIndex: number): strin
     ["rgb(229 231 235 / 70%)", "rgb(243 244 246 / 92%)"],
     ["rgb(226 232 240 / 65%)", "rgb(248 250 252 / 92%)"],
   ];
-  const rowPalette = palette[rowIndex] ?? palette[0];
+  const rowPalette = palette[rowIndex] ?? palette[0] ?? ["rgb(23 33 43 / 8%)"];
   return rowPalette[windowIndex % rowPalette.length] ?? "rgb(23 33 43 / 8%)";
 }
 
@@ -740,7 +740,7 @@ function drawChannel(
     isHighlighted,
     hasHighlight,
   }: {
-    values: number[];
+    values: TimeseriesSampleArray;
     channelIndex: number;
     channelCount: number;
     color: string;
@@ -995,23 +995,37 @@ function drawEmptyAxes(
   });
 }
 
-function createInitialView(samples: Record<ChannelId, number[]>, channels: ChannelId[]): TimeseriesView {
-  const values = channels.flatMap((channel) => samples[channel] ?? []);
-  if (values.length === 0) {
-    return { xScale: 1, xOffset: 0, yMin: -1, yMax: 1 };
-  }
+function createInitialView(samples: TimeseriesSamples, channels: ChannelId[]): TimeseriesView {
+  let hasValue = false;
+  let min = 0;
+  let max = 0;
 
-  const firstValue = values[0];
-  if (firstValue === undefined) {
-    return { xScale: 1, xOffset: 0, yMin: -1, yMax: 1 };
-  }
+  channels.forEach((channel) => {
+    const values = samples[channel];
+    if (!values) {
+      return;
+    }
 
-  let min = firstValue;
-  let max = firstValue;
-  values.forEach((value) => {
-    min = Math.min(min, value);
-    max = Math.max(max, value);
+    for (let index = 0; index < values.length; index += 1) {
+      const value = values[index];
+      if (value === undefined) {
+        continue;
+      }
+
+      if (!hasValue) {
+        min = value;
+        max = value;
+        hasValue = true;
+      } else {
+        min = Math.min(min, value);
+        max = Math.max(max, value);
+      }
+    }
   });
+
+  if (!hasValue) {
+    return { xScale: 1, xOffset: 0, yMin: -1, yMax: 1 };
+  }
   const padding = (max - min) * 0.1 || 1;
 
   return {
@@ -1022,7 +1036,7 @@ function createInitialView(samples: Record<ChannelId, number[]>, channels: Chann
   };
 }
 
-function getMaxSampleCount(samples: Record<ChannelId, number[]>, channels: ChannelId[]): number {
+function getMaxSampleCount(samples: TimeseriesSamples, channels: ChannelId[]): number {
   return channels.reduce((max, channel) => Math.max(max, samples[channel]?.length ?? 0), 0);
 }
 
@@ -1059,7 +1073,7 @@ function clampOffset(offset: number, scale: number, plotWidth: number): number {
 function mergeViewPreserveVisibleWindow(
   currentView: TimeseriesView,
   previousSnapshot: { duration: number; plotWidth: number } | null,
-  samples: Record<ChannelId, number[]>,
+  samples: TimeseriesSamples,
   channels: ChannelId[],
   nextDuration: number,
   plotWidth: number,
