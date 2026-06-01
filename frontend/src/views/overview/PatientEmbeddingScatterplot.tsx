@@ -252,7 +252,10 @@ export function PatientEmbeddingScatterplot({
             <EmbeddingIntrospectionPanel
               rows={introspectionRows}
               sourceDimension={embeddings?.reduction.source_dimension}
+              featureNames={embeddings?.feature_names}
               itemLabel="Patient"
+              tableTitle="Mean band activations"
+              tableSubtitle="Patient rows show feature-wise mean activations across all prediction windows. Select two activation columns to update the pairwise view."
             />
           )}
           onPointClick={(point) => {

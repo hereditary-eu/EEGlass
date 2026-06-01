@@ -5,12 +5,13 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from backend.config import CONFIG
+from backend.ml.model_registry import DEFAULT_MODEL_CLASSES
 from backend.ml.model_vars import MODEL_CLASS_LABELS
 from backend.pydantic_models.prediction_cache import (
     ModelPredictionClassWindowCount,
     ModelPredictionSummary,
 )
-from backend.pydantic_models.settings import PatientAggregationSettings
+from backend.pydantic_models.settings import PatientAggregationSettings, PatientAggregationSettingsResponse
 from backend.services.model_errors import ModelValidationError
 from backend.services.prediction_cache_artifacts import read_json, write_json_atomic
 
@@ -18,6 +19,10 @@ from backend.services.prediction_cache_artifacts import read_json, write_json_at
 HEALTHY_LABEL = "Healthy"
 ALZHEIMER_LABEL = "Alzheimer Disease"
 FTD_LABEL = "Frontotemporal Dementia"
+THRESHOLD_CLASS_FIELDS = (
+    ("alzheimer_threshold", ALZHEIMER_LABEL),
+    ("frontotemporal_dementia_threshold", FTD_LABEL),
+)
 
 
 class PatientAggregationService:
@@ -44,6 +49,30 @@ class PatientAggregationService:
     def save_settings(cls, settings: PatientAggregationSettings) -> PatientAggregationSettings:
         write_json_atomic(cls._settings_path(), settings.model_dump(mode="json"))
         return settings
+
+    @classmethod
+    def get_settings_response(cls) -> PatientAggregationSettingsResponse:
+        return cls.build_settings_response(cls.get_settings())
+
+    @classmethod
+    def save_settings_response(cls, settings: PatientAggregationSettings) -> PatientAggregationSettingsResponse:
+        return cls.build_settings_response(cls.save_settings(settings))
+
+    @classmethod
+    def build_settings_response(cls, settings: PatientAggregationSettings) -> PatientAggregationSettingsResponse:
+        compact_labels = {model_class.label: model_class.compact_label for model_class in DEFAULT_MODEL_CLASSES}
+        return PatientAggregationSettingsResponse(
+            **settings.model_dump(mode="json"),
+            defaults=cls.default_settings(),
+            thresholds=[
+                {
+                    "field": field,
+                    "class_label": class_label,
+                    "compact_label": compact_labels.get(class_label, class_label),
+                }
+                for field, class_label in THRESHOLD_CLASS_FIELDS
+            ],
+        )
 
     @classmethod
     def apply_to_summary(

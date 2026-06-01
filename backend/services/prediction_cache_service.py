@@ -11,7 +11,7 @@ from typing import Any, Literal
 import numpy as np
 
 from backend.config import CONFIG
-from backend.ml.model_vars import DEFAULT_MODEL_NAME
+from backend.ml.model_vars import DEFAULT_MODEL_NAME, get_embedding_feature_names
 from backend.pydantic_models.inference import (
     ModelBandPowerStatsResponse,
     ModelInferenceResponse,
@@ -793,6 +793,7 @@ class PredictionCacheService:
             preprocessing_version=PREPROCESSING_VERSION,
             embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
             embedding_label=PENULTIMATE_EMBEDDING_LABEL,
+            feature_names=get_embedding_feature_names(source_dimension),
             reduction=ModelPatientEmbeddingReduction(
                 method="pca",
                 status=reduction_status,
@@ -825,6 +826,7 @@ class PredictionCacheService:
                 checkpoint_signature=checkpoint_signature,
                 embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
                 embedding_label=PENULTIMATE_EMBEDDING_LABEL,
+                feature_names=[],
                 reduction=ModelPatientEmbeddingReduction(
                     method="pca",
                     status="insufficient_data",
@@ -863,6 +865,7 @@ class PredictionCacheService:
                 checkpoint_signature=checkpoint_signature,
                 embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
                 embedding_label=PENULTIMATE_EMBEDDING_LABEL,
+                feature_names=get_embedding_feature_names(source_dimension),
                 reduction=ModelPatientEmbeddingReduction(
                     method="pca",
                     status="insufficient_data",
@@ -917,6 +920,7 @@ class PredictionCacheService:
             checkpoint_signature=checkpoint_signature,
             embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
             embedding_label=PENULTIMATE_EMBEDDING_LABEL,
+            feature_names=get_embedding_feature_names(source_dimension),
             reduction=ModelPatientEmbeddingReduction(
                 method="pca",
                 status=reduction_status,

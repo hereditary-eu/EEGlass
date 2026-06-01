@@ -7,7 +7,7 @@ import {
   EegScalpTopologyPanel,
   TotalBandPowerChart,
 } from "../components";
-import { MODEL_BANDS } from "../constants/eegModel";
+import { getModelBandIds } from "../constants/eegModel";
 import { useTimeseriesData } from "../hooks/useTimeseriesData";
 import type { PatientViewOutletContext } from "../layouts/AppLayout";
 import { useAppStore } from "../stores/useAppStore";
@@ -116,11 +116,13 @@ export function PatientView() {
       }
 
       if (event.key === "n" || event.key === "m") {
+        const bandOptions = getModelBandIds(ts.modelInfo);
+        if (!bandOptions.length) return;
         const current = useAppStore.getState().selectedScalpBand;
-        const currentIndex = current ? MODEL_BANDS.indexOf(current) : -1;
+        const currentIndex = current ? bandOptions.indexOf(current) : -1;
         const direction = event.key === "n" ? 1 : -1;
-        const nextIndex = (currentIndex + direction + MODEL_BANDS.length) % MODEL_BANDS.length;
-        setSelectedScalpBand(MODEL_BANDS[nextIndex]);
+        const nextIndex = (currentIndex + direction + bandOptions.length) % bandOptions.length;
+        setSelectedScalpBand(bandOptions[nextIndex]);
         return;
       }
 
@@ -201,6 +203,7 @@ export function PatientView() {
           error={ts.bandPowerError}
           statsError={ts.bandPowerStatsError}
           modelClasses={ts.modelInfo?.classes ?? []}
+          modelBands={ts.modelInfo?.bands ?? []}
           selectedChannels={ts.activeChannels}
           selectedWindowIndex={ts.lockedPredictionWindowIndex}
           predictionWindowCount={ts.inferenceResult?.predictions.length ?? 0}

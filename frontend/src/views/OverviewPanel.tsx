@@ -11,6 +11,7 @@ import type {
   ModelPredictionCacheProgress,
   ModelPredictionCacheStatus,
   PatientAggregationSettings,
+  PatientAggregationSettingsPayload,
   TimeseriesDatasetInfo,
   TimeseriesSubjectInfo,
 } from "../types";
@@ -398,7 +399,7 @@ export function OverviewPanel() {
   );
 
   const savePatientAggregationSettings = useCallback(
-    async (settings: PatientAggregationSettings) => {
+    async (settings: PatientAggregationSettingsPayload) => {
       setIsSavingPatientAggregationSettings(true);
       setPatientAggregationSettingsError(null);
 

@@ -176,7 +176,10 @@ export function WindowEmbeddingPanel({
             <EmbeddingIntrospectionPanel
               rows={introspectionRows}
               sourceDimension={embeddings?.reduction.source_dimension}
+              featureNames={embeddings?.feature_names}
               itemLabel="Window"
+              tableTitle="Window band activations"
+              tableSubtitle="Window rows show per-window encoder activations. Select two activation columns to update the pairwise view."
             />
           )}
           onPointClick={(point) => {

@@ -2,7 +2,6 @@ import type { VacpActionDescriptor, VacpCapabilitiesSnapshot, VacpRef, VacpState
 import { nowIso, VACP_SCHEMA_VERSION } from "@vacp/core";
 import { installVacpRuntimeBridge, VacpActionRegistry } from "@vacp/gateway";
 
-import { MODEL_BANDS } from "../constants/eegModel";
 import type { TimeseriesBandFilter, TimeseriesSource } from "../types";
 import {
   createPrivateVacpGlobalKey,
@@ -18,6 +17,7 @@ interface RegisterVacpScalpTopologyArgs {
   source: TimeseriesSource;
   windowIndex: number | null;
   selectedBand: TimeseriesBandFilter;
+  availableBands: TimeseriesBandFilter[];
   applyBandFilterOnClick: boolean;
   selectedTimeseriesBandFilter: TimeseriesBandFilter | null;
   selectBand: (band: TimeseriesBandFilter) => void;
@@ -40,11 +40,12 @@ export function registerVacpScalpTopology(args: RegisterVacpScalpTopologyArgs): 
   const clickFilterRef = `${refPrefix}/timeseries-click-filter` as VacpRef;
   const globalKey = createPrivateVacpGlobalKey(SCALP_TOPOLOGY_CHART_ID);
   const actions = new VacpActionRegistry();
+  const availableBands = getAvailableBands(args);
 
   actions.register(
     createActionDescriptor(SCALP_TOPOLOGY_ACTIONS.bandNext, bandRef, "Select the next scalp band."),
     () => {
-      const band = getRelativeBand(args.selectedBand, 1);
+      const band = getRelativeBand(args.selectedBand, availableBands, 1);
       args.selectBand(band);
       return { band };
     },
@@ -53,7 +54,7 @@ export function registerVacpScalpTopology(args: RegisterVacpScalpTopologyArgs): 
   actions.register(
     createActionDescriptor(SCALP_TOPOLOGY_ACTIONS.bandPrevious, bandRef, "Select the previous scalp band."),
     () => {
-      const band = getRelativeBand(args.selectedBand, -1);
+      const band = getRelativeBand(args.selectedBand, availableBands, -1);
       args.selectBand(band);
       return { band };
     },
@@ -61,10 +62,10 @@ export function registerVacpScalpTopology(args: RegisterVacpScalpTopologyArgs): 
 
   actions.register(
     createActionDescriptor(SCALP_TOPOLOGY_ACTIONS.bandSet, bandRef, "Select a specific scalp band.", {
-      band: { type: "string", enum: MODEL_BANDS },
+      band: { type: "string", enum: availableBands },
     }),
     (params) => {
-      const band = getBandParam(params);
+      const band = getBandParam(params, availableBands);
       if (!band) return { band, found: false };
       args.selectBand(band);
       return { band, found: true };
@@ -163,7 +164,7 @@ function buildCapabilitiesSnapshot(
         createActionDescriptor(SCALP_TOPOLOGY_ACTIONS.bandNext, bandRef, "Select the next scalp band."),
         createActionDescriptor(SCALP_TOPOLOGY_ACTIONS.bandPrevious, bandRef, "Select the previous scalp band."),
         createActionDescriptor(SCALP_TOPOLOGY_ACTIONS.bandSet, bandRef, "Select a specific scalp band.", {
-          band: { type: "string", enum: MODEL_BANDS },
+          band: { type: "string", enum: getAvailableBands(args) },
         }),
         createActionDescriptor(
           SCALP_TOPOLOGY_ACTIONS.timeseriesClickFilterSelect,
@@ -197,7 +198,7 @@ function buildStateSnapshot(
         windowIndex: args.windowIndex,
       },
       [bandRef]: {
-        availableBands: MODEL_BANDS,
+        availableBands: getAvailableBands(args),
         selectedBand: args.selectedBand,
       },
       [clickFilterRef]: {
@@ -235,16 +236,24 @@ function createActionDescriptor(
   };
 }
 
-function getRelativeBand(selectedBand: TimeseriesBandFilter, direction: 1 | -1): TimeseriesBandFilter {
-  const currentIndex = MODEL_BANDS.indexOf(selectedBand);
-  const nextIndex = (currentIndex + direction + MODEL_BANDS.length) % MODEL_BANDS.length;
-  return MODEL_BANDS[nextIndex];
+function getAvailableBands(args: RegisterVacpScalpTopologyArgs): TimeseriesBandFilter[] {
+  return args.availableBands.length ? args.availableBands : [args.selectedBand];
 }
 
-function getBandParam(params: unknown): TimeseriesBandFilter | null {
+function getRelativeBand(
+  selectedBand: TimeseriesBandFilter,
+  availableBands: TimeseriesBandFilter[],
+  direction: 1 | -1,
+): TimeseriesBandFilter {
+  const currentIndex = availableBands.indexOf(selectedBand);
+  const nextIndex = (currentIndex + direction + availableBands.length) % availableBands.length;
+  return availableBands[nextIndex];
+}
+
+function getBandParam(params: unknown, availableBands: TimeseriesBandFilter[]): TimeseriesBandFilter | null {
   if (!params || typeof params !== "object" || Array.isArray(params)) return null;
   const band = (params as { band?: unknown }).band;
-  return typeof band === "string" && MODEL_BANDS.includes(band as TimeseriesBandFilter)
+  return typeof band === "string" && availableBands.includes(band as TimeseriesBandFilter)
     ? (band as TimeseriesBandFilter)
     : null;
 }

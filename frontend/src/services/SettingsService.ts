@@ -1,6 +1,6 @@
 import { ApiClient } from "./ApiClient";
 import { API_ROUTES } from "./ApiRoutes";
-import type { PatientAggregationSettings } from "../types";
+import type { PatientAggregationSettings, PatientAggregationSettingsPayload } from "../types";
 
 export class SettingsService {
   static async getPatientAggregationSettings(): Promise<PatientAggregationSettings> {
@@ -8,7 +8,7 @@ export class SettingsService {
   }
 
   static async updatePatientAggregationSettings(
-    settings: PatientAggregationSettings,
+    settings: PatientAggregationSettingsPayload,
   ): Promise<PatientAggregationSettings> {
     return ApiClient.put<PatientAggregationSettings>(API_ROUTES.settings.patientAggregation, settings);
   }

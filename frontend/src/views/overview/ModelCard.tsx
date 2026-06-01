@@ -6,9 +6,11 @@ import type {
   ModelInfoResponse,
   ModelListItem,
   ModelMetadataValue,
+  PatientAggregationSettingsPayload,
   ModelPredictionCacheProgress,
   ModelPredictionCacheStatus,
   PatientAggregationSettings,
+  PatientAggregationThresholdField,
 } from "../../types";
 import { ModelScalpTopologyPanel } from "../../components";
 import { PredictionCacheProgressBar } from "./PredictionCacheProgressBar";
@@ -32,15 +34,15 @@ interface ModelCardProps {
   isStartingCacheJob: boolean;
   isDeletingCache: boolean;
   onModelChange: (modelName: string) => void;
-  onSavePatientAggregationSettings: (settings: PatientAggregationSettings) => Promise<void>;
+  onSavePatientAggregationSettings: (settings: PatientAggregationSettingsPayload) => Promise<void>;
   onStartPredictionCacheJob: () => void;
   onDeletePredictionCache: () => void;
 }
 
-const DEFAULT_PATIENT_AGGREGATION_SETTINGS: PatientAggregationSettings = {
+const EMPTY_PATIENT_AGGREGATION_SETTINGS: PatientAggregationSettingsPayload = {
   strategy: "disease_threshold",
-  alzheimer_threshold: 0.3,
-  frontotemporal_dementia_threshold: 0.3,
+  alzheimer_threshold: 0,
+  frontotemporal_dementia_threshold: 0,
 };
 
 export function ModelCard({
@@ -67,8 +69,8 @@ export function ModelCard({
   const metadataEntries = Object.entries(modelInfo?.metadata ?? {});
   const [isModelSummaryOpen, setIsModelSummaryOpen] = useState(false);
   const [isModelConfigOpen, setIsModelConfigOpen] = useState(false);
-  const [draftAggregationSettings, setDraftAggregationSettings] = useState<PatientAggregationSettings>(
-    patientAggregationSettings ?? DEFAULT_PATIENT_AGGREGATION_SETTINGS,
+  const [draftAggregationSettings, setDraftAggregationSettings] = useState<PatientAggregationSettingsPayload>(
+    () => toPatientAggregationSettingsPayload(patientAggregationSettings ?? EMPTY_PATIENT_AGGREGATION_SETTINGS),
   );
   const [settingsSaveError, setSettingsSaveError] = useState<string | null>(null);
   const hasModelSummary = Boolean(modelInfo?.model_summary);
@@ -87,19 +89,21 @@ export function ModelCard({
 
   useEffect(() => {
     if (isModelConfigOpen) {
-      setDraftAggregationSettings(patientAggregationSettings ?? DEFAULT_PATIENT_AGGREGATION_SETTINGS);
+      setDraftAggregationSettings(
+        toPatientAggregationSettingsPayload(patientAggregationSettings ?? EMPTY_PATIENT_AGGREGATION_SETTINGS),
+      );
       setSettingsSaveError(null);
     }
   }, [isModelConfigOpen, patientAggregationSettings]);
 
-  const updateDraftThreshold = (field: "alzheimer_threshold" | "frontotemporal_dementia_threshold", value: string) => {
+  const updateDraftThreshold = (field: PatientAggregationThresholdField, value: string) => {
     setDraftAggregationSettings((currentSettings) => ({
       ...currentSettings,
       [field]: clampThreshold(Number(value)),
     }));
   };
 
-  const saveDraftAggregationSettings = async (settings: PatientAggregationSettings) => {
+  const saveDraftAggregationSettings = async (settings: PatientAggregationSettingsPayload) => {
     setSettingsSaveError(null);
     try {
       await onSavePatientAggregationSettings(settings);
@@ -189,47 +193,43 @@ export function ModelCard({
                   <span>Disease window thresholds</span>
                 </div>
                 <div className="overview-model-threshold-grid">
-                  <label>
-                    <span>Alzheimer Disease</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={formatThresholdInput(draftAggregationSettings.alzheimer_threshold)}
-                      disabled={isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings}
-                      onChange={(event) => updateDraftThreshold("alzheimer_threshold", event.currentTarget.value)}
-                    />
-                  </label>
-                  <label>
-                    <span>FTD</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={formatThresholdInput(draftAggregationSettings.frontotemporal_dementia_threshold)}
-                      disabled={isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings}
-                      onChange={(event) =>
-                        updateDraftThreshold("frontotemporal_dementia_threshold", event.currentTarget.value)
-                      }
-                    />
-                  </label>
+                  {(patientAggregationSettings?.thresholds ?? []).map((threshold) => (
+                    <label key={threshold.field}>
+                      <span>{threshold.class_label}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={formatThresholdInput(draftAggregationSettings[threshold.field])}
+                        disabled={isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings}
+                        onChange={(event) => updateDraftThreshold(threshold.field, event.currentTarget.value)}
+                      />
+                    </label>
+                  ))}
                 </div>
                 <p>{settingsSaveError ?? settingsStatusText}</p>
                 <div className="overview-model-settings-actions">
                   <button
                     type="button"
                     className="overview-model-reset-button"
-                    disabled={isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings}
-                    onClick={() => void saveDraftAggregationSettings(DEFAULT_PATIENT_AGGREGATION_SETTINGS)}
+                    disabled={
+                      isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings || !patientAggregationSettings
+                    }
+                    onClick={() =>
+                      void saveDraftAggregationSettings(
+                        patientAggregationSettings?.defaults ?? EMPTY_PATIENT_AGGREGATION_SETTINGS,
+                      )
+                    }
                   >
                     Reset defaults
                   </button>
                   <button
                     type="button"
                     className="overview-model-save-button"
-                    disabled={isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings}
+                    disabled={
+                      isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings || !patientAggregationSettings
+                    }
                     onClick={() => void saveDraftAggregationSettings(draftAggregationSettings)}
                   >
                     {isSavingPatientAggregationSettings ? "Saving..." : "Save"}
@@ -358,6 +358,16 @@ function formatModelMetadataValue(value: ModelMetadataValue): string {
   }
 
   return String(value);
+}
+
+function toPatientAggregationSettingsPayload(
+  settings: PatientAggregationSettings | PatientAggregationSettingsPayload,
+): PatientAggregationSettingsPayload {
+  return {
+    strategy: settings.strategy,
+    alzheimer_threshold: settings.alzheimer_threshold,
+    frontotemporal_dementia_threshold: settings.frontotemporal_dementia_threshold,
+  };
 }
 
 function clampThreshold(value: number): number {

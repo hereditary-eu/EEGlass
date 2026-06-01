@@ -35,6 +35,7 @@ class ModelPatientEmbeddingsResponse(BaseModel):
     preprocessing_version: str
     embedding_layer: str
     embedding_label: str
+    feature_names: List[str]
     reduction: ModelPatientEmbeddingReduction
     points: List[ModelPatientEmbeddingPoint]
 
@@ -59,5 +60,6 @@ class ModelWindowEmbeddingsResponse(BaseModel):
     checkpoint_signature: str
     embedding_layer: str
     embedding_label: str
+    feature_names: List[str]
     reduction: ModelPatientEmbeddingReduction
     points: List[ModelWindowEmbeddingPoint]

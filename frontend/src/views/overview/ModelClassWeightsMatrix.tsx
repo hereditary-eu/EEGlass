@@ -6,7 +6,7 @@ import {
   formatBandClassValue,
   getBandClassDivergingColor,
 } from "../../components/classification";
-import { formatCompactClassLabel } from "../../constants/eegModel";
+import { formatCompactClassLabel, getModelBandLabel } from "../../constants/eegModel";
 import { ModelService } from "../../services/ModelService";
 import type { ModelClassWeightsResponse, ModelInfoResponse } from "../../types";
 import { getOverviewError } from "./overviewUtils";
@@ -112,18 +112,19 @@ function createWeightCells(weights: ModelClassWeightsResponse, modelInfo: ModelI
       const classWeight = band.class_weights.find((item) => item.class_id === modelClass.class_id);
       const weight = classWeight?.weight ?? 0;
       const valueText = formatBandClassValue(weight);
+      const bandLabel = getModelBandLabel(band.band, modelInfo.bands);
 
       return {
         classLabel: modelClass.label,
         classShort: formatCompactClassLabel(modelClass.label, modelInfo.classes),
         classOrder,
-        band: band.band,
+        band: bandLabel,
         bandOrder,
         value: weight,
         valueText,
         weight,
         cellColor: getBandClassDivergingColor(weight, maxAbsWeight),
-        tooltipValue: `${band.band} -> ${modelClass.label}: ${valueText}`,
+        tooltipValue: `${bandLabel} -> ${modelClass.label}: ${valueText}`,
       };
     }),
   );

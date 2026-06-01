@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ModelService } from "../../services/ModelService";
 import { useAppStore } from "../../stores/useAppStore";
 import { registerVacpScalpTopology } from "../../vacp/registerScalpTopology";
+import { getModelBandLabel } from "../../constants/eegModel";
 import type {
   ChannelId,
   ModelInfoResponse,
@@ -13,7 +14,7 @@ import type {
 import { ComponentStatusIndicator, MathFormula } from "../ui";
 import { BandSelector } from "./ModelScalpTopologyPanel";
 import { ScalpTopologyPlot } from "./ScalpTopologyPlot";
-import { SCALP_BAND_OPTIONS, type ScalpTopologyValueChannel } from "./scalpTopologyUtils";
+import type { ScalpTopologyValueChannel } from "./scalpTopologyUtils";
 import "./TopologyAttributionPanel.css";
 
 interface EegScalpTopologyPanelProps {
@@ -44,37 +45,6 @@ export function EegScalpTopologyPanel({
   const selectedTimeseriesBandFilter = useAppStore((state) => state.selectedTimeseriesBandFilter);
   const setSelectedTimeseriesBandFilter = useAppStore((state) => state.setSelectedTimeseriesBandFilter);
   const modelName = modelInfo?.name ?? undefined;
-
-  useEffect(() => {
-    return registerVacpScalpTopology({
-      datasetId,
-      subjectId,
-      source,
-      windowIndex,
-      selectedBand: selectedScalpBand,
-      applyBandFilterOnClick,
-      selectedTimeseriesBandFilter,
-      selectBand: setSelectedScalpBand,
-      setApplyBandFilterOnClick,
-      setSelectedTimeseriesBandFilter,
-    });
-  }, [
-    applyBandFilterOnClick,
-    datasetId,
-    selectedScalpBand,
-    selectedTimeseriesBandFilter,
-    setSelectedScalpBand,
-    setSelectedTimeseriesBandFilter,
-    source,
-    subjectId,
-    windowIndex,
-  ]);
-
-  useEffect(() => {
-    if (applyBandFilterOnClick) {
-      setSelectedTimeseriesBandFilter(selectedScalpBand);
-    }
-  }, [applyBandFilterOnClick, selectedScalpBand, setSelectedTimeseriesBandFilter]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -123,6 +93,20 @@ export function EegScalpTopologyPanel({
     () => activeMode?.bands.find((band) => band.band === selectedScalpBand) ?? activeMode?.bands[0] ?? null,
     [activeMode, selectedScalpBand],
   );
+  const activeBandId = activeBand?.band ?? selectedScalpBand;
+  const activeBandLabel = getModelBandLabel(activeBandId, modelInfo?.bands);
+  const bandOptions = useMemo(
+    () =>
+      (modelInfo?.bands.length
+        ? modelInfo.bands
+        : (activeMode?.bands ?? []).map((band) => ({
+            band: band.band,
+            label: band.band,
+            start_hz: 0,
+            end_hz: 0,
+          }))),
+    [activeMode, modelInfo],
+  );
   const bandValueRange = useMemo(() => getPerBandDivergingValueRange(activeBand), [activeBand]);
   const channels = useMemo<ScalpTopologyValueChannel[]>(
     () =>
@@ -136,9 +120,42 @@ export function EegScalpTopologyPanel({
   );
   const subtitle =
     scalpTopologies && activeMode
-      ? `Window ${scalpTopologies.window_index + 1}: ${scalpTopologies.start_time.toFixed(1)}s-${scalpTopologies.end_time.toFixed(1)}s - ${selectedScalpBand} spatial evidence`
+      ? `Window ${scalpTopologies.window_index + 1}: ${scalpTopologies.start_time.toFixed(1)}s-${scalpTopologies.end_time.toFixed(1)}s - ${activeBandLabel} spatial evidence`
       : "";
   const status = getScalpStatus({ error, isLoading, scalpTopologies });
+
+  useEffect(() => {
+    return registerVacpScalpTopology({
+      datasetId,
+      subjectId,
+      source,
+      windowIndex,
+      selectedBand: activeBandId,
+      availableBands: bandOptions.map((band) => band.band),
+      applyBandFilterOnClick,
+      selectedTimeseriesBandFilter,
+      selectBand: setSelectedScalpBand,
+      setApplyBandFilterOnClick,
+      setSelectedTimeseriesBandFilter,
+    });
+  }, [
+    activeBandId,
+    applyBandFilterOnClick,
+    bandOptions,
+    datasetId,
+    selectedTimeseriesBandFilter,
+    setSelectedScalpBand,
+    setSelectedTimeseriesBandFilter,
+    source,
+    subjectId,
+    windowIndex,
+  ]);
+
+  useEffect(() => {
+    if (applyBandFilterOnClick) {
+      setSelectedTimeseriesBandFilter(activeBandId);
+    }
+  }, [activeBandId, applyBandFilterOnClick, setSelectedTimeseriesBandFilter]);
 
   return (
     <div className="topology-panel topology-panel--eeg">
@@ -157,7 +174,7 @@ export function EegScalpTopologyPanel({
       </div>
 
       <div className="topology-panel-controls">
-        <BandSelector selectedBand={selectedScalpBand} onSelectedBandChange={setSelectedScalpBand} />
+        <BandSelector bands={bandOptions} selectedBand={activeBandId} onSelectedBandChange={setSelectedScalpBand} />
       </div>
 
       <label className="topology-panel-filter-toggle">
@@ -167,7 +184,7 @@ export function EegScalpTopologyPanel({
           onChange={(event) => {
             const shouldApplyFilter = event.currentTarget.checked;
             setApplyBandFilterOnClick(shouldApplyFilter);
-            setSelectedTimeseriesBandFilter(shouldApplyFilter ? selectedScalpBand : null);
+            setSelectedTimeseriesBandFilter(shouldApplyFilter ? activeBandId : null);
           }}
         />
         <span>Apply selected band to timeseries clicks</span>
@@ -188,7 +205,7 @@ export function EegScalpTopologyPanel({
           onChannelSelect={(channel) => {
             onChannelSelect(channel);
             if (applyBandFilterOnClick) {
-              setSelectedTimeseriesBandFilter(selectedScalpBand);
+              setSelectedTimeseriesBandFilter(activeBandId);
             }
           }}
           isLoading={isLoading}

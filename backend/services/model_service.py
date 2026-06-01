@@ -17,6 +17,7 @@ from backend.ml.model_vars import (
     MODEL_CHANNELS,
     MODEL_CLASS_LABELS,
     PARAMETERS_DEFAULT,
+    get_embedding_feature_names,
 )
 from backend.pydantic_models.inference import (
     ModelBandPowerResponse,
@@ -281,6 +282,15 @@ def build_model_info_response(model_spec: ModelSpec) -> ModelInfoResponse:
                 "compact_label": class_spec.compact_label,
             }
             for class_spec in model_spec.classes
+        ],
+        bands=[
+            {
+                "band": band_name,
+                "label": band_name,
+                "start_hz": start_hz,
+                "end_hz": end_hz,
+            }
+            for band_name, start_hz, end_hz in model_spec.bands
         ],
         metadata={
             "API name": model_spec.name,
@@ -1005,6 +1015,7 @@ class ModelService:
             checkpoint_signature=ModelRuntime.checkpoint_signature(model_spec),
             embedding_layer="encoder",
             embedding_label="window penultimate embedding",
+            feature_names=get_embedding_feature_names(source_dimension),
             reduction=ModelPatientEmbeddingReduction(
                 method="pca",
                 status=reduction_status,

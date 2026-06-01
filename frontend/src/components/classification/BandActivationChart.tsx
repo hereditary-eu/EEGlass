@@ -4,7 +4,7 @@ import type { View } from "vega";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
-import { MODEL_BAND_LABELS, formatCompactClassLabel } from "../../constants/eegModel";
+import { formatCompactClassLabel, getModelBandLabel } from "../../constants/eegModel";
 import type { ModelClassEvidenceContribution, ModelInfoResponse, TimeseriesSource } from "../../types";
 import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
@@ -71,7 +71,7 @@ export function BandActivationChart({
         return {
           order,
           band: band.band,
-          label: MODEL_BAND_LABELS[band.band] ?? band.band,
+          label: getModelBandLabel(band.band, modelInfo?.bands),
           activation,
           rawActivation: band.feature_value,
           multiplier,
@@ -79,7 +79,7 @@ export function BandActivationChart({
           activationText: formatActivation(activation),
         };
       }) ?? [],
-    [evidence, selectedClassLabel],
+    [evidence, modelInfo?.bands, selectedClassLabel],
   );
   const valuesRef = useRef<typeof values>([]);
   const status = getActivationStatus({ error, evidence, isLoading });

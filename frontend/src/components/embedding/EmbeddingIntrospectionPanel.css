@@ -31,6 +31,11 @@
   padding: 0 0 0.65rem;
 }
 
+.embedding-introspection-table-section .cif-data-table .panelTitleGroup {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .embedding-introspection-table-section .cif-data-table .panelTitle {
   color: #17212b;
   font-size: 0.92rem;
@@ -47,7 +52,9 @@
 }
 
 .embedding-introspection-table-section .cif-data-table .headerOptions {
+  flex: 0 0 auto;
   gap: 0.45rem;
+  min-width: max-content;
 }
 
 .embedding-introspection-table-section .cif-data-table .columnTag {
@@ -60,6 +67,7 @@
 }
 
 .embedding-introspection-table-section .cif-data-table .viewModeSwitch {
+  flex: 0 0 auto;
   margin-right: 0;
   background: #e8eef3;
   border-radius: 6px;
@@ -77,6 +85,10 @@
 }
 
 .embedding-introspection-table-section .cif-data-table .toggleViewButton {
+  flex: 0 0 24px;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
   margin-left: 0;
   opacity: 0.72;
 }

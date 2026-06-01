@@ -15,14 +15,24 @@ export interface EmbeddingIntrospectionRow {
 interface EmbeddingIntrospectionPanelProps {
   rows: EmbeddingIntrospectionRow[];
   sourceDimension?: number;
+  featureNames?: string[];
   itemLabel: string;
+  tableTitle?: string;
+  tableSubtitle?: string;
 }
 
 type TableViewMode = "numerical" | "heatmap";
 const PREDICTED_CLASS_COLUMN = "Predicted class";
 const UNKNOWN_PREDICTED_CLASS = "Unknown";
 
-export function EmbeddingIntrospectionPanel({ rows, sourceDimension, itemLabel }: EmbeddingIntrospectionPanelProps) {
+export function EmbeddingIntrospectionPanel({
+  rows,
+  sourceDimension,
+  featureNames,
+  itemLabel,
+  tableTitle = "Band activations",
+  tableSubtitle = "Select two activation columns to update the pairwise view.",
+}: EmbeddingIntrospectionPanelProps) {
   const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
   const [selectedFeatureColumns, setSelectedFeatureColumns] = useState<string[] | null>(null);
   const [isTableExpanded, setIsTableExpanded] = useState(true);
@@ -34,8 +44,8 @@ export function EmbeddingIntrospectionPanel({ rows, sourceDimension, itemLabel }
       sourceDimension ?? 0,
     );
 
-    return Array.from({ length: inferredDimension }, (_, index) => getFeatureColumnName(index));
-  }, [rows, sourceDimension]);
+    return Array.from({ length: inferredDimension }, (_, index) => getFeatureColumnName(featureNames, index));
+  }, [featureNames, rows, sourceDimension]);
 
   const metadataColumns = useMemo(() => {
     const columns = new Set<string>();
@@ -79,14 +89,13 @@ export function EmbeddingIntrospectionPanel({ rows, sourceDimension, itemLabel }
     }
 
     const [xColumn, yColumn] = activeFeatureColumns;
+    const xIndex = featureColumns.indexOf(xColumn);
+    const yIndex = featureColumns.indexOf(yColumn);
+    if (xIndex < 0 || yIndex < 0) {
+      return [];
+    }
+
     return rows.flatMap((row) => {
-      const xIndex = getFeatureColumnIndex(xColumn);
-      const yIndex = getFeatureColumnIndex(yColumn);
-
-      if (xIndex === null || yIndex === null) {
-        return [];
-      }
-
       const xValue = row.rawEmbedding?.[xIndex];
       const yValue = row.rawEmbedding?.[yIndex];
       if (typeof xValue !== "number" || typeof yValue !== "number") {
@@ -102,7 +111,7 @@ export function EmbeddingIntrospectionPanel({ rows, sourceDimension, itemLabel }
         },
       ];
     });
-  }, [activeFeatureColumns, rows]);
+  }, [activeFeatureColumns, featureColumns, rows]);
 
   const handleColumnSelect = (columns: string[]) => {
     const featureSelection = columns.filter((column) => featureColumns.includes(column)).slice(-2);
@@ -129,8 +138,8 @@ export function EmbeddingIntrospectionPanel({ rows, sourceDimension, itemLabel }
     <div className="embedding-introspection-panel">
       <section className="embedding-introspection-table-section" aria-label="Raw embedding features">
         <DataTable
-          title="Raw embedding features"
-          subtitle="Select two feature columns to update the pairwise view."
+          title={tableTitle}
+          subtitle={tableSubtitle}
           data={tableRows}
           columns={tableColumns}
           hiddenColumns={hiddenColumns}
@@ -171,16 +180,6 @@ export function EmbeddingIntrospectionPanel({ rows, sourceDimension, itemLabel }
   );
 }
 
-function getFeatureColumnName(index: number): string {
-  return `Feature ${index + 1}`;
-}
-
-function getFeatureColumnIndex(column: string): number | null {
-  const match = /^Feature (\d+)$/.exec(column);
-  if (!match) {
-    return null;
-  }
-
-  const index = Number(match[1]) - 1;
-  return Number.isInteger(index) && index >= 0 ? index : null;
+function getFeatureColumnName(featureNames: string[] | undefined, index: number): string {
+  return featureNames?.[index] || `Feature ${index + 1}`;
 }

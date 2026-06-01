@@ -6,14 +6,15 @@ import type { VisualizationSpec } from "vega-embed";
 import type { VacpActionCall, VacpActionDescriptor, VacpActionResult, VacpRef } from "@vacp/core";
 
 import {
-  MODEL_BAND_LABELS,
   formatCompactClassLabel,
   getEmbeddingClassColors,
+  getModelBandLabel,
   getModelClassLabels,
 } from "../../constants/eegModel";
 import type {
   ChannelId,
   ModelBandPowerResponse,
+  ModelBandPresentation,
   ModelBandPowerStatsMode,
   ModelBandPowerStatsResponse,
   ModelClassPresentation,
@@ -34,6 +35,7 @@ interface TotalBandPowerChartProps {
   error: string | null;
   statsError: string | null;
   modelClasses: ModelClassPresentation[];
+  modelBands: ModelBandPresentation[];
   selectedChannels: ChannelId[];
   selectedWindowIndex: number | null;
   predictionWindowCount: number;
@@ -78,6 +80,7 @@ export function TotalBandPowerChart({
   error,
   statsError,
   modelClasses,
+  modelBands,
   selectedChannels,
   selectedWindowIndex,
   predictionWindowCount,
@@ -127,7 +130,7 @@ export function TotalBandPowerChart({
         return {
           order: index,
           band: band.band,
-          label: MODEL_BAND_LABELS[band.band] ?? band.band,
+          label: getModelBandLabel(band.band, modelBands),
           relativePower: band.relative_power,
           relativePowerDb: toRelativePowerDb(band.relative_power),
           lower2SigmaDb: stats?.lower_2sigma_db ?? null,
@@ -138,7 +141,7 @@ export function TotalBandPowerChart({
           range: `${band.start_hz.toFixed(1)}-${band.end_hz.toFixed(1)} Hz`,
         };
       }),
-    [activeChannel, statsByBand],
+    [activeChannel, modelBands, statsByBand],
   );
   const valuesRef = useRef<typeof values>([]);
   const hasStats = values.some((value) => value.lower2SigmaDb !== null && value.upper2SigmaDb !== null);
