@@ -56,3 +56,6 @@ class CONFIG:
 
     # LOGGING
     LOG_LEVEL = "DEBUG"
+
+    # API
+    GZIP_MINIMUM_SIZE = int(os.getenv("GZIP_MINIMUM_SIZE", "1000"))

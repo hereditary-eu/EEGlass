@@ -25,7 +25,7 @@ def create_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.add_middleware(GZipMiddleware, minimum_size=1000)
+    app.add_middleware(GZipMiddleware, minimum_size=CONFIG.GZIP_MINIMUM_SIZE)
 
     app.include_router(timeseries_router)
     app.include_router(model_router)
