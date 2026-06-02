@@ -49,6 +49,7 @@ const styles = {
   tinyHistogramClickable: "tinyHistogramClickable",
   nonNumericalIndicator: "nonNumericalIndicator",
   heatmapRow: "heatmapRow",
+  heatmapRowHovered: "heatmapRowHovered",
   hoveredCellContent: "hoveredCellContent",
   heatmapCell: "heatmapCell",
   virtualSpacerRow: "virtualSpacerRow",

@@ -64,6 +64,22 @@ interface ClassLogitDatum {
   tooltipValue: string;
 }
 
+type ClassContributionDatumArgs = Pick<
+  ClassContributionDatum,
+  | "classLabel"
+  | "classShort"
+  | "classOrder"
+  | "band"
+  | "bandOrder"
+  | "contributionRaw"
+  | "contributionRelative"
+  | "contributionDisplayed"
+  | "colorScale"
+  | "isTotal"
+  | "isPredictedClass"
+  | "isWinningLogit"
+>;
+
 export function ClassContributionsPanel({
   datasetId,
   subjectId,
@@ -382,10 +398,7 @@ function createContributionDatum({
   isTotal,
   isPredictedClass,
   isWinningLogit,
-}: Omit<
-  ClassContributionDatum,
-  "value" | "valueText" | "contributionText" | "normalizedContribution" | "cellColor" | "tooltipValue"
->): ClassContributionDatum {
+}: ClassContributionDatumArgs): ClassContributionDatum {
   const contributionText = formatContribution(contributionDisplayed);
 
   return {
@@ -557,4 +570,3 @@ function getEvidenceStatus({
   return { status: "idle", label: "Class contributions idle" };
 }
 
-export type { ClassContributionsPanelProps };

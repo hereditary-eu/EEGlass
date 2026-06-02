@@ -330,12 +330,13 @@ export function OverviewPanel() {
     if (!selectedDatasetId || !activeModelName) {
       return;
     }
+    const modelName = activeModelName;
 
     async function loadPredictionCacheState() {
       try {
         const [status, activeProgress] = await Promise.all([
-          ModelService.getPredictionCacheStatus(selectedDatasetId, "derivatives", activeModelName),
-          ModelService.getActivePredictionCacheJob(selectedDatasetId, "derivatives", activeModelName),
+          ModelService.getPredictionCacheStatus(selectedDatasetId, "derivatives", modelName),
+          ModelService.getActivePredictionCacheJob(selectedDatasetId, "derivatives", modelName),
         ]);
         if (!isCurrent) {
           return;

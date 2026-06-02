@@ -34,7 +34,7 @@ export function useModelClassEvidence({
   const [evidence, setEvidence] = useState<ModelClassEvidenceResponse | null>(() =>
     cacheKey ? (evidenceCache.get(cacheKey) ?? null) : null,
   );
-  const [isLoading, setIsLoading] = useState(Boolean(cacheKey) && !evidenceCache.has(cacheKey));
+  const [isLoading, setIsLoading] = useState(cacheKey !== null && !evidenceCache.has(cacheKey));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,9 +58,10 @@ export function useModelClassEvidence({
     setIsLoading(true);
     setError(null);
 
+    const requestModelName = modelName;
     const evidencePromise =
       evidencePromises.get(cacheKey) ??
-      ModelService.computeClassEvidence(datasetId, subjectId, windowIndex, MODEL_INPUT_SOURCE, modelName).catch(
+      ModelService.computeClassEvidence(datasetId, subjectId, windowIndex, MODEL_INPUT_SOURCE, requestModelName).catch(
         (loadError) => {
           evidencePromises.delete(cacheKey);
           throw loadError;

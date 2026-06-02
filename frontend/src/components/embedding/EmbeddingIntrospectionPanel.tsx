@@ -120,8 +120,10 @@ export function EmbeddingIntrospectionPanel({
 
   const defaultPair = useMemo(() => featureColumns.slice(0, 2), [featureColumns]);
   const activeFeatureColumns = selectedFeatureColumns ?? (defaultPair.length === 2 ? defaultPair : []);
+  const activeXColumn = activeFeatureColumns[0];
+  const activeYColumn = activeFeatureColumns[1];
   const activeFeaturePair: [string, string] | null =
-    activeFeatureColumns.length === 2 ? [activeFeatureColumns[0], activeFeatureColumns[1]] : null;
+    activeFeatureColumns.length === 2 && activeXColumn && activeYColumn ? [activeXColumn, activeYColumn] : null;
   const tableColumns = useMemo(
     () => [itemLabel, ...metadataColumns, PREDICTED_CLASS_COLUMN, ...featureColumns],
     [featureColumns, itemLabel, metadataColumns],
@@ -195,11 +197,11 @@ export function EmbeddingIntrospectionPanel({
   }, [featureImportanceRequest]);
 
   const scatterData = useMemo(() => {
-    if (activeFeatureColumns.length !== 2) {
+    if (!activeFeaturePair) {
       return [];
     }
 
-    const [xColumn, yColumn] = activeFeatureColumns;
+    const [xColumn, yColumn] = activeFeaturePair;
     const xIndex = featureColumns.indexOf(xColumn);
     const yIndex = featureColumns.indexOf(yColumn);
     if (xIndex < 0 || yIndex < 0) {
@@ -222,7 +224,7 @@ export function EmbeddingIntrospectionPanel({
         },
       ];
     });
-  }, [activeFeatureColumns, featureColumns, rows]);
+  }, [activeFeaturePair, featureColumns, rows]);
 
   const handleColumnSelect = (columns: string[]) => {
     const featureSelection = columns.filter((column) => featureColumns.includes(column)).slice(-2);
@@ -291,18 +293,18 @@ export function EmbeddingIntrospectionPanel({
           <div>
             <h3>Pairwise feature view</h3>
             <p>
-              {activeFeatureColumns.length === 2
-                ? `${activeFeatureColumns[0]} against ${activeFeatureColumns[1]}`
+              {activeFeaturePair
+                ? `${activeFeaturePair[0]} against ${activeFeaturePair[1]}`
                 : "Select two feature columns in the table."}
             </p>
           </div>
           <span>{scatterData.length} points</span>
         </div>
-        {activeFeatureColumns.length === 2 && scatterData.length ? (
+        {activeFeaturePair && scatterData.length ? (
           <EmbeddingPairwiseScatterplot
             points={scatterData}
-            xLabel={activeFeatureColumns[0]}
-            yLabel={activeFeatureColumns[1]}
+            xLabel={activeFeaturePair[0]}
+            yLabel={activeFeaturePair[1]}
           />
         ) : (
           <div className="embedding-introspection-empty">Select two feature columns to plot a pairwise view.</div>

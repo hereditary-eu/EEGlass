@@ -102,26 +102,39 @@ export function DatasetDirectory({
     }
 
     if (event.key === "ArrowRight") {
-      onEnterPatientSelection(datasets[datasetIndex].id);
+      const dataset = datasets[datasetIndex];
+      if (dataset) {
+        onEnterPatientSelection(dataset.id);
+      }
       return;
     }
 
     if (event.key === "Home") {
-      onSelectDataset(datasets[0].id);
-      focusDatasetRow(0);
+      const firstDataset = datasets[0];
+      if (firstDataset) {
+        onSelectDataset(firstDataset.id);
+        focusDatasetRow(0);
+      }
       return;
     }
 
     if (event.key === "End") {
-      onSelectDataset(datasets[datasets.length - 1].id);
-      focusDatasetRow(datasets.length - 1);
+      const lastIndex = datasets.length - 1;
+      const lastDataset = datasets[lastIndex];
+      if (lastDataset) {
+        onSelectDataset(lastDataset.id);
+        focusDatasetRow(lastIndex);
+      }
       return;
     }
 
     const direction = event.key === "ArrowDown" ? 1 : -1;
     const nextIndex = (datasetIndex + direction + datasets.length) % datasets.length;
-    onSelectDataset(datasets[nextIndex].id);
-    focusDatasetRow(nextIndex);
+    const nextDataset = datasets[nextIndex];
+    if (nextDataset) {
+      onSelectDataset(nextDataset.id);
+      focusDatasetRow(nextIndex);
+    }
   };
 
   return (

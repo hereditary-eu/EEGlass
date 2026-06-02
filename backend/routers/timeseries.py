@@ -1,10 +1,11 @@
 import json
-from typing import cast
+import logging
+from typing import Literal
 
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query, Response
 
-from backend.ml.model_vars import DEFAULT_MODEL_NAME, MODEL_BANDS
+from backend.ml.model_vars import DEFAULT_MODEL_NAME
 from backend.pydantic_models.timeseries import (
     TimeseriesBandFilter,
     TimeseriesDatasetListResponse,
@@ -20,11 +21,10 @@ from backend.services.timeseries_service import (
     TimeseriesServiceError,
     TimeseriesValidationError,
 )
-from backend.utils.logger import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 timeseries_router = APIRouter(prefix="/data", tags=["data"])
-SUPPORTED_BAND_FILTERS = tuple(band_name for band_name, _, _ in MODEL_BANDS)
+TimeseriesSignalFormat = Literal["json", "float32"]
 
 
 @timeseries_router.get("/datasets", response_model=TimeseriesDatasetListResponse)
@@ -52,13 +52,13 @@ async def list_timeseries_subjects(
 async def get_timeseries_subject_metadata(
     dataset_id: str,
     subject_id: str,
-    source: str = Query("derivatives"),
+    source: TimeseriesSource = Query("derivatives"),
 ) -> TimeseriesSubjectMetadata:
     try:
         return TimeseriesService.get_subject_metadata(
             dataset_id=dataset_id,
             subject_id=subject_id,
-            source=_parse_source(source),
+            source=source,
         )
     except TimeseriesServiceError as exc:
         raise _http_error(exc) from exc
@@ -70,8 +70,8 @@ async def get_timeseries_preview(
     subject_id: str,
     channels: str = Query(..., description="Comma-separated channel names, for example Fp1,Fp2"),
     max_points: int = Query(5000, ge=2, le=100_000),
-    source: str = Query("derivatives"),
-    band_filter: str | None = Query(None, description="Optional display bandpass filter."),
+    source: TimeseriesSource = Query("derivatives"),
+    band_filter: TimeseriesBandFilter | None = Query(None, description="Optional display bandpass filter."),
     start_time: float | None = Query(None, ge=0),
     end_time: float | None = Query(None, gt=0),
 ) -> TimeseriesSignalResponse:
@@ -80,10 +80,10 @@ async def get_timeseries_preview(
             dataset_id=dataset_id,
             subject_id=subject_id,
             channels=_parse_channels(channels),
-            source=_parse_source(source),
+            source=source,
             start_time=start_time,
             end_time=end_time,
-            band_filter=_parse_band_filter(band_filter),
+            band_filter=band_filter,
             preview=True,
             max_points=max_points,
         )
@@ -98,22 +98,22 @@ async def get_timeseries_signal(
     dataset_id: str,
     subject_id: str,
     channels: str = Query(..., description="Comma-separated channel names, for example Fp1,Fp2"),
-    source: str = Query("derivatives"),
-    band_filter: str | None = Query(None, description="Optional display bandpass filter."),
+    source: TimeseriesSource = Query("derivatives"),
+    band_filter: TimeseriesBandFilter | None = Query(None, description="Optional display bandpass filter."),
     start_time: float | None = Query(None, ge=0),
     end_time: float | None = Query(None, gt=0),
-    format: str = Query("json", pattern="^(json|float32)$"),
+    response_format: TimeseriesSignalFormat = Query("json", alias="format"),
 ) -> TimeseriesSignalResponse | Response:
     try:
-        if format == "float32":
+        if response_format == "float32":
             signal_data = TimeseriesService.get_signal_data(
                 dataset_id=dataset_id,
                 subject_id=subject_id,
                 channels=_parse_channels(channels),
-                source=_parse_source(source),
+                source=source,
                 start_time=start_time,
                 end_time=end_time,
-                band_filter=_parse_band_filter(band_filter),
+                band_filter=band_filter,
                 preview=False,
             )
             metadata = TimeseriesService.signal_data_metadata(signal_data)
@@ -130,10 +130,10 @@ async def get_timeseries_signal(
             dataset_id=dataset_id,
             subject_id=subject_id,
             channels=_parse_channels(channels),
-            source=_parse_source(source),
+            source=source,
             start_time=start_time,
             end_time=end_time,
-            band_filter=_parse_band_filter(band_filter),
+            band_filter=band_filter,
             preview=False,
         )
     except TimeseriesServiceError as exc:
@@ -145,23 +145,6 @@ def _parse_channels(channels: str) -> list[str]:
     if not parsed_channels:
         raise HTTPException(status_code=400, detail="At least one channel must be requested.")
     return parsed_channels
-
-
-def _parse_source(source: str) -> TimeseriesSource:
-    if source not in ("raw", "derivatives"):
-        raise HTTPException(status_code=400, detail="source must be either 'raw' or 'derivatives'.")
-    return cast(TimeseriesSource, source)
-
-
-def _parse_band_filter(band_filter: str | None) -> TimeseriesBandFilter | None:
-    if band_filter is None:
-        return None
-    if band_filter not in SUPPORTED_BAND_FILTERS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"band_filter must be one of: {', '.join(SUPPORTED_BAND_FILTERS)}.",
-        )
-    return cast(TimeseriesBandFilter, band_filter)
 
 
 def _http_error(exc: TimeseriesServiceError) -> HTTPException:

@@ -28,6 +28,8 @@ interface RegisterVacpTimeseriesArgs {
   selectWindow: (windowIndex: number) => void;
 }
 
+type WindowPrediction = ModelInferenceResponse["predictions"][number];
+
 const TIMESERIES_CHART_ID = "patient-view/timeseries";
 const TIMESERIES_ACTIONS = {
   navigateBack: "patient_view.navigate_back",
@@ -374,6 +376,15 @@ function selectWindowByPrediction(
     args.lockedPredictionWindowIndex,
     request.confidencePreference,
   );
+  if (!selectedWindow) {
+    return {
+      found: false,
+      predictedLabel: request.predictedLabel,
+      matchedWindows: candidates.length,
+      reason: "no selectable matching window",
+    };
+  }
+
   return {
     found: true,
     windowIndex: selectedWindow.window_index,
@@ -385,29 +396,34 @@ function selectWindowByPrediction(
 }
 
 function pickPredictionWindow(
-  windows: ModelInferenceResponse["predictions"],
+  windows: WindowPrediction[],
   currentWindowIndex: number | null,
   confidencePreference: string,
-): ModelInferenceResponse["predictions"][number] {
+): WindowPrediction | null {
+  const firstWindow = windows[0];
+  if (!firstWindow) {
+    return null;
+  }
+
   if (confidencePreference === "lowest") {
-    return windows.reduce((best, window) => (window.confidence < best.confidence ? window : best), windows[0]);
+    return windows.reduce((best, window) => (window.confidence < best.confidence ? window : best), firstWindow);
   }
 
   if (confidencePreference === "first") {
-    return windows[0];
+    return firstWindow;
   }
 
   if (confidencePreference === "next") {
     const next = windows.find((window) => window.window_index > (currentWindowIndex ?? -1));
-    return next ?? windows[0];
+    return next ?? firstWindow;
   }
 
   if (confidencePreference === "previous") {
     const previous = [...windows].reverse().find((window) => window.window_index < (currentWindowIndex ?? Infinity));
-    return previous ?? windows[windows.length - 1];
+    return previous ?? windows[windows.length - 1] ?? firstWindow;
   }
 
-  return windows.reduce((best, window) => (window.confidence > best.confidence ? window : best), windows[0]);
+  return windows.reduce((best, window) => (window.confidence > best.confidence ? window : best), firstWindow);
 }
 
 function getChannelParam(params: unknown): ChannelId | null {
@@ -505,11 +521,13 @@ function levenshteinDistance(a: string, b: string): number {
   for (let i = 1; i <= a.length; i += 1) {
     current[0] = i;
     for (let j = 1; j <= b.length; j += 1) {
-      current[j] =
-        a[i - 1] === b[j - 1] ? previous[j - 1] : Math.min(previous[j - 1] + 1, previous[j] + 1, current[j - 1] + 1);
+      const substitution = (previous[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1);
+      const insertion = (previous[j] ?? 0) + 1;
+      const deletion = (current[j - 1] ?? 0) + 1;
+      current[j] = Math.min(substitution, insertion, deletion);
     }
     previous.splice(0, previous.length, ...current);
   }
 
-  return previous[b.length];
+  return previous[b.length] ?? 0;
 }

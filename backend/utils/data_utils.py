@@ -1,12 +1,11 @@
 import json
+import logging
 from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
 
-from backend.utils.logger import get_logger
-
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _normalize_scalar(value: Any) -> Any:

@@ -205,7 +205,10 @@ export function PatientList({
     }
 
     if (event.key === "ArrowRight") {
-      onOpenPatientView(sortedSubjects[subjectIndex]);
+      const subject = sortedSubjects[subjectIndex];
+      if (subject) {
+        onOpenPatientView(subject);
+      }
       return;
     }
 

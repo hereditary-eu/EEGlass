@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from uvicorn.protocols.utils import ClientDisconnected
 
@@ -39,9 +41,8 @@ from backend.services.model_service import (
     ModelServiceError,
     ModelValidationError,
 )
-from backend.utils.logger import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 model_router = APIRouter(tags=["model"])
 
 
@@ -477,17 +478,3 @@ def _http_error(exc: ModelServiceError) -> HTTPException:
 
     logger.error(f"Model service error: {exc}")
     return HTTPException(status_code=500, detail=str(exc))
-
-
-def _warm_patient_embedding_feature_importance(response: ModelPatientEmbeddingsResponse) -> None:
-    try:
-        FeatureImportanceService.warm_patient_embedding_feature_importance(response)
-    except ModelServiceError as exc:
-        logger.warning(f"Could not warm patient embedding feature importance cache: {exc}")
-
-
-def _warm_window_embedding_feature_importance(response: ModelWindowEmbeddingsResponse) -> None:
-    try:
-        FeatureImportanceService.warm_window_embedding_feature_importance(response)
-    except ModelServiceError as exc:
-        logger.warning(f"Could not warm window embedding feature importance cache: {exc}")

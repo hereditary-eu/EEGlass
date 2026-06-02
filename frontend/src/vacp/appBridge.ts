@@ -142,28 +142,28 @@ async function buildCapabilitiesSnapshot(): Promise<VacpCapabilitiesSnapshot> {
   const seenActions = new Set<string>();
 
   for (const chart of charts.values()) {
-    const capabilities = await chart.bridge.getCapabilities().catch(() => null);
+    const capabilities = await Promise.resolve(chart.bridge.getCapabilities()).catch(() => null);
     if (!capabilities) continue;
 
-    capabilities.graph.nodes.forEach((node) => {
-      if (seenNodes.has(node.ref)) return;
+    for (const node of capabilities.graph.nodes) {
+      if (seenNodes.has(node.ref)) continue;
       seenNodes.add(node.ref);
       graph.nodes.push(node);
-    });
+    }
 
-    capabilities.graph.edges.forEach((edge) => {
+    for (const edge of capabilities.graph.edges) {
       const key = `${edge.from}|${edge.kind}|${edge.to}`;
-      if (seenEdges.has(key)) return;
+      if (seenEdges.has(key)) continue;
       seenEdges.add(key);
       graph.edges.push(edge);
-    });
+    }
 
-    capabilities.graph.actions.forEach((action) => {
+    for (const action of capabilities.graph.actions) {
       const key = `${action.name}|${action.targetRef ?? ""}`;
-      if (seenActions.has(key)) return;
+      if (seenActions.has(key)) continue;
       seenActions.add(key);
       graph.actions.push(action);
-    });
+    }
 
     const rootNode = capabilities.graph.nodes.find((node) => node.ref === chart.refPrefix);
     if (rootNode) {
@@ -261,14 +261,14 @@ async function findTargetChart(call: VacpActionCall): Promise<RegisteredVacpChar
   const capabilities = await Promise.all(
     Array.from(charts.values()).map(async (chart) => ({
       chart,
-      capabilities: await chart.bridge.getCapabilities().catch(() => null),
+      capabilities: await Promise.resolve(chart.bridge.getCapabilities()).catch(() => null),
     })),
   );
 
   const matches = capabilities.filter(({ capabilities: snapshot }) =>
     snapshot?.graph.actions.some((action) => action.name === call.name),
   );
-  return matches.length === 1 ? matches[0].chart : null;
+  return matches.length === 1 ? (matches[0]?.chart ?? null) : null;
 }
 
 function findChartByRef(ref: string): RegisteredVacpChart | null {

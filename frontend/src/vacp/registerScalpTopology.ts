@@ -245,9 +245,13 @@ function getRelativeBand(
   availableBands: TimeseriesBandFilter[],
   direction: 1 | -1,
 ): TimeseriesBandFilter {
+  if (!availableBands.length) {
+    return selectedBand;
+  }
+
   const currentIndex = availableBands.indexOf(selectedBand);
   const nextIndex = (currentIndex + direction + availableBands.length) % availableBands.length;
-  return availableBands[nextIndex];
+  return availableBands[nextIndex] ?? selectedBand;
 }
 
 function getBandParam(params: unknown, availableBands: TimeseriesBandFilter[]): TimeseriesBandFilter | null {

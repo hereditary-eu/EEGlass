@@ -1,6 +1,10 @@
 .cif-histogram.wrapper {
 }
 
+.cif-histogram .chart {
+  min-width: 0;
+}
+
 .cif-histogram.wrapper svg {
   display: block;
   border-radius: 2px;
@@ -23,15 +27,4 @@
   border: 1px solid var(--color-gray-lighter);
   background-color: var(--color-white);
   cursor: pointer;
-}
-
-.cif-histogram .customTooltip {
-  background-color: var(--color-white-transparent);
-  padding: 10px;
-  border: 1px solid var(--color-gray-light);
-  border-radius: 4px;
-}
-
-.cif-histogram .tooltipLine {
-  margin: 0;
 }

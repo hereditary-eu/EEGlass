@@ -25,7 +25,7 @@ import { createVacpChartRefPrefix } from "../../vacp/appBridge";
 import { registerVacpVegaLiteChart } from "../../vacp/registerVegaLiteChart";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
 
-interface TotalBandPowerChartProps {
+export interface TotalBandPowerChartProps {
   bandPower: ModelBandPowerResponse | null;
   bandPowerStats: ModelBandPowerStatsResponse | null;
   bandPowerStatsMode: ModelBandPowerStatsMode;
@@ -182,6 +182,10 @@ export function TotalBandPowerChart({
     }
 
     const resizeObserver = new ResizeObserver(([entry]) => {
+      if (!entry) {
+        return;
+      }
+
       const nextHeight = Math.max(180, Math.floor(entry.contentRect.height));
       setPlotHeight((current) => (current !== nextHeight ? nextHeight : current));
       resizeVegaView(viewRef.current);
@@ -219,15 +223,15 @@ export function TotalBandPowerChart({
           ? [
               {
                 mark: {
-                  type: "area",
-                  interpolate: "monotone",
+                  type: "area" as const,
+                  interpolate: "monotone" as const,
                   color: rangeColors.fill,
                 },
                 encoding: {
                   x: createBandAxisEncoding(),
                   y: {
                     field: "lower2SigmaDb",
-                    type: "quantitative",
+                    type: "quantitative" as const,
                     axis: createPowerAxis(),
                     scale: createPowerScale(),
                   },
@@ -236,8 +240,8 @@ export function TotalBandPowerChart({
               },
               {
                 mark: {
-                  type: "line",
-                  interpolate: "monotone",
+                  type: "line" as const,
+                  interpolate: "monotone" as const,
                   color: rangeColors.stroke,
                   strokeDash: [4, 3],
                   strokeWidth: 1.5,
@@ -246,7 +250,7 @@ export function TotalBandPowerChart({
                   x: createBandAxisEncoding(),
                   y: {
                     field: "meanDb",
-                    type: "quantitative",
+                    type: "quantitative" as const,
                     axis: createPowerAxis(),
                     scale: createPowerScale(),
                   },
@@ -256,8 +260,8 @@ export function TotalBandPowerChart({
           : []),
         {
           mark: {
-            type: "line",
-            interpolate: "monotone",
+            type: "line" as const,
+            interpolate: "monotone" as const,
             point: {
               filled: true,
               fill: "#0e7490",
@@ -272,7 +276,7 @@ export function TotalBandPowerChart({
             x: createBandAxisEncoding(),
             y: {
               field: "relativePowerDb",
-              type: "quantitative",
+              type: "quantitative" as const,
               axis: createPowerAxis(),
               scale: createPowerScale(),
             },
@@ -524,8 +528,8 @@ export function TotalBandPowerChart({
 function createBandAxisEncoding() {
   return {
     field: "label",
-    type: "ordinal",
-    sort: { field: "order", order: "ascending" },
+    type: "ordinal" as const,
+    sort: { field: "order", order: "ascending" as const },
     axis: {
       title: null,
       labelColor: "#5d6b78",
@@ -772,4 +776,3 @@ function getBandPowerStatus({
   return { status: "idle", label: "Band power idle" };
 }
 
-export type { TotalBandPowerChartProps };

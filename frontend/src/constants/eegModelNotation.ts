@@ -15,6 +15,7 @@ export const EEG_MODEL_NOTATION_LABELS = {
   spatialEvidenceConnector: "and window band power before",
   denseLayerPrefix: "Dense layer:",
   denseLayerConnector: "mapped to class logits",
+  decisionArgmaxPrefix: "Decision: argmax(",
   bandActivationDenseMultiplier: "x dense multiplier",
   encoderOutputPrefix: "Encoder output",
   encoderBeforeDenseWeights: "before dense weights",

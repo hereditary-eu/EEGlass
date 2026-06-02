@@ -1,5 +1,8 @@
-import React, { memo, useId, useMemo, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts/es6";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
+import type { View } from "vega";
+import embed from "vega-embed";
+import type { VisualizationSpec } from "vega-embed";
+
 import "./Histogram.css";
 
 interface HistogramProps {
@@ -20,12 +23,18 @@ interface HistogramProps {
 const rootClass = "cif-histogram";
 const styles = {
   wrapper: "wrapper",
+  chart: "chart",
   title: "title",
   controls: "controls",
   binSelect: "binSelect",
-  customTooltip: "customTooltip",
-  tooltipLine: "tooltipLine",
 } as const;
+
+interface HistogramDatum {
+  bin: string;
+  fullLabel: string;
+  count: number;
+  order: number;
+}
 
 const Histogram: React.FC<HistogramProps> = ({
   data,
@@ -38,18 +47,19 @@ const Histogram: React.FC<HistogramProps> = ({
   showTooltip = variant === "big",
   showGrid = variant === "big",
   barColor = "#8884d8",
-  animated = false,
+  animated: _animated = false,
   title,
 }) => {
   const [bins, setBins] = useState(initialBins);
-  const chartId = useId();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<View | null>(null);
   const binOptions = [2, 5, 10, 15, 20, 25, 30];
 
-  if (!data || data.length === 0) {
-    return null;
-  }
+  const histogramData = useMemo<HistogramDatum[]>(() => {
+    if (!data?.length) {
+      return [];
+    }
 
-  const histogramData = useMemo(() => {
     const numericData = data.filter((value): value is number => Number.isFinite(value));
 
     if (numericData.length === 0) {
@@ -78,6 +88,7 @@ const Histogram: React.FC<HistogramProps> = ({
         bin: binLabel,
         fullLabel: `${lowerBound.toFixed(3)} - ${upperBound.toFixed(3)}`,
         count: 0,
+        order: index,
       };
     });
 
@@ -85,51 +96,133 @@ const Histogram: React.FC<HistogramProps> = ({
       const normalizedIndex = Math.floor((value - min) / binWidth);
       const binIndex = Math.min(Math.max(normalizedIndex, 0), bins - 1);
 
-      if (computedHistogramData[binIndex]) {
-        computedHistogramData[binIndex].count += 1;
+      const bin = computedHistogramData[binIndex];
+      if (bin) {
+        bin.count += 1;
       }
     });
 
     return computedHistogramData;
   }, [bins, data]);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    container.innerHTML = "";
+    if (!histogramData.length) {
+      viewRef.current = null;
+      return;
+    }
+
+    const spec: VisualizationSpec = {
+      $schema: "https://vega.github.io/schema/vega-lite/v6.json",
+      width: width ?? "container",
+      height,
+      padding: variant === "big" ? { top: 20, right: 30, bottom: 20, left: 20 } : 0,
+      autosize: {
+        type: "fit",
+        contains: "padding",
+        resize: true,
+      },
+      background: "transparent",
+      data: { values: histogramData },
+      mark: {
+        type: "bar" as const,
+        color: barColor,
+        cornerRadiusTopLeft: variant === "big" ? 2 : 0,
+        cornerRadiusTopRight: variant === "big" ? 2 : 0,
+      },
+      encoding: {
+        x: {
+          field: "bin",
+          type: "ordinal" as const,
+          sort: { field: "order", order: "ascending" as const },
+          axis: showAxes
+            ? {
+                title: null,
+                labelAngle: -45,
+                labelColor: "#5d6b78",
+                labelFontSize: 10,
+                tickColor: "#d7e0e8",
+                domainColor: "#d7e0e8",
+              }
+            : null,
+        },
+        y: {
+          field: "count",
+          type: "quantitative" as const,
+          axis: showAxes
+            ? {
+                title: null,
+                labelColor: "#5d6b78",
+                labelFontSize: 10,
+                grid: showGrid,
+                gridColor: "#e8eef3",
+                domain: false,
+                tickMinStep: 1,
+              }
+            : null,
+          scale: { nice: true, zero: true },
+        },
+        tooltip: showTooltip
+          ? [
+              { field: "fullLabel", type: "nominal" as const, title: "Range" },
+              { field: "count", type: "quantitative" as const, title: "Count" },
+            ]
+          : undefined,
+      },
+      config: {
+        view: { stroke: null },
+      },
+    };
+
+    let finalized = false;
+    const resultPromise = embed(container, spec, {
+      actions: false,
+      renderer: "svg",
+    });
+
+    resultPromise.catch(() => undefined);
+    resultPromise
+      .then((result) => {
+        if (!finalized) {
+          viewRef.current = result.view;
+          void result.view.resize().runAsync().catch(() => undefined);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      if (finalized) {
+        return;
+      }
+
+      finalized = true;
+      viewRef.current = null;
+      resultPromise.then((result) => result.finalize()).catch(() => undefined);
+    };
+  }, [barColor, height, histogramData, showAxes, showGrid, showTooltip, variant, width]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || width) {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      void viewRef.current?.resize().runAsync().catch(() => undefined);
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, [width]);
+
   if (histogramData.length === 0) {
     return null;
   }
-
-  const CustomTooltip = ({
-    active,
-    payload,
-  }: {
-    active?: boolean;
-    payload?: Array<{ payload: { bin: string; fullLabel: string; count: number }; value: number }>;
-  }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className={styles.customTooltip}>
-          <p className={styles.tooltipLine}>{`Range: ${payload[0]?.payload.fullLabel}`}</p>
-          <p className={styles.tooltipLine}>{`Count: ${payload[0]?.value ?? 0}`}</p>
-        </div>
-      );
-    }
-
-    return null;
-  };
-
-  const chartMargin =
-    variant === "big" ? { top: 20, right: 30, bottom: 20, left: 20 } : { top: 0, right: 0, bottom: 0, left: 0 };
-
-  const chart = (
-    <BarChart width={width} height={height} data={histogramData} margin={chartMargin}>
-      {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-      {showAxes && (
-        <XAxis dataKey="bin" angle={-45} textAnchor="end" height={60} interval={0} tick={{ fontSize: 10 }} />
-      )}
-      {showAxes && <YAxis />}
-      {showTooltip && <Tooltip content={<CustomTooltip />} />}
-      <Bar dataKey="count" fill={barColor} isAnimationActive={animated} id={`histogram-${variant}-${chartId}`} />
-    </BarChart>
-  );
 
   return (
     <div className={`${rootClass} ${styles.wrapper}`}>
@@ -150,21 +243,14 @@ const Histogram: React.FC<HistogramProps> = ({
           </select>
         </div>
       )}
-      {width ? (
-        chart
-      ) : (
-        <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={histogramData} margin={chartMargin}>
-            {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-            {showAxes && (
-              <XAxis dataKey="bin" angle={-45} textAnchor="end" height={60} interval={0} tick={{ fontSize: 10 }} />
-            )}
-            {showAxes && <YAxis />}
-            {showTooltip && <Tooltip content={<CustomTooltip />} />}
-            <Bar dataKey="count" fill={barColor} isAnimationActive={animated} id={`histogram-${variant}-${chartId}`} />
-          </BarChart>
-        </ResponsiveContainer>
-      )}
+      <div
+        className={styles.chart}
+        ref={containerRef}
+        style={{
+          width: width ? `${width}px` : "100%",
+          height: `${height}px`,
+        }}
+      />
     </div>
   );
 };

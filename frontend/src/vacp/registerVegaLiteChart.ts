@@ -54,7 +54,7 @@ export function registerVacpVegaLiteChart(args: RegisterVacpVegaLiteChartArgs): 
     };
   };
 
-  bridge.getState = async (...params: Parameters<typeof bridge.getState>) => {
+  bridge.getState = (async (...params: Parameters<typeof bridge.getState>) => {
     const state = await originalGetState(...params);
     if ("state" in state) {
       Object.assign(state.state, args.getExtraState?.() ?? {});
@@ -62,7 +62,7 @@ export function registerVacpVegaLiteChart(args: RegisterVacpVegaLiteChartArgs): 
       if (Object.keys(extraSummary).length) state.summary = { ...(state.summary ?? {}), ...extraSummary };
     }
     return state;
-  };
+  }) as typeof bridge.getState;
 
   bridge.execute = async (call) => {
     if (args.extraActions?.some((action) => action.name === call.name)) {

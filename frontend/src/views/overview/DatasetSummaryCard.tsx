@@ -60,6 +60,10 @@ export function DatasetSummaryCard({
     }
 
     const resizeObserver = new ResizeObserver(([entry]) => {
+      if (!entry) {
+        return;
+      }
+
       const nextHeight = Math.max(150, Math.floor(entry.contentRect.height));
       setPlotHeight((current) => (current === nextHeight ? current : nextHeight));
       resizeVegaView(viewRef.current);

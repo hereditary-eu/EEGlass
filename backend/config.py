@@ -1,61 +1,60 @@
-import logging
-import os
-from dotenv import load_dotenv
+from typing import Any
 
-load_dotenv()
-
-logger = logging.getLogger(__name__)
+from pydantic import Field, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class CONFIG:
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     # APP
-    TITLE = "EEGlass Backend"
+    TITLE: str = "EEGlass Backend"
 
     # CORS
-    ORIGINS = [
-        "http://localhost",
-        "http://localhost:3000",
-    ]
+    ORIGINS: list[str] = Field(default_factory=lambda: ["http://localhost", "http://localhost:3000"])
 
     # DATA
-    DATASET_STORAGE_DIR = os.getenv("DATASET_STORAGE_DIR", "data/datasets")
-    MODEL_OUTPUT_STORAGE_DIR = os.getenv("MODEL_OUTPUT_STORAGE_DIR", "data/model_outputs")
-    MODEL_PREDICTION_WORKERS = int(os.getenv("MODEL_PREDICTION_WORKERS", "1"))
-    MODEL_OUTPUT_TMP_MAX_AGE_SECONDS = int(os.getenv("MODEL_OUTPUT_TMP_MAX_AGE_SECONDS", "3600"))
+    DATASET_STORAGE_DIR: str = "data/datasets"
+    MODEL_OUTPUT_STORAGE_DIR: str = "data/model_outputs"
+    MODEL_PREDICTION_WORKERS: int = 1
+    MODEL_OUTPUT_TMP_MAX_AGE_SECONDS: int = 3600
 
     # MODEL FEATURE IMPORTANCE
-    MODEL_FEATURE_IMPORTANCE_DEFAULT_METHOD = os.getenv("MODEL_FEATURE_IMPORTANCE_DEFAULT_METHOD", "shap")
-    MODEL_FEATURE_IMPORTANCE_BACKEND_MODEL = os.getenv("MODEL_FEATURE_IMPORTANCE_BACKEND_MODEL", "xgboost")
-    MODEL_FEATURE_IMPORTANCE_MIN_ROWS = int(os.getenv("MODEL_FEATURE_IMPORTANCE_MIN_ROWS", "3"))
-    MODEL_FEATURE_IMPORTANCE_MIN_CLASSES = int(os.getenv("MODEL_FEATURE_IMPORTANCE_MIN_CLASSES", "2"))
-    MODEL_FEATURE_IMPORTANCE_XGBOOST_N_ESTIMATORS = int(
-        os.getenv("MODEL_FEATURE_IMPORTANCE_XGBOOST_N_ESTIMATORS", "80")
-    )
-    MODEL_FEATURE_IMPORTANCE_XGBOOST_MAX_DEPTH = int(os.getenv("MODEL_FEATURE_IMPORTANCE_XGBOOST_MAX_DEPTH", "3"))
-    MODEL_FEATURE_IMPORTANCE_XGBOOST_LEARNING_RATE = float(
-        os.getenv("MODEL_FEATURE_IMPORTANCE_XGBOOST_LEARNING_RATE", "0.08")
-    )
-    MODEL_FEATURE_IMPORTANCE_XGBOOST_RANDOM_STATE = int(
-        os.getenv("MODEL_FEATURE_IMPORTANCE_XGBOOST_RANDOM_STATE", "42")
-    )
+    MODEL_FEATURE_IMPORTANCE_DEFAULT_METHOD: str = "shap"
+    MODEL_FEATURE_IMPORTANCE_BACKEND_MODEL: str = "xgboost"
+    MODEL_FEATURE_IMPORTANCE_MIN_ROWS: int = 3
+    MODEL_FEATURE_IMPORTANCE_MIN_CLASSES: int = 2
+    MODEL_FEATURE_IMPORTANCE_XGBOOST_N_ESTIMATORS: int = 80
+    MODEL_FEATURE_IMPORTANCE_XGBOOST_MAX_DEPTH: int = 3
+    MODEL_FEATURE_IMPORTANCE_XGBOOST_LEARNING_RATE: float = 0.08
+    MODEL_FEATURE_IMPORTANCE_XGBOOST_RANDOM_STATE: int = 42
 
     # MODEL AGGREGATION
-    MODEL_PATIENT_AGGREGATION_STRATEGY = os.getenv("MODEL_PATIENT_AGGREGATION_STRATEGY", "disease_threshold")
-    MODEL_PATIENT_ALZHEIMER_WINDOW_THRESHOLD = float(
-        os.getenv(
-            "MODEL_PATIENT_ALZHEIMER_WINDOW_THRESHOLD",
-            os.getenv("MODEL_PATIENT_DISEASE_WINDOW_THRESHOLD", "0.3"),
-        )
-    )
-    MODEL_PATIENT_FTD_WINDOW_THRESHOLD = float(
-        os.getenv(
-            "MODEL_PATIENT_FTD_WINDOW_THRESHOLD",
-            os.getenv("MODEL_PATIENT_DISEASE_WINDOW_THRESHOLD", "0.3"),
-        )
-    )
+    MODEL_PATIENT_AGGREGATION_STRATEGY: str = "disease_threshold"
+    MODEL_PATIENT_DISEASE_WINDOW_THRESHOLD: float = 0.3
+    MODEL_PATIENT_ALZHEIMER_WINDOW_THRESHOLD: float | None = None
+    MODEL_PATIENT_FTD_WINDOW_THRESHOLD: float | None = None
 
     # LOGGING
-    LOG_LEVEL = "DEBUG"
+    LOG_LEVEL: str = "DEBUG"
 
     # API
-    GZIP_MINIMUM_SIZE = int(os.getenv("GZIP_MINIMUM_SIZE", "1000"))
+    GZIP_MINIMUM_SIZE: int = 1000
+
+    @field_validator("ORIGINS", mode="before")
+    @classmethod
+    def parse_origins(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
+
+    @model_validator(mode="after")
+    def apply_patient_threshold_fallbacks(self) -> "Settings":
+        if self.MODEL_PATIENT_ALZHEIMER_WINDOW_THRESHOLD is None:
+            self.MODEL_PATIENT_ALZHEIMER_WINDOW_THRESHOLD = self.MODEL_PATIENT_DISEASE_WINDOW_THRESHOLD
+        if self.MODEL_PATIENT_FTD_WINDOW_THRESHOLD is None:
+            self.MODEL_PATIENT_FTD_WINDOW_THRESHOLD = self.MODEL_PATIENT_DISEASE_WINDOW_THRESHOLD
+        return self
+
+
+CONFIG = Settings()

@@ -297,7 +297,9 @@ export function ModelCard({
               </button>
             </div>
           </div>
-          {isCacheJobRunning(cacheProgress) ? <PredictionCacheProgressBar progress={cacheProgress} /> : null}
+          {cacheProgress && isCacheJobRunning(cacheProgress) ? (
+            <PredictionCacheProgressBar progress={cacheProgress} />
+          ) : null}
           {cacheError ? <p className="overview-model-cache-error">{cacheError}</p> : null}
         </div>
       </div>

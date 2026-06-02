@@ -87,6 +87,10 @@ export function ScalpTopologyPlot({
     }
 
     const resizeObserver = new ResizeObserver(([entry]) => {
+      if (!entry) {
+        return;
+      }
+
       const nextSize = Math.max(0, Math.floor(Math.min(entry.contentRect.width, entry.contentRect.height) - 12));
       setPlotSize((current) => (current !== nextSize ? nextSize : current));
     });
@@ -148,7 +152,14 @@ export function ScalpTopologyPlot({
       const pixelX = index % resolution;
       const pixelY = resolution - 1 - Math.floor(index / resolution);
       const pixelIndex = (pixelY * resolution + pixelX) * 4;
-      if (!Number.isFinite(plotX) || !Number.isFinite(plotY) || !Number.isFinite(interpolatedValue)) {
+      if (
+        typeof plotX !== "number" ||
+        typeof plotY !== "number" ||
+        typeof interpolatedValue !== "number" ||
+        !Number.isFinite(plotX) ||
+        !Number.isFinite(plotY) ||
+        !Number.isFinite(interpolatedValue)
+      ) {
         continue;
       }
 

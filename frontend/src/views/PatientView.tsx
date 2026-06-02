@@ -96,7 +96,10 @@ export function PatientView() {
         event.preventDefault();
         const direction = event.key === "ArrowDown" ? 1 : -1;
         const nextIndex = (currentIndex + direction + subjects.length) % subjects.length;
-        navigate(`/datasets/${encodeURIComponent(datasetId)}/patients/${encodeURIComponent(subjects[nextIndex].id)}`);
+        const nextSubject = subjects[nextIndex];
+        if (nextSubject) {
+          navigate(`/datasets/${encodeURIComponent(datasetId)}/patients/${encodeURIComponent(nextSubject.id)}`);
+        }
         return;
       }
 
@@ -107,7 +110,10 @@ export function PatientView() {
         const currentIndex = current ? channels.indexOf(current) : -1;
         const direction = event.key === "c" ? 1 : -1;
         const nextIndex = (currentIndex + direction + channels.length) % channels.length;
-        ts.handleSingleChannelSelect(channels[nextIndex]);
+        const nextChannel = channels[nextIndex];
+        if (nextChannel) {
+          ts.handleSingleChannelSelect(nextChannel);
+        }
         return;
       }
 
@@ -118,7 +124,10 @@ export function PatientView() {
         const currentIndex = current ? bandOptions.indexOf(current) : -1;
         const direction = event.key === "n" ? 1 : -1;
         const nextIndex = (currentIndex + direction + bandOptions.length) % bandOptions.length;
-        setSelectedScalpBand(bandOptions[nextIndex]);
+        const nextBand = bandOptions[nextIndex];
+        if (nextBand) {
+          setSelectedScalpBand(nextBand);
+        }
         return;
       }
 

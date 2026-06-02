@@ -111,6 +111,10 @@ export function BandActivationChart({
     }
 
     const resizeObserver = new ResizeObserver(([entry]) => {
+      if (!entry) {
+        return;
+      }
+
       const nextHeight = Math.max(88, Math.floor(entry.contentRect.height));
       setPlotHeight((current) => (current !== nextHeight ? nextHeight : current));
       resizeVegaView(viewRef.current);
@@ -328,8 +332,8 @@ export function BandActivationChart({
 function createBandAxisEncoding() {
   return {
     field: "label",
-    type: "ordinal",
-    sort: { field: "order", order: "ascending" },
+    type: "ordinal" as const,
+    sort: { field: "order", order: "ascending" as const },
     axis: {
       title: null,
       labelAngle: -90,
@@ -344,7 +348,7 @@ function createBandAxisEncoding() {
 function createActivationAxis() {
   return {
     title: "Value",
-    orient: "right",
+    orient: "right" as const,
     ticks: false,
     labelPadding: 4,
     minExtent: 38,
