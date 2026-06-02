@@ -22,4 +22,3 @@ class ModelFeatureImportanceResponse(BaseModel):
     target_column: FeatureImportanceTargetColumn
     unit_label: str
     feature_importances: List[ModelFeatureImportanceItem]
-

@@ -377,4 +377,3 @@ def make_window_embeddings_response(
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -35,8 +35,7 @@ class FeatureImportanceCalculator(Protocol):
     backend_model: str
     unit_label: str
 
-    def calculate(self, data: FeatureImportanceInput) -> list[ModelFeatureImportanceItem]:
-        ...
+    def calculate(self, data: FeatureImportanceInput) -> list[ModelFeatureImportanceItem]: ...
 
 
 class ShapXgboostFeatureImportanceCalculator:
@@ -111,7 +110,9 @@ class ShapXgboostFeatureImportanceCalculator:
         try:
             import shap
         except ImportError as exc:
-            raise ModelDependencyUnavailableError("SHAP is required for feature importance but is not available.") from exc
+            raise ModelDependencyUnavailableError(
+                "SHAP is required for feature importance but is not available."
+            ) from exc
         return shap
 
 

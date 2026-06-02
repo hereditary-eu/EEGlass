@@ -102,9 +102,7 @@ def load_model_windows_for_participant(
         resolved_sample_length = int(sample_length or PARAMETERS_DEFAULT["sample_length"])
         max_windows = int(n_max) // resolved_sample_length
         if max_windows < 1:
-            raise ValueError(
-                f"n_max={n_max} is too small for one model window of {resolved_sample_length} samples."
-            )
+            raise ValueError(f"n_max={n_max} is too small for one model window of {resolved_sample_length} samples.")
         windows = windows[:max_windows]
         prediction_ranges = prediction_ranges[:max_windows]
 

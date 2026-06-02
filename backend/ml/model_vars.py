@@ -82,7 +82,5 @@ MODEL_BAND_ACTIVATION_FEATURE_NAMES = tuple(f"{band_name} activation" for band_n
 def get_embedding_feature_names(dimension: int) -> list[str]:
     band_feature_names = list(MODEL_BAND_ACTIVATION_FEATURE_NAMES[:dimension])
     if dimension > len(band_feature_names):
-        band_feature_names.extend(
-            f"Feature {index + 1}" for index in range(len(band_feature_names), dimension)
-        )
+        band_feature_names.extend(f"Feature {index + 1}" for index in range(len(band_feature_names), dimension))
     return band_feature_names
