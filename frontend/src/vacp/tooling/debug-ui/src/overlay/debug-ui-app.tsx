@@ -90,7 +90,7 @@ export function VacpDebugUiApp(props: { globalKey: string; includeActions: boole
     const dock = createVacpDebugDock({
       root,
       handles: [button],
-      storageKey: "vacp:debug:pos:top-center",
+      storageKey: "vacp:debug:pos:top-right",
       onMove: () => panelPosition(),
       onDrop: () => panelPosition(),
     });

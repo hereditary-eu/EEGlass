@@ -110,7 +110,7 @@ export function createVacpDebugDock(args: {
     } else {
       const margin = 14;
       const rect = root.getBoundingClientRect();
-      applyPos({ left: (window.innerWidth - rect.width) / 2, top: margin });
+      applyPos({ left: window.innerWidth - rect.width - margin, top: margin });
     }
     snapToNearest({ animate: false });
   };
