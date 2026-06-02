@@ -324,4 +324,9 @@ select {
     left: auto !important;
     bottom: auto !important;
   }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
 }

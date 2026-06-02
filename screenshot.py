@@ -42,6 +42,7 @@ PDF_PARAMS = {
     "marginBottom": 0,
     "marginLeft": 0,
     "marginRight": 0,
+    "pageRanges": "1",
 }
 
 
@@ -96,6 +97,8 @@ def screenshot_element(css_selector: str, filename: str):
 
 
 driver.get("http://localhost:3000")
+time.sleep(1)  # wait for table to load
+driver.find_element(By.CSS_SELECTOR, ".overview-drill-button").click()  # navigate into table
 save_screenshot("overview.pdf")
 
 driver.find_element(By.CSS_SELECTOR, ".vacp-debug-ui-button").click()
@@ -106,8 +109,8 @@ screenshot_element(".vacp-debug-ui-panel", "vacp-panel.pdf")
 driver.get("http://localhost:3000/datasets/ds004504/patients/sub-001")
 save_screenshot("patient_view.pdf")
 
-# driver.get("http://localhost:8000/docs")
-# save_screenshot("api-docs.pdf")
+driver.get("http://localhost:8000/docs")
+save_screenshot("api-docs.pdf")
 
 driver.close()
 driver.quit()
