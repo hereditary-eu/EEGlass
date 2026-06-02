@@ -310,4 +310,18 @@ select {
   article {
     box-shadow: none !important;
   }
+
+  #vacp-debug-ui-root {
+    top: 12px !important;
+    right: 12px !important;
+    left: auto !important;
+    bottom: auto !important;
+  }
+
+  #vacp-debug-ui-panel {
+    top: 52px !important;
+    right: 12px !important;
+    left: auto !important;
+    bottom: auto !important;
+  }
 }
