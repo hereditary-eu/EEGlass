@@ -143,14 +143,6 @@ export function EmbeddingIntrospectionPanel({
       }),
     [featureColumns, rows],
   );
-  const defaultCorrelationFeatures = useMemo(() => {
-    if (!activeFeaturePair) {
-      return featureColumns;
-    }
-
-    return Array.from(new Set([...activeFeaturePair, ...featureColumns]));
-  }, [activeFeaturePair, featureColumns]);
-
   useEffect(() => {
     if (!featureImportanceRequest) {
       setFeatureImportanceResponse(null);
@@ -288,7 +280,6 @@ export function EmbeddingIntrospectionPanel({
             <CorrelationHeatmap
               patientsData={correlationRows}
               covariateFeatures={featureColumns}
-              defaultSelectedCovariateFeatures={defaultCorrelationFeatures}
               selectedFeaturePair={activeFeaturePair}
               onSelectedFeaturePairChange={handleFeaturePairSelect}
             />

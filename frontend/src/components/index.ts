@@ -1,15 +1,7 @@
-export { CorrelationHeatmap, CorrelationHeatmapMock } from "./correlation-heatmap";
+export { CorrelationHeatmap } from "./correlation-heatmap";
 export type { CorrelationHeatmapProps } from "./correlation-heatmap";
-export { ScatterHistogram, ScatterHistogramMock } from "./scatter-histogram";
-export type { ScatterHistogramProps } from "./scatter-histogram";
-export { PcaBiplotPanel, PcaBiplotPanelMock } from "./pca-biplot";
-export type { PcaBiplotPanelProps } from "./pca-biplot";
-export { ClusteredScatterplotViewer, ClusteredScatterplotViewerMock } from "./clustered-scatterplot";
-export type { ClusteredScatterplotViewerProps } from "./clustered-scatterplot";
-export { ClusterSimilarityMatrix, SimilarityMatrixViewer, SimilarityMatrixViewerMock } from "./similarity-matrix";
-export type { ClusterSimilarityMatrixProps, SimilarityMatrixViewerProps } from "./similarity-matrix";
-export { DataTable, DataTableMock } from "./data-table";
-export type { DataTableMockProps, DataTableProps } from "./data-table";
+export { DataTable } from "./data-table";
+export type { DataTableProps } from "./data-table";
 export { EegTimeseries } from "./timeseries";
 export type { EegTimeseriesProps, TimeseriesWindowAnnotationRow, TimeseriesWindowAnnotationValue } from "./timeseries";
 export { EmbeddingIntrospectionPanel, EmbeddingScatterplot } from "./embedding";

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import type { TimeseriesSubjectSplit } from "../types";
 
@@ -18,11 +18,7 @@ export function AppLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const isPatientViewRoute = /^\/datasets\/[^/]+\/patients\/[^/]+/.test(pathname);
-  const pageTitle = isPatientViewRoute
-    ? "Patient View"
-    : pathname === "/components"
-      ? "Retained Components"
-      : "Overview";
+  const pageTitle = isPatientViewRoute ? "Patient View" : "Overview";
   const [patientViewHeaderDetails, setPatientViewHeaderDetails] = useState<PatientViewHeaderDetails | null>(null);
 
   const returnToPatientDirectory = () => {
@@ -68,22 +64,6 @@ export function AppLayout() {
               ) : null}
             </div>
           </div>
-
-          <nav className="app-nav" aria-label="Primary">
-            <NavLink
-              className={({ isActive }) => (isActive ? "app-nav-link app-nav-link--active" : "app-nav-link")}
-              to="/"
-              end
-            >
-              Overview
-            </NavLink>
-            <NavLink
-              className={({ isActive }) => (isActive ? "app-nav-link app-nav-link--active" : "app-nav-link")}
-              to="/components"
-            >
-              Components
-            </NavLink>
-          </nav>
         </header>
 
         <Outlet context={{ setPatientViewHeaderDetails } satisfies PatientViewOutletContext} />

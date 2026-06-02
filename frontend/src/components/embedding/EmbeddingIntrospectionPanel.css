@@ -175,7 +175,7 @@
   overflow: auto;
 }
 
-.embedding-introspection-correlation-section .neurodegenvis-card {
+.embedding-introspection-correlation-section .correlation-heatmap-card {
   min-width: max-content;
   height: 100%;
   align-items: stretch;
@@ -189,29 +189,14 @@
 
 .embedding-introspection-correlation-section .pearsonCorrelation-heading {
   color: #17212b;
-  font-size: 0.92rem;
+  font-size: 0.78rem;
   line-height: 1.1;
   text-align: left;
 }
 
-.embedding-introspection-correlation-section .checkbox-container {
-  justify-content: flex-start;
-  gap: 0.5rem;
-  padding: 0.15rem 0;
-  color: #5d6b78;
-  font-size: 0.72rem;
-}
-
-.embedding-introspection-correlation-section .checkbox-container label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  white-space: nowrap;
-}
-
-.embedding-introspection-correlation-section .neurodegenvis-caption {
+.embedding-introspection-correlation-section .correlation-heatmap-caption {
   color: #64748b;
-  font-size: 0.74rem;
+  font-size: 0.62rem;
   line-height: 1.25;
 }
 

@@ -1,16 +1,22 @@
 import { useEffect, useRef } from "react";
-import * as d3 from "d3";
-import * as Plot from "@observablehq/plot";
+import type { View } from "vega";
+import embed from "vega-embed";
+import type { VisualizationSpec } from "vega-embed";
 
-import { pearsonCorrelation } from "../../utils/neurodegenvis/pearsonCorrelation";
-import { NEURO_FONT_SIZE } from "../../utils/neurodegenvis/visVariables";
+import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 
 export type CorrelationHeatmapDatum = Record<string, string | number | boolean | null | undefined>;
+
+const HEATMAP_CELL_WIDTH = 52;
+const HEATMAP_CELL_HEIGHT = 28;
 
 interface CorrelationCell {
   a: string;
   b: string;
   correlation: number;
+  correlationText: string;
+  isSelected: boolean;
+  textColor: string;
 }
 
 interface NeuroHeatmapPlotProps {
@@ -27,102 +33,196 @@ export function NeuroHeatmapPlot({
   onSelectedFeaturesChange,
 }: NeuroHeatmapPlotProps) {
   const heatmapRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<View | null>(null);
+  useVegaLayoutResize(viewRef);
 
   useEffect(() => {
-    const correlations: CorrelationCell[] = d3.cross(covariateFeatures, covariateFeatures).map(([a, b]) => ({
-      a,
-      b,
-      correlation: pearsonCorrelation(
-        (Plot.valueof(patientsData as object[], a) as number[] | null) ?? [],
-        (Plot.valueof(patientsData as object[], b) as number[] | null) ?? [],
-      ),
-    }));
+    const container = heatmapRef.current;
+    if (!container) {
+      return;
+    }
 
-    const plot = Plot.plot({
-      width: covariateFeatures.length * 65 + 165,
-      height: covariateFeatures.length * 35 + 155,
-      marginLeft: 134,
-      marginBottom: 132,
-      label: null,
-      color: {
-        scheme: "buylrd",
-        pivot: 0,
-        legend: true,
-        label: "correlation",
+    container.innerHTML = "";
+    const correlations: CorrelationCell[] = covariateFeatures.flatMap((a) =>
+      covariateFeatures.map((b) => {
+        const correlation = correlationForFeaturePair(patientsData, a, b);
+        const isSelected = a === selectedFeatures[0] && b === selectedFeatures[1];
+        return {
+          a,
+          b,
+          correlation,
+          correlationText: correlation.toFixed(2),
+          isSelected,
+          textColor: correlation > 0.8 || correlation < -0.6 ? "white" : "black",
+        };
+      }),
+    );
+
+    const spec: VisualizationSpec = {
+      $schema: "https://vega.github.io/schema/vega-lite/v6.json",
+      width: { step: HEATMAP_CELL_WIDTH },
+      height: { step: HEATMAP_CELL_HEIGHT },
+      background: "transparent",
+      data: { values: correlations },
+      resolve: {
+        scale: {
+          color: "independent",
+        },
       },
-      x: {
-        domain: covariateFeatures,
-        tickRotate: 90,
+      encoding: {
+        x: createFeatureAxis("a", covariateFeatures, -45),
+        y: createFeatureAxis("b", covariateFeatures, 0),
       },
-      y: {
-        domain: covariateFeatures,
-      },
-      marks: [
-        Plot.cell(correlations, {
-          x: "a",
-          y: "b",
-          fill: "correlation",
-          className: "heatmap-cell",
-        }),
-        Plot.text(correlations, {
-          x: "a",
-          y: "b",
-          text: (datum) => datum.correlation.toFixed(2),
-          fill: (datum) => (datum.correlation > 0.8 || datum.correlation < -0.6 ? "white" : "black"),
-          fontSize: 12,
-          className: "heatmap-label",
-        }),
+      layer: [
+        {
+          mark: {
+            type: "rect",
+            cursor: "pointer",
+            stroke: "transparent",
+          },
+          encoding: {
+            color: {
+              field: "correlation",
+              type: "quantitative",
+              title: "correlation",
+              scale: {
+                domain: [-1, 0, 1],
+                range: ["#5e4fa2", "#ffffbf", "#9e0142"],
+              },
+              legend: {
+                orient: "right",
+                gradientLength: 160,
+                gradientThickness: 14,
+                titleColor: "#5d6b78",
+                labelColor: "#5d6b78",
+                titleFontSize: 10,
+                labelFontSize: 10,
+              },
+            },
+            opacity: {
+              condition: { test: "datum.isSelected", value: 0.5 },
+              value: 1,
+            },
+            strokeWidth: {
+              condition: { test: "datum.isSelected", value: 2.5 },
+              value: 0,
+            },
+          },
+        },
+        {
+          mark: {
+            type: "text",
+            fontSize: 10,
+            cursor: "pointer",
+          },
+          encoding: {
+            text: { field: "correlationText" },
+            color: { field: "textColor", type: "nominal", scale: null, legend: null },
+          },
+        },
       ],
-      style: `font-size: ${NEURO_FONT_SIZE}; --plot-axis-tick-rotate: 90deg;`,
-    });
-
-    d3.select(plot).selectAll(".heatmap-label").style("pointer-events", "none");
-
-    const rects = d3.select(plot).selectAll<SVGRectElement, unknown>(".heatmap-cell rect");
-    const applyHighlight = (pair: [string, string]) => {
-      rects
-        .style("fill-opacity", (_, index) => {
-          const correlation = correlations[index];
-          return correlation.a === pair[0] && correlation.b === pair[1] ? "0.5" : "1";
-        })
-        .style("stroke", "none")
-        .style("stroke-width", 0);
+      config: {
+        view: {
+          strokeWidth: 0,
+        },
+        axis: {
+          domain: false,
+          labelColor: "#5d6b78",
+          labelFontSize: 9,
+          titleColor: "#5d6b78",
+          titleFontSize: 10,
+          tickColor: "#d7e0e8",
+        },
+      },
     };
 
-    applyHighlight(selectedFeatures);
+    let finalized = false;
+    const resultPromise = embed(container, spec, {
+      actions: false,
+      renderer: "svg",
+    });
 
-    rects
-      .on("click", function () {
-        const index = rects.nodes().indexOf(this);
-        if (index < 0) {
+    resultPromise.catch(() => undefined);
+    resultPromise
+      .then((result) => {
+        if (finalized) {
           return;
         }
 
-        const correlation = correlations[index];
-        onSelectedFeaturesChange([correlation.a, correlation.b]);
-        applyHighlight([correlation.a, correlation.b]);
+        viewRef.current = result.view;
+        resizeVegaView(result.view);
+        result.view.addEventListener("click", (_event, item) => {
+          const datum = item?.datum as Partial<CorrelationCell> | undefined;
+          if (typeof datum?.a === "string" && typeof datum.b === "string") {
+            onSelectedFeaturesChange([datum.a, datum.b]);
+          }
+        });
       })
-      .on("pointerover", function () {
-        d3.select(this).style("stroke", "black").style("stroke-width", 3.5);
-      })
-      .on("pointerout", function () {
-        const rect = d3.select(this);
-        const index = rects.nodes().indexOf(this);
-        const correlation = index >= 0 ? correlations[index] : undefined;
-        const isSelected =
-          correlation !== undefined && correlation.a === selectedFeatures[0] && correlation.b === selectedFeatures[1];
-        rect.style("stroke", isSelected ? "black" : "none").style("stroke-width", isSelected ? 2.5 : 0);
-      });
-
-    if (heatmapRef.current) {
-      heatmapRef.current.innerHTML = "";
-      heatmapRef.current.append(plot);
-    }
+      .catch(() => undefined);
 
     return () => {
-      plot.remove();
+      if (finalized) {
+        return;
+      }
+
+      finalized = true;
+      viewRef.current = null;
+      resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
   }, [patientsData, covariateFeatures, onSelectedFeaturesChange, selectedFeatures]);
 
   return <div ref={heatmapRef} />;
+}
+
+function correlationForFeaturePair(rows: CorrelationHeatmapDatum[], first: string, second: string): number {
+  if (first === second) {
+    return 1;
+  }
+
+  const pairedValues = rows.flatMap((row) => {
+    const firstValue = row[first];
+    const secondValue = row[second];
+    return typeof firstValue === "number" &&
+      Number.isFinite(firstValue) &&
+      typeof secondValue === "number" &&
+      Number.isFinite(secondValue)
+      ? [{ firstValue, secondValue }]
+      : [];
+  });
+  const correlation = pearsonCorrelation(
+    pairedValues.map((pair) => pair.firstValue),
+    pairedValues.map((pair) => pair.secondValue),
+  );
+  return Number.isFinite(correlation) ? correlation : 0;
+}
+
+function pearsonCorrelation(x: number[], y: number[]): number {
+  if (x.length !== y.length || x.length === 0) {
+    return Number.NaN;
+  }
+
+  const xMean = mean(x);
+  const yMean = mean(y);
+  const covariance = x.reduce((sum, value, index) => sum + (value - xMean) * (y[index]! - yMean), 0);
+  const sigmaX = x.reduce((sum, value) => sum + (value - xMean) ** 2, 0);
+  const sigmaY = y.reduce((sum, value) => sum + (value - yMean) ** 2, 0);
+  const denominator = Math.sqrt(sigmaX * sigmaY);
+  return denominator === 0 ? Number.NaN : covariance / denominator;
+}
+
+function mean(values: number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function createFeatureAxis(field: "a" | "b", domain: string[], labelAngle: number) {
+  return {
+    field,
+    type: "nominal" as const,
+    sort: domain,
+    axis: {
+      labelAngle,
+      tickSize: 0,
+      title: null,
+    },
+  };
 }

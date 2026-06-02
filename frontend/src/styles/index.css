@@ -191,38 +191,6 @@ select {
   color: #5d6b78;
 }
 
-.app-nav {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.2rem;
-  border: 1px solid #d7e0e8;
-  border-radius: 8px;
-  background: #ffffff;
-}
-
-.app-nav-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 1.7rem;
-  padding: 0.3rem 0.65rem;
-  border-radius: 6px;
-  color: #5d6b78;
-  font-size: 0.82rem;
-  line-height: 1;
-  text-decoration: none;
-}
-
-.app-nav-link:hover {
-  color: #17212b;
-  background: rgb(14 116 144 / 8%);
-}
-
-.app-nav-link--active {
-  color: #0f5f76;
-  background: rgb(14 116 144 / 12%);
-}
-
 .app-section {
   padding: 1.5rem;
   border: 1px solid #d7e0e8;
@@ -309,10 +277,6 @@ select {
   .app-header {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .app-nav {
-    align-self: flex-start;
   }
 
   .patient-view-panel {

@@ -78,10 +78,6 @@ export interface DataTableProps {
   shapleyValues?: ShapleyValueItem[] | null;
 }
 
-export interface DataTableMockProps {
-  title?: string;
-}
-
 type ColumnType = "number" | "string" | "mixed";
 
 const TABLE_HEADER_HEIGHT = 40;
@@ -542,120 +538,6 @@ const DataTable: React.FC<DataTableProps> = ({
         </div>
       )}
     </div>
-  );
-};
-
-const mockColumns = ["Subject", "Age", "MMSE", "Hippocampus", "TemporalPower", "Diagnosis"];
-
-const baseMockData: DataRow[] = [
-  {
-    Subject: "P-001",
-    Age: 67,
-    MMSE: 28,
-    Hippocampus: 6.1,
-    TemporalPower: 0.81,
-    Diagnosis: "Control",
-  },
-  {
-    Subject: "P-002",
-    Age: 72,
-    MMSE: 24,
-    Hippocampus: 5.2,
-    TemporalPower: 0.63,
-    Diagnosis: "MCI",
-  },
-  {
-    Subject: "P-003",
-    Age: 75,
-    MMSE: 19,
-    Hippocampus: 4.6,
-    TemporalPower: 0.48,
-    Diagnosis: "AD",
-  },
-  {
-    Subject: "P-004",
-    Age: 69,
-    MMSE: 26,
-    Hippocampus: 5.8,
-    TemporalPower: 0.72,
-    Diagnosis: "Control",
-  },
-  {
-    Subject: "P-005",
-    Age: 78,
-    MMSE: 21,
-    Hippocampus: 4.9,
-    TemporalPower: 0.57,
-    Diagnosis: "MCI",
-  },
-  {
-    Subject: "P-006",
-    Age: 81,
-    MMSE: 17,
-    Hippocampus: 4.1,
-    TemporalPower: 0.42,
-    Diagnosis: "AD",
-  },
-  {
-    Subject: "P-007",
-    Age: 70,
-    MMSE: 27,
-    Hippocampus: 5.9,
-    TemporalPower: 0.77,
-    Diagnosis: "Control",
-  },
-  {
-    Subject: "P-008",
-    Age: 74,
-    MMSE: 22,
-    Hippocampus: 5.0,
-    TemporalPower: 0.55,
-    Diagnosis: "MCI",
-  },
-];
-
-const mockData: DataRow[] = Array.from({ length: 3 }, (_, batchIndex) =>
-  baseMockData.map((row, rowIndex) => ({
-    ...row,
-    Subject: `P-${String(batchIndex * baseMockData.length + rowIndex + 1).padStart(3, "0")}`,
-    Age: typeof row.Age === "number" ? row.Age + batchIndex : row.Age,
-    MMSE: typeof row.MMSE === "number" ? Math.max(12, row.MMSE - batchIndex) : row.MMSE,
-    Hippocampus:
-      typeof row.Hippocampus === "number" ? Number((row.Hippocampus - batchIndex * 0.15).toFixed(1)) : row.Hippocampus,
-    TemporalPower:
-      typeof row.TemporalPower === "number"
-        ? Number(Math.max(0.25, row.TemporalPower - batchIndex * 0.05).toFixed(2))
-        : row.TemporalPower,
-  })),
-).flat();
-
-const mockShapleyValues: ShapleyValueItem[] = [
-  { feature: "MMSE", "SHAP Value": 0.92 },
-  { feature: "Hippocampus", "SHAP Value": 0.84 },
-  { feature: "TemporalPower", "SHAP Value": 0.68 },
-  { feature: "Age", "SHAP Value": 0.41 },
-];
-
-export const DataTableMock: React.FC<DataTableMockProps> = ({ title = "Data" }) => {
-  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [viewMode, setViewMode] = useState<"numerical" | "heatmap">("numerical");
-
-  return (
-    <DataTable
-      title={title}
-      data={mockData}
-      columns={mockColumns}
-      hiddenColumns={hiddenColumns}
-      onColumnHide={(column) => setHiddenColumns((prev) => [...prev, column])}
-      onHiddenColumnRestore={(column) => setHiddenColumns((prev) => prev.filter((item) => item !== column))}
-      onColumnSelect={() => {}}
-      isExpanded={isExpanded}
-      viewMode={viewMode}
-      onViewModeChange={setViewMode}
-      onToggleExpanded={() => setIsExpanded((prev) => !prev)}
-      shapleyValues={mockShapleyValues}
-    />
   );
 };
 

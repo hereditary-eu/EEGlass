@@ -39,6 +39,6 @@ data/
 
 stuff/
 
-*local*
+local/
 
 .vscode/tasks.json
