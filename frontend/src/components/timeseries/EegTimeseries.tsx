@@ -82,6 +82,8 @@ const DEFAULT_WINDOW_SIZE_SECONDS = 4;
 const WINDOW_ANNOTATION_FONT = "10px Inter, Segoe UI, sans-serif";
 const WINDOW_ANNOTATION_TEXT_PADDING = 14;
 const WINDOW_ANNOTATION_MIN_LABEL_WIDTH = 42;
+const CHANNEL_LABEL_FONT = "11px Inter, Segoe UI, sans-serif";
+const CHANNEL_LABEL_X = 32;
 const CHANNEL_COLORS = ["#0f6ea8", "#be185d", "#15803d", "#b45309", "#6d28d9"];
 const DEFAULT_WINDOW_ANNOTATION_ROWS: TimeseriesWindowAnnotationRow[] = [];
 
@@ -548,6 +550,7 @@ function renderTimeseries({
   const hasHoveredChannel = hoveredChannel !== null && channels.includes(hoveredChannel);
   channels.forEach((channel, index) => {
     drawChannel(ctx, {
+      channel,
       values: samples[channel] ?? [],
       channelIndex: index,
       channelCount: channels.length,
@@ -726,6 +729,7 @@ function getDefaultAnnotationColor(rowIndex: number, windowIndex: number): strin
 function drawChannel(
   ctx: CanvasRenderingContext2D,
   {
+    channel,
     values,
     channelIndex,
     channelCount,
@@ -740,6 +744,7 @@ function drawChannel(
     isHighlighted,
     hasHighlight,
   }: {
+    channel: ChannelId;
     values: TimeseriesSampleArray;
     channelIndex: number;
     channelCount: number;
@@ -838,6 +843,14 @@ function drawChannel(
   ctx.globalAlpha = hasHighlight && !isHighlighted ? 0.32 : 1;
   ctx.lineWidth = isHighlighted ? 2 : 1;
   ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.font = CHANNEL_LABEL_FONT;
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = isHighlighted ? color : "#334155";
+  ctx.fillText(channel, CHANNEL_LABEL_X, channelTop + channelHeight / 2);
   ctx.restore();
 }
 
