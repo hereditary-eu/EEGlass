@@ -4,11 +4,7 @@ import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../../constants/e
 import type { ModelBandPresentation, TimeseriesBandFilter } from "../../types";
 import { MathFormula } from "../ui";
 import { ScalpTopologyPlot } from "./ScalpTopologyPlot";
-import {
-  findScalpBand,
-  getRangeFromResponse,
-  type ScalpTopologyValueChannel,
-} from "./scalpTopologyUtils";
+import { findScalpBand, getRangeFromResponse, type ScalpTopologyValueChannel } from "./scalpTopologyUtils";
 import { useModelScalpTopologies } from "./useModelScalpTopologies";
 import "./TopologyAttributionPanel.css";
 
@@ -18,7 +14,7 @@ interface ModelScalpTopologyPanelProps {
 }
 
 export function ModelScalpTopologyPanel({ modelName, compact = false }: ModelScalpTopologyPanelProps) {
-  const [selectedBand, setSelectedBand] = useState<TimeseriesBandFilter | null>(null);
+  const [selectedBand, setSelectedBand] = useState<TimeseriesBandFilter | null>("alpha");
   const { scalpTopologies, isLoading, error } = useModelScalpTopologies(modelName);
   const activeBand = useMemo(() => findScalpBand(scalpTopologies, selectedBand), [scalpTopologies, selectedBand]);
   const bandOptions = useMemo(

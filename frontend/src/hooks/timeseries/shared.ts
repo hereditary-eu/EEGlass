@@ -8,7 +8,7 @@ export const DEFAULT_PREVIEW_MAX_POINTS = 5000;
 export const PREDICTION_CACHE_RETRY_COUNT = 4;
 export const PREDICTION_CACHE_RETRY_DELAY_MS = 650;
 
-const DEFAULT_CHANNELS: ChannelId[] = ["F3", "F4", "P3", "P4", "O1", "O2"];
+const DEFAULT_CHANNELS: ChannelId[] = ["O1", "O2", "F3", "F4", "P3", "P4"];
 // const DEFAULT_CHANNELS: ChannelId[] = ["O2", "O1", "F3", "F4", "P3", "P4"];
 
 export function resolveSelectedChannels(selectedChannels: ChannelId[], availableChannels: ChannelId[]): ChannelId[] {

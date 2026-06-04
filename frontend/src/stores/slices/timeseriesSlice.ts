@@ -25,7 +25,7 @@ export interface TimeseriesSlice {
 export const createTimeseriesSlice: StateCreator<AppStoreState, [], [], TimeseriesSlice> = (set) => ({
   selectedChannels: [],
   selectedTimeseriesSource: "derivatives",
-  selectedScalpBand: "delta",
+  selectedScalpBand: "alpha",
   selectedTimeseriesBandFilter: null,
   selectedTimeRange: null,
   hoveredPredictionWindowIndex: null,
