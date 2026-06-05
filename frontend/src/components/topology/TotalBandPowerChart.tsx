@@ -418,7 +418,7 @@ export function TotalBandPowerChart({
     <div className="topology-bandpower">
       <div className="topology-bandpower-header">
         <div>
-          <h4 className="topology-bandpower-title">Total band power</h4>
+          <h4 className="topology-bandpower-title">Total Band Power</h4>
           <p className="topology-bandpower-subtitle">
             {activeChannel && bandPower
               ? `Window ${bandPower.window_index + 1}: ${bandPower.start_time.toFixed(1)}s-${bandPower.end_time.toFixed(1)}s · ${activeChannel.channel}`
@@ -822,4 +822,3 @@ function getBandPowerStatus({
 
   return { status: "idle", label: "Band power idle" };
 }
-

@@ -266,7 +266,7 @@ export function BandActivationChart({
     <div className="classification-band-activation-chart">
       <div className="classification-band-activation-chart-header">
         <div>
-          <h4>Band activations</h4>
+          <h4>Band Activations</h4>
           <p>
             {evidence
               ? `Window ${evidence.window_index + 1}: ${evidence.start_time.toFixed(1)}s-${evidence.end_time.toFixed(1)}s`
@@ -283,8 +283,7 @@ export function BandActivationChart({
             </>
           ) : (
             <>
-              {EEG_MODEL_NOTATION_LABELS.encoderOutputPrefix}{" "}
-              <MathFormula tex={EEG_MODEL_NOTATION.encoderOutput} />{" "}
+              {EEG_MODEL_NOTATION_LABELS.encoderOutputPrefix} <MathFormula tex={EEG_MODEL_NOTATION.encoderOutput} />{" "}
               {EEG_MODEL_NOTATION_LABELS.encoderBeforeDenseWeights}
             </>
           )}
