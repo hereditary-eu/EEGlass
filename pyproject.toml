@@ -32,8 +32,8 @@ dev = [
   "ipykernel>=7.2.0",
   "isort>=8.0.1",
   "mass-ts>=0.1.4",
-  "pypdf>=6.12.2",
-  "ruff>=0.15.15",
+  "pypdf>=6.13.0",
+  "ruff>=0.15.16",
   "selenium>=4.44.0",
   "selfeeg[interactive]>=0.2.1",
 ]
