@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { changeset } from "vega";
 import type { View } from "vega";
 import embed from "vega-embed";
@@ -50,6 +50,11 @@ const MIN_RELATIVE_POWER_FOR_DB = 1e-6;
 const MIN_DB_DOMAIN = -40;
 const BAND_POWER_DATA_NAME = "bandPowerValues";
 const TOTAL_BAND_POWER_CHART_ID = "patient-view/total-band-power";
+const SELECTED_WINDOW_SERIES = "Selected window value";
+const REFERENCE_MEAN_SERIES = "Reference mean";
+const REFERENCE_RANGE_SERIES = "+/-2sigma range";
+const LEGEND_SERIES_FIELD = "series";
+const LEGEND_SERIES_DOMAIN = [SELECTED_WINDOW_SERIES, REFERENCE_MEAN_SERIES, REFERENCE_RANGE_SERIES] as const;
 const DEFAULT_RANGE_FILL = "rgb(14 116 144 / 13%)";
 const DEFAULT_RANGE_STROKE = "#64748b";
 const TOTAL_BAND_POWER_ACTIONS = {
@@ -225,7 +230,7 @@ export function TotalBandPowerChart({
                 mark: {
                   type: "area" as const,
                   interpolate: "monotone" as const,
-                  color: rangeColors.fill,
+                  fill: rangeColors.fill,
                 },
                 encoding: {
                   x: createBandAxisEncoding(),
@@ -262,6 +267,7 @@ export function TotalBandPowerChart({
           mark: {
             type: "line" as const,
             interpolate: "monotone" as const,
+            color: "#0e7490",
             point: {
               filled: true,
               fill: "#0e7490",
@@ -269,7 +275,6 @@ export function TotalBandPowerChart({
               size: 74,
               strokeWidth: 2,
             },
-            color: "#0e7490",
             strokeWidth: 2.5,
           },
           encoding: {
@@ -292,6 +297,7 @@ export function TotalBandPowerChart({
             ],
           },
         },
+        createBandPowerLegendLayer(rangeColors, hasStats),
       ],
       config: {
         view: { stroke: null },
@@ -494,26 +500,6 @@ export function TotalBandPowerChart({
           </div>
           <div className="topology-bandpower-plot-frame">
             <div className="topology-bandpower-plot" ref={containerRef} />
-            <div className="topology-bandpower-legend" aria-label="Band power chart legend">
-              <span className="topology-bandpower-legend-item">
-                <span className="topology-bandpower-legend-mark topology-bandpower-legend-mark--value" />
-                Selected window value
-              </span>
-              <span className="topology-bandpower-legend-item">
-                <span
-                  className="topology-bandpower-legend-mark topology-bandpower-legend-mark--mean"
-                  style={{ "--range-stroke": rangeColors.stroke } as CSSProperties}
-                />
-                Reference mean
-              </span>
-              <span className="topology-bandpower-legend-item">
-                <span
-                  className="topology-bandpower-legend-mark topology-bandpower-legend-mark--range"
-                  style={{ background: rangeColors.fill }}
-                />
-                +/-2sigma range
-              </span>
-            </div>
           </div>
         </div>
       </div>
@@ -560,6 +546,67 @@ function createPowerScale() {
     domainMax: 0,
     nice: false,
     zero: false,
+  };
+}
+
+function createBandPowerLegendLayer(rangeColors: { fill: string; stroke: string }, includeStats: boolean) {
+  const seriesDomain = includeStats ? [...LEGEND_SERIES_DOMAIN] : [SELECTED_WINDOW_SERIES];
+
+  return {
+    data: { values: [] },
+    mark: {
+      type: "point" as const,
+      filled: true,
+      opacity: 1,
+    },
+    encoding: {
+      fill: {
+        field: LEGEND_SERIES_FIELD,
+        type: "nominal" as const,
+        scale: {
+          domain: seriesDomain,
+          range: includeStats ? ["#0e7490", "transparent", rangeColors.fill] : ["#0e7490"],
+        },
+        legend: createBandPowerLegend(),
+      },
+      stroke: {
+        field: LEGEND_SERIES_FIELD,
+        type: "nominal" as const,
+        scale: {
+          domain: seriesDomain,
+          range: includeStats ? ["#064e56", rangeColors.stroke, rangeColors.fill] : ["#064e56"],
+        },
+      },
+      shape: {
+        field: LEGEND_SERIES_FIELD,
+        type: "nominal" as const,
+        scale: {
+          domain: seriesDomain,
+          range: includeStats ? ["circle", "stroke", "square"] : ["circle"],
+        },
+      },
+      strokeDash: {
+        field: LEGEND_SERIES_FIELD,
+        type: "nominal" as const,
+        scale: {
+          domain: seriesDomain,
+          range: includeStats ? [[1, 0], [4, 3], [1, 0]] : [[1, 0]],
+        },
+      },
+    },
+  };
+}
+
+function createBandPowerLegend() {
+  return {
+    orient: "bottom" as const,
+    direction: "horizontal" as const,
+    title: null,
+    labelColor: "#64748b",
+    labelFontSize: 10,
+    labelLimit: 180,
+    symbolSize: 120,
+    symbolStrokeWidth: 3,
   };
 }
 
