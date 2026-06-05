@@ -588,68 +588,6 @@
   color: #0f5f76;
 }
 
-.topology-bandpower-legend {
-  position: absolute;
-  left: 3.05rem;
-  bottom: 3.65rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.18rem;
-  color: #64748b;
-  font-size: 0.66rem;
-  line-height: 1.1;
-  pointer-events: none;
-}
-
-.topology-bandpower-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.24rem;
-  white-space: nowrap;
-}
-
-.topology-bandpower-legend-mark {
-  position: relative;
-  flex: 0 0 auto;
-  width: 1.25rem;
-  height: 0.55rem;
-}
-
-.topology-bandpower-legend-mark--value::before,
-.topology-bandpower-legend-mark--mean::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  border-top: 2px solid #0e7490;
-}
-
-.topology-bandpower-legend-mark--value::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 0.36rem;
-  height: 0.36rem;
-  border: 1.5px solid #064e56;
-  border-radius: 50%;
-  background: #0e7490;
-  transform: translate(-50%, -50%);
-}
-
-.topology-bandpower-legend-mark--mean::before {
-  border-top-color: var(--range-stroke, #64748b);
-  border-top-style: dashed;
-}
-
-.topology-bandpower-legend-mark--range {
-  border-radius: 999px;
-  background: rgb(14 116 144 / 13%);
-}
-
 .topology-bandpower-plot-frame {
   position: relative;
   min-width: 0;
