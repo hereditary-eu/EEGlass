@@ -99,14 +99,14 @@ export function EegScalpTopologyPanel({
   const activeBandLabel = getModelBandLabel(activeBandId, modelInfo?.bands);
   const bandOptions = useMemo(
     () =>
-      (modelInfo?.bands.length
+      modelInfo?.bands.length
         ? modelInfo.bands
         : (activeMode?.bands ?? []).map((band) => ({
             band: band.band,
             label: band.band,
             start_hz: 0,
             end_hz: 0,
-          }))),
+          })),
     [activeMode, modelInfo],
   );
   const bandValueRange = useMemo(() => getPerBandDivergingValueRange(activeBand), [activeBand]);
@@ -163,13 +163,12 @@ export function EegScalpTopologyPanel({
     <div className="topology-panel topology-panel--eeg">
       <div className="topology-panel-header">
         <div>
-          <h3 className="topology-panel-title">Scalp view</h3>
+          <h3 className="topology-panel-title">Scalp View</h3>
           <p className="topology-panel-subtitle">{subtitle}</p>
         </div>
         <p className="topology-panel-stage">
           <span className="topology-panel-stage-text">
-            {EEG_MODEL_NOTATION_LABELS.spatialEvidencePrefix}{" "}
-            <MathFormula tex={EEG_MODEL_NOTATION.spatialWeight} />{" "}
+            {EEG_MODEL_NOTATION_LABELS.spatialEvidencePrefix} <MathFormula tex={EEG_MODEL_NOTATION.spatialWeight} />{" "}
             {EEG_MODEL_NOTATION_LABELS.spatialEvidenceConnector}{" "}
             <MathFormula tex={EEG_MODEL_NOTATION.spatialEvidence} />
           </span>

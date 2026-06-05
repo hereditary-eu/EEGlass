@@ -57,7 +57,7 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
         <div className="timeseries-slot-left">
           <div className="timeseries-slot-heading">
             <div>
-              <h3 className="timeseries-slot-title">Input signal</h3>
+              <h3 className="timeseries-slot-title">Input Signals</h3>
               <p className="timeseries-slot-subtitle">
                 {ts.selectedPredictionWindow
                   ? `Window ${ts.selectedPredictionWindow.window_index + 1}: ${ts.selectedPredictionWindow.start_time.toFixed(1)}s-${ts.selectedPredictionWindow.end_time.toFixed(1)}s`
@@ -112,9 +112,7 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
             {ts.selectedTimeseriesBandFilter ? (
               <span className="timeseries-slot-status">Filter: {ts.selectedTimeseriesBandFilter}</span>
             ) : null}
-            {ts.source === "raw" ? (
-              <span className="timeseries-slot-status">Predictions use derivatives</span>
-            ) : null}
+            {ts.source === "raw" ? <span className="timeseries-slot-status">Predictions use derivatives</span> : null}
             <button
               type="button"
               className="timeseries-slot-button"

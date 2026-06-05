@@ -33,7 +33,7 @@ export function CorrelationHeatmap({
   return (
     <div className="correlation-heatmap-card">
       <div className="flex-container-row">
-        <h3 className="pearsonCorrelation-heading">Pearson correlation for embedding features</h3>
+        <h3 className="pearsonCorrelation-heading">Pearson Correlation for Embedding Features</h3>
       </div>
 
       <p className="correlation-heatmap-caption">
