@@ -27,10 +27,21 @@ export function PatientView() {
       state: {
         datasetId,
         directoryLevel: "patients",
-        selectedSubjectId: subjectId,
+        selectedSubjectId: null,
       },
     });
   }, [datasetId, navigate, subjectId]);
+
+  const navigateToSubject = useCallback(
+    (nextSubjectId: string) => {
+      if (!datasetId || !nextSubjectId) {
+        return;
+      }
+
+      navigate(`/datasets/${encodeURIComponent(datasetId)}/patients/${encodeURIComponent(nextSubjectId)}`);
+    },
+    [datasetId, navigate],
+  );
 
   useEffect(() => {
     if (!datasetId || !subjectId) {
@@ -40,6 +51,7 @@ export function PatientView() {
     return registerVacpTimeseries({
       datasetId: ts.datasetId,
       subjectId: ts.subjectId,
+      subjects: ts.subjects,
       source: ts.source,
       modelClasses: ts.modelInfo?.classes ?? [],
       availableChannels: ts.availableChannels,
@@ -50,6 +62,7 @@ export function PatientView() {
       lockedPredictionWindowIndex: ts.lockedPredictionWindowIndex,
       selectedPredictionWindowIndex: ts.selectedPredictionWindowIndex,
       navigateBack: returnToPatientDirectory,
+      navigateSubject: navigateToSubject,
       selectChannel: ts.handleSingleChannelSelect,
       selectWindow: ts.setLockedPredictionWindowIndex,
     });
@@ -65,11 +78,13 @@ export function PatientView() {
     ts.inferenceResult,
     ts.lockedPredictionWindowIndex,
     ts.modelInfo,
+    navigateToSubject,
     returnToPatientDirectory,
     ts.selectedPredictionWindowIndex,
     ts.setLockedPredictionWindowIndex,
     ts.source,
     ts.subjectId,
+    ts.subjects,
   ]);
 
   useEffect(() => {
@@ -98,7 +113,7 @@ export function PatientView() {
         const nextIndex = (currentIndex + direction + subjects.length) % subjects.length;
         const nextSubject = subjects[nextIndex];
         if (nextSubject) {
-          navigate(`/datasets/${encodeURIComponent(datasetId)}/patients/${encodeURIComponent(nextSubject.id)}`);
+          navigateToSubject(nextSubject.id);
         }
         return;
       }
@@ -144,7 +159,7 @@ export function PatientView() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [datasetId, navigate, returnToPatientDirectory, setSelectedScalpBand, subjectId, ts]);
+  }, [datasetId, navigateToSubject, returnToPatientDirectory, setSelectedScalpBand, subjectId, ts]);
 
   useEffect(() => {
     if (!datasetId || !subjectId) {

@@ -2,7 +2,13 @@ import type { VacpActionDescriptor, VacpCapabilitiesSnapshot, VacpRef, VacpState
 import { nowIso, VACP_SCHEMA_VERSION } from "@vacp/core";
 import { installVacpRuntimeBridge, VacpActionRegistry } from "@vacp/gateway";
 
-import type { ChannelId, ModelClassPresentation, ModelInferenceResponse, TimeseriesSource } from "../types";
+import type {
+  ChannelId,
+  ModelClassPresentation,
+  ModelInferenceResponse,
+  TimeseriesSource,
+  TimeseriesSubjectInfo,
+} from "../types";
 import {
   createPrivateVacpGlobalKey,
   createVacpChartRefPrefix,
@@ -14,6 +20,7 @@ import {
 interface RegisterVacpTimeseriesArgs {
   datasetId: string;
   subjectId: string;
+  subjects: TimeseriesSubjectInfo[];
   source: TimeseriesSource;
   modelClasses: ModelClassPresentation[];
   availableChannels: ChannelId[];
@@ -24,6 +31,7 @@ interface RegisterVacpTimeseriesArgs {
   lockedPredictionWindowIndex: number | null;
   selectedPredictionWindowIndex: number | null;
   navigateBack: () => void;
+  navigateSubject: (subjectId: string) => void;
   selectChannel: (channel: ChannelId) => void;
   selectWindow: (windowIndex: number) => void;
 }
@@ -33,6 +41,9 @@ type WindowPrediction = ModelInferenceResponse["predictions"][number];
 const TIMESERIES_CHART_ID = "patient-view/timeseries";
 const TIMESERIES_ACTIONS = {
   navigateBack: "patient_view.navigate_back",
+  subjectNext: "patient_view.subject_next",
+  subjectPrevious: "patient_view.subject_previous",
+  subjectSet: "patient_view.subject_set",
   channelNext: "patient_view.timeseries.channel_next",
   channelPrevious: "patient_view.timeseries.channel_previous",
   channelSet: "patient_view.timeseries.channel_set",
@@ -44,6 +55,7 @@ const TIMESERIES_ACTIONS = {
 
 export function registerVacpTimeseries(args: RegisterVacpTimeseriesArgs): () => void {
   const refPrefix = createVacpChartRefPrefix(TIMESERIES_CHART_ID);
+  const subjectRef = `${refPrefix}/subject` as VacpRef;
   const channelRef = `${refPrefix}/channel` as VacpRef;
   const windowRef = `${refPrefix}/window` as VacpRef;
   const globalKey = createPrivateVacpGlobalKey(TIMESERIES_CHART_ID);
@@ -54,6 +66,45 @@ export function registerVacpTimeseries(args: RegisterVacpTimeseriesArgs): () => 
     () => {
       args.navigateBack();
       return { navigated: true, datasetId: args.datasetId, subjectId: args.subjectId };
+    },
+  );
+
+  actions.register(
+    createActionDescriptor(TIMESERIES_ACTIONS.subjectNext, subjectRef, "Navigate to the next patient in the dataset."),
+    () => {
+      const subject = getRelativeSubject(args, 1);
+      if (!subject) return { subjectId: null, found: false, navigated: false };
+      const navigated = subject.id !== args.subjectId;
+      if (navigated) args.navigateSubject(subject.id);
+      return { subjectId: subject.id, found: true, navigated };
+    },
+  );
+
+  actions.register(
+    createActionDescriptor(
+      TIMESERIES_ACTIONS.subjectPrevious,
+      subjectRef,
+      "Navigate to the previous patient in the dataset.",
+    ),
+    () => {
+      const subject = getRelativeSubject(args, -1);
+      if (!subject) return { subjectId: null, found: false, navigated: false };
+      const navigated = subject.id !== args.subjectId;
+      if (navigated) args.navigateSubject(subject.id);
+      return { subjectId: subject.id, found: true, navigated };
+    },
+  );
+
+  actions.register(
+    createActionDescriptor(TIMESERIES_ACTIONS.subjectSet, subjectRef, "Navigate to a patient by subject id.", {
+      subjectId: { type: "string", enum: getSubjectIdOptions(args) },
+    }),
+    (params) => {
+      const subject = getSubjectFromParams(args, params);
+      if (!subject) return { subjectId: getSubjectIdParam(params), found: false, navigated: false };
+      const navigated = subject.id !== args.subjectId;
+      if (navigated) args.navigateSubject(subject.id);
+      return { subjectId: subject.id, found: true, navigated };
     },
   );
 
@@ -146,8 +197,8 @@ export function registerVacpTimeseries(args: RegisterVacpTimeseriesArgs): () => 
     sessionKey: `${VACP_APP_ID}:${TIMESERIES_CHART_ID}`,
     actions,
     snapshots: {
-      getCapabilities: () => buildCapabilitiesSnapshot(args, refPrefix, channelRef, windowRef),
-      getState: () => buildStateSnapshot(args, refPrefix, channelRef, windowRef),
+      getCapabilities: () => buildCapabilitiesSnapshot(args, refPrefix, subjectRef, channelRef, windowRef),
+      getState: () => buildStateSnapshot(args, refPrefix, subjectRef, channelRef, windowRef),
     },
   });
 
@@ -163,10 +214,12 @@ export function registerVacpTimeseries(args: RegisterVacpTimeseriesArgs): () => 
 function buildCapabilitiesSnapshot(
   args: RegisterVacpTimeseriesArgs,
   refPrefix: VacpRef,
+  subjectRef: VacpRef,
   channelRef: VacpRef,
   windowRef: VacpRef,
 ): VacpCapabilitiesSnapshot {
   const windowCount = args.inferenceResult?.predictions.length ?? 0;
+  const subjectIds = getSubjectIdOptions(args);
   return {
     version: VACP_SCHEMA_VERSION,
     createdAt: nowIso(),
@@ -182,11 +235,19 @@ function buildCapabilitiesSnapshot(
           data: {
             datasetId: args.datasetId,
             subjectId: args.subjectId,
+            subjectIds,
+            patientCount: args.subjects.length,
             source: args.source,
             availableChannels: args.availableChannels,
             windowCount,
             predictedLabels: getPredictionLabelOptions(args),
           },
+        },
+        {
+          ref: subjectRef,
+          kind: "InteractionTarget",
+          layer: "InteractionFeedbackLayer",
+          title: "Selected patient",
         },
         {
           ref: channelRef,
@@ -203,6 +264,7 @@ function buildCapabilitiesSnapshot(
       ],
       edges: [
         { from: VACP_APP_REF, to: refPrefix, kind: "contains" },
+        { from: refPrefix, to: subjectRef, kind: "contains" },
         { from: refPrefix, to: channelRef, kind: "contains" },
         { from: refPrefix, to: windowRef, kind: "contains" },
       ],
@@ -212,6 +274,15 @@ function buildCapabilitiesSnapshot(
           refPrefix,
           "Return to this dataset's patient directory.",
         ),
+        createActionDescriptor(TIMESERIES_ACTIONS.subjectNext, subjectRef, "Navigate to the next patient in the dataset."),
+        createActionDescriptor(
+          TIMESERIES_ACTIONS.subjectPrevious,
+          subjectRef,
+          "Navigate to the previous patient in the dataset.",
+        ),
+        createActionDescriptor(TIMESERIES_ACTIONS.subjectSet, subjectRef, "Navigate to a patient by subject id.", {
+          subjectId: { type: "string", enum: subjectIds },
+        }),
         createActionDescriptor(TIMESERIES_ACTIONS.channelNext, channelRef, "Select the next EEG channel."),
         createActionDescriptor(TIMESERIES_ACTIONS.channelPrevious, channelRef, "Select the previous EEG channel."),
         createActionDescriptor(TIMESERIES_ACTIONS.channelSet, channelRef, "Select a specific EEG channel.", {
@@ -244,12 +315,15 @@ function buildCapabilitiesSnapshot(
 function buildStateSnapshot(
   args: RegisterVacpTimeseriesArgs,
   refPrefix: VacpRef,
+  subjectRef: VacpRef,
   channelRef: VacpRef,
   windowRef: VacpRef,
 ): VacpStateSnapshot {
   const windows = args.inferenceResult?.predictions ?? [];
   const selectedWindow =
     args.lockedPredictionWindowIndex === null ? null : (windows[args.lockedPredictionWindowIndex] ?? null);
+  const subjectIds = getSubjectIdOptions(args);
+  const currentSubjectIndex = subjectIds.indexOf(args.subjectId);
 
   return {
     version: VACP_SCHEMA_VERSION,
@@ -258,6 +332,11 @@ function buildStateSnapshot(
       [refPrefix]: {
         datasetId: args.datasetId,
         subjectId: args.subjectId,
+        subjectIds,
+        patientCount: args.subjects.length,
+        currentSubjectIndex: currentSubjectIndex === -1 ? null : currentSubjectIndex,
+        previousSubjectId: getRelativeSubject(args, -1)?.id ?? null,
+        nextSubjectId: getRelativeSubject(args, 1)?.id ?? null,
         source: args.source,
         activeChannels: args.activeChannels,
         availableChannels: args.availableChannels,
@@ -276,6 +355,11 @@ function buildStateSnapshot(
               confidence: selectedWindow.confidence,
             }
           : null,
+      },
+      [subjectRef]: {
+        subjectId: args.subjectId,
+        subjectIds,
+        currentSubjectIndex: currentSubjectIndex === -1 ? null : currentSubjectIndex,
       },
       [channelRef]: { activeChannels: args.activeChannels, hoveredChannel: args.hoveredChannel },
       [windowRef]: {
@@ -321,6 +405,18 @@ function getRelativeChannel(args: RegisterVacpTimeseriesArgs, direction: 1 | -1)
   const currentIndex = current ? channels.indexOf(current) : -1;
   const nextIndex = (currentIndex + direction + channels.length) % channels.length;
   return channels[nextIndex] ?? null;
+}
+
+function getRelativeSubject(args: RegisterVacpTimeseriesArgs, direction: 1 | -1): TimeseriesSubjectInfo | null {
+  if (!args.subjects.length) return null;
+  const currentIndex = args.subjects.findIndex((subject) => subject.id === args.subjectId);
+  const nextIndex =
+    currentIndex === -1
+      ? direction === 1
+        ? 0
+        : args.subjects.length - 1
+      : (currentIndex + direction + args.subjects.length) % args.subjects.length;
+  return args.subjects[nextIndex] ?? null;
 }
 
 function getRelativeWindowIndex(args: RegisterVacpTimeseriesArgs, direction: 1 | -1): number | null {
@@ -432,6 +528,26 @@ function getChannelParam(params: unknown): ChannelId | null {
   return typeof channel === "string" && channel.length ? channel : null;
 }
 
+function getSubjectFromParams(args: RegisterVacpTimeseriesArgs, params: unknown): TimeseriesSubjectInfo | null {
+  const subjectId = getSubjectIdParam(params);
+  if (!subjectId) return null;
+  return args.subjects.find((subject) => subject.id === subjectId) ?? null;
+}
+
+function getSubjectIdParam(params: unknown): string | null {
+  if (!params || typeof params !== "object" || Array.isArray(params)) return null;
+  const raw = params as { subjectId?: unknown; patientId?: unknown; id?: unknown };
+  const subjectId =
+    typeof raw.subjectId === "string" && raw.subjectId.length
+      ? raw.subjectId
+      : typeof raw.patientId === "string" && raw.patientId.length
+        ? raw.patientId
+        : typeof raw.id === "string" && raw.id.length
+          ? raw.id
+          : null;
+  return subjectId;
+}
+
 function getWindowIndexParam(params: unknown): number | null {
   if (!params || typeof params !== "object" || Array.isArray(params)) return null;
   const windowIndex = (params as { windowIndex?: unknown }).windowIndex;
@@ -483,6 +599,10 @@ function getPredictionLabelOptions(args: RegisterVacpTimeseriesArgs): string[] {
   });
   args.inferenceResult?.predictions.forEach((prediction) => labels.add(prediction.predicted_label));
   return Array.from(labels).filter(Boolean);
+}
+
+function getSubjectIdOptions(args: RegisterVacpTimeseriesArgs): string[] {
+  return args.subjects.map((subject) => subject.id).filter(Boolean);
 }
 
 function getMatchingPredictionLabels(args: RegisterVacpTimeseriesArgs, requestedLabel: string): string[] {
