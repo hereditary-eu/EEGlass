@@ -518,7 +518,7 @@
   align-items: center;
   overflow: hidden;
   border: 1px solid #d7e0e8;
-  border-radius: 6px;
+  border-radius: 8px;
   background: rgb(255 255 255 / 82%);
 }
 
@@ -552,13 +552,14 @@
   display: inline-flex;
   flex: 0 0 auto;
   overflow: hidden;
-  border: 1px solid #c8d4de;
-  border-radius: 5px;
-  background: #ffffff;
+  border: 1px solid #d7e0e8;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 82%);
 }
 
 .topology-bandpower-range-switch button {
   border: 0;
+  border-right: 1px solid #d7e0e8;
   border-radius: 0;
   background: transparent;
   color: #5d6b78;
@@ -567,6 +568,10 @@
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
+}
+
+.topology-bandpower-range-switch button:last-child {
+  border-right: 0;
 }
 
 .topology-bandpower-range-switch button:hover {

@@ -275,6 +275,8 @@ export function EmbeddingIntrospectionPanel({
             onToggleExpanded={() => setIsTableExpanded((current) => !current)}
             menuOptions={{ canSort: true, canHide: true }}
             shapleyValues={shapleyValues}
+            numericDisplayPrecision={4}
+            numericDisplayColumns={featureColumns}
           />
         </section>
         {showCorrelationHeatmap && activeFeaturePair ? (

@@ -77,6 +77,8 @@ export interface DataTableProps {
     canHide?: boolean;
   };
   shapleyValues?: ShapleyValueItem[] | null;
+  numericDisplayPrecision?: number;
+  numericDisplayColumns?: string[];
 }
 
 type ColumnType = "number" | "string" | "mixed";
@@ -107,6 +109,8 @@ const DataTable: React.FC<DataTableProps> = ({
     canHide: true,
   },
   shapleyValues,
+  numericDisplayPrecision,
+  numericDisplayColumns,
 }) => {
   const [internalSelectedColumns, setInternalSelectedColumns] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ id: string; desc: boolean } | null>(null);
@@ -308,6 +312,26 @@ const DataTable: React.FC<DataTableProps> = ({
     return featureImportanceMap?.get(featureName) ?? null;
   };
   const resolvedSelectedColumns = selectedColumns ?? internalSelectedColumns;
+  const numericDisplayColumnSet = useMemo(
+    () => (numericDisplayColumns ? new Set(numericDisplayColumns) : null),
+    [numericDisplayColumns],
+  );
+  const formatCellValue = (value: DataRow[string], columnId: string): string => {
+    if (value == null) {
+      return "";
+    }
+
+    if (
+      typeof value === "number" &&
+      Number.isFinite(value) &&
+      typeof numericDisplayPrecision === "number" &&
+      (numericDisplayColumnSet === null || numericDisplayColumnSet.has(columnId))
+    ) {
+      return value.toFixed(numericDisplayPrecision);
+    }
+
+    return String(value);
+  };
 
   return (
     <div className={`${rootClass} ${styles.tablePanelContent}`}>
@@ -432,7 +456,7 @@ const DataTable: React.FC<DataTableProps> = ({
                   >
                     {visibleColumns.map((columnId) => {
                       const cellValue = row[columnId];
-                      const displayValue = cellValue == null ? "" : String(cellValue);
+                      const displayValue = formatCellValue(cellValue, columnId);
                       const heatmapStyle =
                         typeof cellValue === "number" ? getCellStyle(cellValue, columnId) : undefined;
 

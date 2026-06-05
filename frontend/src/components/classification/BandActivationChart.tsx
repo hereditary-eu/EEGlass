@@ -4,7 +4,7 @@ import type { View } from "vega";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
 
-import { formatCompactClassLabel, getModelBandLabel } from "../../constants/eegModel";
+import { formatCompactClassLabel, getEmbeddingClassColors, getModelBandLabel } from "../../constants/eegModel";
 import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../../constants/eegModelNotation";
 import type {
   ModelClassEvidenceContribution,
@@ -297,6 +297,7 @@ export function BandActivationChart({
           <div className="classification-band-activation-class-selector" aria-label="Band activation class multiplier">
             {classLabels.map((classLabel) => {
               const isSelected = classLabel === selectedClassLabel;
+              const colors = getEmbeddingClassColors(classLabel, modelInfo?.classes);
               return (
                 <button
                   key={classLabel}
@@ -304,6 +305,11 @@ export function BandActivationChart({
                   className={`classification-band-activation-class-button${
                     isSelected ? " classification-band-activation-class-button--active" : ""
                   }`}
+                  style={
+                    isSelected
+                      ? { backgroundColor: colors.fill, color: colors.stroke, borderColor: colors.stroke }
+                      : { borderColor: colors.fill }
+                  }
                   title={isSelected ? "Clear class multiplier" : `Apply ${classLabel} dense multipliers`}
                   onClick={() => setSelectedClassLabel((current) => (current === classLabel ? null : classLabel))}
                 >

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { View } from "vega";
 import embed from "vega-embed";
 import type { VisualizationSpec } from "vega-embed";
@@ -7,8 +7,8 @@ import { resizeVegaView, useVegaLayoutResize } from "../../utils/vegaLayout";
 
 export type CorrelationHeatmapDatum = Record<string, string | number | boolean | null | undefined>;
 
-const HEATMAP_CELL_WIDTH = 52;
-const HEATMAP_CELL_HEIGHT = 28;
+const DEFAULT_HEATMAP_HEIGHT = 260;
+const MIN_HEATMAP_HEIGHT = 120;
 
 interface CorrelationCell {
   a: string;
@@ -34,7 +34,28 @@ export function NeuroHeatmapPlot({
 }: NeuroHeatmapPlotProps) {
   const heatmapRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
+  const [plotHeight, setPlotHeight] = useState(DEFAULT_HEATMAP_HEIGHT);
   useVegaLayoutResize(viewRef);
+
+  useEffect(() => {
+    const container = heatmapRef.current;
+    if (!container) {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      if (!entry) {
+        return;
+      }
+
+      const nextHeight = Math.max(MIN_HEATMAP_HEIGHT, Math.floor(entry.contentRect.height));
+      setPlotHeight((current) => (current !== nextHeight ? nextHeight : current));
+      resizeVegaView(viewRef.current);
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   useEffect(() => {
     const container = heatmapRef.current;
@@ -60,8 +81,13 @@ export function NeuroHeatmapPlot({
 
     const spec: VisualizationSpec = {
       $schema: "https://vega.github.io/schema/vega-lite/v6.json",
-      width: { step: HEATMAP_CELL_WIDTH },
-      height: { step: HEATMAP_CELL_HEIGHT },
+      width: "container",
+      height: plotHeight,
+      autosize: {
+        type: "fit",
+        contains: "padding",
+        resize: true,
+      },
       background: "transparent",
       data: { values: correlations },
       resolve: {
@@ -169,9 +195,9 @@ export function NeuroHeatmapPlot({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [patientsData, covariateFeatures, onSelectedFeaturesChange, selectedFeatures]);
+  }, [patientsData, covariateFeatures, onSelectedFeaturesChange, plotHeight, selectedFeatures]);
 
-  return <div ref={heatmapRef} />;
+  return <div className="correlation-heatmap-plot" ref={heatmapRef} />;
 }
 
 function correlationForFeaturePair(rows: CorrelationHeatmapDatum[], first: string, second: string): number {
