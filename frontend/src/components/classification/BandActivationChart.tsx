@@ -131,7 +131,7 @@ export function BandActivationChart({
     }
 
     container.innerHTML = "";
-    if (plotHeight <= 0) {
+    if (!values.length || plotHeight <= 0) {
       viewRef.current = null;
       return;
     }
@@ -146,7 +146,7 @@ export function BandActivationChart({
         resize: true,
       },
       background: "transparent",
-      data: { name: ACTIVATION_DATA_NAME, values: [] },
+      data: { name: ACTIVATION_DATA_NAME, values },
       layer: [
         {
           mark: {
@@ -240,7 +240,7 @@ export function BandActivationChart({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [activationScaleDomain, activationScaleDomainKey, plotHeight]);
+  }, [activationScaleDomain, activationScaleDomainKey, plotHeight, values.length]);
 
   useEffect(() => {
     const view = viewRef.current;

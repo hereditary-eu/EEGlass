@@ -522,6 +522,11 @@
   background: rgb(255 255 255 / 82%);
 }
 
+.topology-bandpower-cohort-selector--reserved {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .topology-bandpower-cohort-button {
   border: 0;
   border-right: 1px solid #d7e0e8;
@@ -592,6 +597,9 @@
   position: relative;
   min-width: 0;
   min-height: 0;
+  height: 100%;
+  display: grid;
+  overflow: hidden;
 }
 
 .topology-bandpower-plot {
@@ -599,10 +607,20 @@
   min-height: 0;
   width: 100%;
   height: 100%;
+  display: grid;
 }
 
-.topology-bandpower-plot > div {
+.topology-bandpower-plot > div,
+.topology-bandpower-plot .vega-embed {
   width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.topology-bandpower-plot svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .topology-bandpower-overlay {

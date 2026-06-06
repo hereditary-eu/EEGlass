@@ -128,6 +128,12 @@ export function TotalBandPowerChart({
     () => new Map((activeStatsChannel?.bands ?? []).map((band) => [band.band, band])),
     [activeStatsChannel],
   );
+  const classLabels = useMemo(() => getModelClassLabels(modelClasses), [modelClasses]);
+  const displayedCohortLabel = bandPowerStats?.mode === "inter_patient" ? (bandPowerStats.cohort_label ?? null) : null;
+  const rangeColors = useMemo(
+    () => getRangeColors(displayedCohortLabel, modelClasses),
+    [displayedCohortLabel, modelClasses],
+  );
 
   const values = useMemo(
     () =>
@@ -143,21 +149,20 @@ export function TotalBandPowerChart({
           upper2SigmaDb: stats?.upper_2sigma_db ?? null,
           meanDb: stats?.mean_db ?? null,
           statsSampleCount: stats?.sample_count ?? null,
+          rangeFill: rangeColors.fill,
+          rangeStroke: rangeColors.stroke,
           percent: band.relative_power * 100,
           range: `${band.start_hz.toFixed(1)}-${band.end_hz.toFixed(1)} Hz`,
         };
       }),
-    [activeChannel, modelBands, statsByBand],
+    [activeChannel, modelBands, rangeColors.fill, rangeColors.stroke, statsByBand],
   );
+  const hasReferenceRange = values.some(
+    (value) => Number.isFinite(value.lower2SigmaDb) && Number.isFinite(value.upper2SigmaDb),
+  );
+  const hasReferenceMean = values.some((value) => Number.isFinite(value.meanDb));
   const valuesRef = useRef<typeof values>([]);
-  const hasStats = values.some((value) => value.lower2SigmaDb !== null && value.upper2SigmaDb !== null);
   const status = getBandPowerStatus({ bandPower, error, isLoading, isLoadingStats, statsError });
-  const classLabels = useMemo(() => getModelClassLabels(modelClasses), [modelClasses]);
-  const displayedCohortLabel = bandPowerStats?.mode === "inter_patient" ? (bandPowerStats.cohort_label ?? null) : null;
-  const rangeColors = useMemo(
-    () => getRangeColors(displayedCohortLabel, modelClasses),
-    [displayedCohortLabel, modelClasses],
-  );
 
   useEffect(() => {
     valuesRef.current = values;
@@ -224,16 +229,21 @@ export function TotalBandPowerChart({
       background: "transparent",
       data: { name: BAND_POWER_DATA_NAME, values },
       layer: [
-        ...(hasStats
+        ...(hasReferenceRange
           ? [
               {
                 mark: {
                   type: "area" as const,
                   interpolate: "monotone" as const,
-                  fill: rangeColors.fill,
                 },
                 encoding: {
                   x: createBandAxisEncoding(),
+                  color: {
+                    field: "rangeFill",
+                    type: "nominal" as const,
+                    scale: null,
+                    legend: null,
+                  },
                   y: {
                     field: "lower2SigmaDb",
                     type: "quantitative" as const,
@@ -243,16 +253,25 @@ export function TotalBandPowerChart({
                   y2: { field: "upper2SigmaDb" },
                 },
               },
+            ]
+          : []),
+        ...(hasReferenceMean
+          ? [
               {
                 mark: {
                   type: "line" as const,
                   interpolate: "monotone" as const,
-                  color: rangeColors.stroke,
                   strokeDash: [4, 3],
                   strokeWidth: 1.5,
                 },
                 encoding: {
                   x: createBandAxisEncoding(),
+                  color: {
+                    field: "rangeStroke",
+                    type: "nominal" as const,
+                    scale: null,
+                    legend: null,
+                  },
                   y: {
                     field: "meanDb",
                     type: "quantitative" as const,
@@ -297,7 +316,7 @@ export function TotalBandPowerChart({
             ],
           },
         },
-        createBandPowerLegendLayer(rangeColors, hasStats),
+        createBandPowerLegendLayer(),
       ],
       config: {
         view: { stroke: null },
@@ -395,7 +414,7 @@ export function TotalBandPowerChart({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [error, hasStats, plotHeight, rangeColors.fill, rangeColors.stroke, values.length]);
+  }, [error, hasReferenceMean, hasReferenceRange, plotHeight, values.length]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -470,8 +489,14 @@ export function TotalBandPowerChart({
                   Inter
                 </button>
               </div>
-              {bandPowerStatsMode === "inter_patient" && classLabels.length ? (
-                <div className="topology-bandpower-cohort-selector" aria-label="Inter-patient cohort range">
+              {classLabels.length ? (
+                <div
+                  className={`topology-bandpower-cohort-selector${
+                    bandPowerStatsMode === "inter_patient" ? "" : " topology-bandpower-cohort-selector--reserved"
+                  }`}
+                  aria-label="Inter-patient cohort range"
+                  aria-hidden={bandPowerStatsMode !== "inter_patient"}
+                >
                   {classLabels.map((classLabel) => {
                     const isSelected = classLabel === bandPowerStatsCohortLabel;
                     const colors = getEmbeddingClassColors(classLabel, modelClasses);
@@ -549,9 +574,7 @@ function createPowerScale() {
   };
 }
 
-function createBandPowerLegendLayer(rangeColors: { fill: string; stroke: string }, includeStats: boolean) {
-  const seriesDomain = includeStats ? [...LEGEND_SERIES_DOMAIN] : [SELECTED_WINDOW_SERIES];
-
+function createBandPowerLegendLayer() {
   return {
     data: { values: [] },
     mark: {
@@ -564,8 +587,8 @@ function createBandPowerLegendLayer(rangeColors: { fill: string; stroke: string 
         field: LEGEND_SERIES_FIELD,
         type: "nominal" as const,
         scale: {
-          domain: seriesDomain,
-          range: includeStats ? ["#0e7490", "transparent", rangeColors.fill] : ["#0e7490"],
+          domain: [...LEGEND_SERIES_DOMAIN],
+          range: ["#0e7490", "transparent", DEFAULT_RANGE_FILL],
         },
         legend: createBandPowerLegend(),
       },
@@ -573,24 +596,24 @@ function createBandPowerLegendLayer(rangeColors: { fill: string; stroke: string 
         field: LEGEND_SERIES_FIELD,
         type: "nominal" as const,
         scale: {
-          domain: seriesDomain,
-          range: includeStats ? ["#064e56", rangeColors.stroke, rangeColors.fill] : ["#064e56"],
+          domain: [...LEGEND_SERIES_DOMAIN],
+          range: ["#064e56", DEFAULT_RANGE_STROKE, DEFAULT_RANGE_FILL],
         },
       },
       shape: {
         field: LEGEND_SERIES_FIELD,
         type: "nominal" as const,
         scale: {
-          domain: seriesDomain,
-          range: includeStats ? ["circle", "stroke", "square"] : ["circle"],
+          domain: [...LEGEND_SERIES_DOMAIN],
+          range: ["circle", "stroke", "square"],
         },
       },
       strokeDash: {
         field: LEGEND_SERIES_FIELD,
         type: "nominal" as const,
         scale: {
-          domain: seriesDomain,
-          range: includeStats ? [[1, 0], [4, 3], [1, 0]] : [[1, 0]],
+          domain: [...LEGEND_SERIES_DOMAIN],
+          range: [[1, 0], [4, 3], [1, 0]],
         },
       },
     },
