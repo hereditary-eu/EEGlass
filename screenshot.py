@@ -107,7 +107,7 @@ save_screenshot("overview-with-vacp-panel-open.pdf")
 screenshot_element(".vacp-debug-ui-panel", "vacp-panel.pdf")
 
 driver.get("http://localhost:3000/datasets/ds004504/patients/sub-001")
-save_screenshot("patient_view.pdf")
+save_screenshot("patient-view.pdf")
 
 driver.get("http://localhost:8000/docs")
 save_screenshot("api-docs.pdf")
