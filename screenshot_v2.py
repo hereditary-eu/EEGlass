@@ -101,15 +101,28 @@ def crop_pdf_to_rect(
         right_padding = padding_px if padding_right_px is None else padding_right_px
         top_padding = padding_px if padding_top_px is None else padding_top_px
         bottom_padding = padding_px if padding_bottom_px is None else padding_bottom_px
-        source_page_rect = source_pdf[0].rect
-        x0 = max(source_page_rect.x0, (rect["left"] - left_padding) * PX_TO_PT)
-        y0 = max(source_page_rect.y0, (rect["top"] - top_padding) * PX_TO_PT)
-        x1 = min(source_page_rect.x1, (rect["left"] + rect["width"] + right_padding) * PX_TO_PT)
-        y1 = min(source_page_rect.y1, (rect["top"] + rect["height"] + bottom_padding) * PX_TO_PT)
-
-        # Redrawing through PyMuPDF clips the page contents, so off-clip objects are pruned
-        # instead of merely hidden behind a cropbox.
+        full = source_pdf[0].rect
+        x0 = max(full.x0, (rect["left"] - left_padding) * PX_TO_PT)
+        y0 = max(full.y0, (rect["top"] - top_padding) * PX_TO_PT)
+        x1 = min(full.x1, (rect["left"] + rect["width"] + right_padding) * PX_TO_PT)
+        y1 = min(full.y1, (rect["top"] + rect["height"] + bottom_padding) * PX_TO_PT)
         clip = pymupdf.Rect(x0, y0, x1, y1)
+
+        # Redact the four strips outside the clip so their content is truly removed
+        # from the stream (not just hidden), making the result clean in Inkscape.
+        for strip in [
+            pymupdf.Rect(full.x0, full.y0, full.x1, clip.y0),
+            pymupdf.Rect(full.x0, clip.y1, full.x1, full.y1),
+            pymupdf.Rect(full.x0, clip.y0, clip.x0, clip.y1),
+            pymupdf.Rect(clip.x1, clip.y0, full.x1, clip.y1),
+        ]:
+            if not strip.is_empty:
+                source_pdf[0].add_redact_annot(strip)
+        source_pdf[0].apply_redactions(
+            images=pymupdf.PDF_REDACT_IMAGE_PIXELS,
+            graphics=pymupdf.PDF_REDACT_LINE_ART_REMOVE_IF_COVERED,
+        )
+
         cropped_page = cropped_pdf.new_page(width=clip.width, height=clip.height)
         cropped_page.show_pdf_page(cropped_page.rect, source_pdf, 0, clip=clip)
         return cropped_pdf.tobytes(garbage=4, deflate=True)
