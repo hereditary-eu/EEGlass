@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import base64
 import json
-import os
 import time
 import traceback
 from pathlib import Path
@@ -33,17 +32,9 @@ OUTPUT_DIR = Path("paper/figures/generated")
 APP_URL = "http://localhost:3000"
 PATIENT_URL = f"{APP_URL}/datasets/ds004504/patients/sub-023"
 
-OUTPUT_OVERVIEW = "overview.pdf"
-OUTPUT_PATIENT_VIEW = "patient_view.pdf"
-OUTPUT_VACP_OVERLAY = "vacp-panel.pdf"
-OUTPUT_INTROSPECTION = "introspection.pdf"
-OUTPUT_TBP_COMPONENT = "total-bandpower.pdf"
-
-
-
 
 chrome_options = Options()
-chrome_options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+chrome_options.binary_location = "/usr/bin/brave-browser"
 
 chrome_options.add_argument("--start-maximized")
 chrome_options.add_argument("--disable-infobars")
@@ -71,6 +62,7 @@ PDF_PARAMS = {
     "marginRight": 0,
     "pageRanges": "1",
 }
+
 
 def save_screenshot(filename: str, pdf_params=PDF_PARAMS):
     try:
@@ -192,7 +184,9 @@ def close_vacp_chat_settings_if_open():
     if not driver.find_elements(By.CSS_SELECTOR, "[data-vacp-chat-settings-panel='1']"):
         return
 
-    close_buttons = driver.find_elements(By.CSS_SELECTOR, "[data-vacp-chat-settings-panel='1'] [aria-label='Close settings']")
+    close_buttons = driver.find_elements(
+        By.CSS_SELECTOR, "[data-vacp-chat-settings-panel='1'] [aria-label='Close settings']"
+    )
     if close_buttons:
         try:
             close_buttons[0].click()
@@ -240,9 +234,9 @@ def select_patient_window(window_number: int):
         raise RuntimeError(f"Unable to select patient window {window_number}: {result}")
 
     wait.until(
-        lambda active_driver: f"Window {window_number}:" in active_driver.find_element(
-            By.CSS_SELECTOR, ".timeseries-slot-subtitle"
-        ).text
+        lambda active_driver: (
+            f"Window {window_number}:" in active_driver.find_element(By.CSS_SELECTOR, ".timeseries-slot-subtitle").text
+        )
     )
     time.sleep(1)
 
@@ -305,7 +299,7 @@ def capture_overview():
     wait_for_visible(".overview-panel")
     click_when_ready(".overview-dataset-row .overview-drill-button")
     wait_for_visible(".overview-patient-list")
-    save_screenshot(OUTPUT_OVERVIEW)
+    save_screenshot("overview.pdf")
 
 
 def open_patient_view():
@@ -318,7 +312,7 @@ def open_patient_view():
 def capture_patient_view():
     print("Capturing patient view")
     driver.set_window_size(SCREEN_WIDTH, SCREEN_HEIGHT)
-    save_screenshot(OUTPUT_PATIENT_VIEW)
+    save_screenshot("patient-view.pdf")
 
 
 def capture_introspection_view():
@@ -346,7 +340,7 @@ def capture_introspection_view():
 
         screenshot_element(
             ".embedding-introspection-dialog",
-            OUTPUT_INTROSPECTION,
+            "introspection.pdf",
             introspection_pdf_params,
             padding_top_px=INTROSPECTION_CROP_VERTICAL_PADDING_PX,
             padding_bottom_px=INTROSPECTION_CROP_VERTICAL_PADDING_PX,
@@ -367,12 +361,10 @@ def capture_total_band_power():
     print("Capturing total band power")
     driver.set_window_size(SCREEN_WIDTH, SCREEN_HEIGHT)
 
-    tbp_slot_selector = "article.patient-view-slot:has(> .topology-bandpower)" # select the containing article of the total band power slot
+    tbp_slot_selector = "article.patient-view-slot:has(> .topology-bandpower)"  # select the containing article of the total band power slot
     tbp_screenshot_layout_style_id = "tbp-screenshot-layout-order"
-    
-    
+
     # switches the top row and bottom row of the patient view panel
-    
 
     driver.execute_script(
         """
@@ -415,13 +407,15 @@ def capture_total_band_power():
     wait_for_visible(".topology-bandpower-cohort-selector")
     click_button_with_text(".topology-bandpower-cohort-selector", "H")
     wait.until(
-        lambda active_driver: "H patient means"
-        in active_driver.find_element(By.CSS_SELECTOR, ".topology-bandpower-range-controls > span").text
+        lambda active_driver: (
+            "H patient means"
+            in active_driver.find_element(By.CSS_SELECTOR, ".topology-bandpower-range-controls > span").text
+        )
     )
     wait_for_visible(".topology-bandpower-plot svg")
     time.sleep(1)
 
-    screenshot_element(tbp_slot_selector, OUTPUT_TBP_COMPONENT)
+    screenshot_element(tbp_slot_selector, "total-bandpower.pdf")
 
     # restore the patient view panel rows
     driver.execute_script(
@@ -438,18 +432,16 @@ def capture_vacp_panel():
     driver.set_window_size(SCREEN_WIDTH, SCREEN_HEIGHT)
     time.sleep(1)
     prepare_vacp_chat_prompt(
-        "Using the active patient view, select the predicted window whose predicted class is Healthy (H) "
-        "and whose confidence is highest."
+        "In the active patient view, take the highest confidence time window predicted as healthy."
     )
     time.sleep(1)
     screenshot_element(
         ".vacp-debug-ui-panel",
-        OUTPUT_VACP_OVERLAY,
-        padding_px=CROP_PADDING_PX,
-        padding_left_px=-14.0,
-        padding_right_px=14.0,
-        padding_bottom_px=-4.0,
-        padding_top_px=0.0,
+        "vacp-panel.pdf",
+        padding_left_px=1.0,
+        padding_right_px=-2.0,
+        padding_bottom_px=-2.0,
+        padding_top_px=1.0,
     )
 
 
@@ -462,7 +454,6 @@ capture_patient_view()
 capture_introspection_view()
 capture_total_band_power()
 capture_vacp_panel()
-
 
 driver.close()
 driver.quit()

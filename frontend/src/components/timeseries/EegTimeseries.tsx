@@ -79,10 +79,10 @@ const WINDOW_ANNOTATION_ROW_HEIGHT = 14;
 const WINDOW_ANNOTATION_ROW_GAP = 3;
 const WINDOW_ANNOTATION_TOP_GAP = 8;
 const DEFAULT_WINDOW_SIZE_SECONDS = 4;
-const WINDOW_ANNOTATION_FONT = "10px Inter, Segoe UI, sans-serif";
+const WINDOW_ANNOTATION_FONT = "10px Helvetica Neue, Helvetica, Arial, sans-serif";
 const WINDOW_ANNOTATION_TEXT_PADDING = 14;
 const WINDOW_ANNOTATION_MIN_LABEL_WIDTH = 42;
-const CHANNEL_LABEL_FONT = "11px Inter, Segoe UI, sans-serif";
+const CHANNEL_LABEL_FONT = "11px Helvetica Neue, Helvetica, Arial, sans-serif";
 const CHANNEL_LABEL_X = 32;
 const CHANNEL_COLORS = ["#0f6ea8", "#be185d", "#15803d", "#b45309", "#6d28d9"];
 const DEFAULT_WINDOW_ANNOTATION_ROWS: TimeseriesWindowAnnotationRow[] = [];
@@ -703,7 +703,7 @@ function drawWindowAnnotationRows(
   });
 
   ctx.fillStyle = "#334155";
-  ctx.font = "11px Inter, Segoe UI, sans-serif";
+  ctx.font = "11px Helvetica Neue, Helvetica, Arial, sans-serif";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   normalizedRows.forEach((row, rowIndex) => {
@@ -872,7 +872,7 @@ function drawGridAndAxes(
   ctx.lineTo(geometry.width - PADDING.right, geometry.axisY);
   ctx.stroke();
 
-  ctx.font = "10px Inter, Segoe UI, sans-serif";
+  ctx.font = "10px Helvetica Neue, Helvetica, Arial, sans-serif";
   ctx.fillStyle = "#5d6b78";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";

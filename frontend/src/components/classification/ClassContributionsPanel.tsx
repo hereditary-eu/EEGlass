@@ -267,7 +267,7 @@ function ClassLogitPanel({ rows, compact = false }: { rows: ClassLogitDatum[]; c
           grid: false,
           ticks: false,
           labelColor: "#334155",
-          labelFont: "Inter, Segoe UI, sans-serif",
+          labelFont: "Helvetica Neue, Helvetica, Arial, sans-serif",
           labelFontSize: 10,
           labelFontWeight: 800,
           title: null,
