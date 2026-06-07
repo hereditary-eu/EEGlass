@@ -296,7 +296,7 @@ export function PatientEmbeddingScatterplot({
               ? `${embeddings.points.length} patients / ${embeddings.reduction.source_dimension}D source embedding`
               : undefined
           }
-          renderIntrospectionContent={() => (
+          renderIntrospectionContent={() =>
             isLoadingRawEmbeddings ? (
               <div className="embedding-introspection-empty">Loading raw embeddings...</div>
             ) : rawEmbeddingsError ? (
@@ -313,7 +313,7 @@ export function PatientEmbeddingScatterplot({
                 showCorrelationHeatmap
               />
             )
-          )}
+          }
           onIntrospectionOpen={loadRawEmbeddings}
           onPointClick={(point) => {
             if (typeof point.subjectId === "string") {

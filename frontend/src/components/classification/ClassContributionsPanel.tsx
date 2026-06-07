@@ -569,4 +569,3 @@ function getEvidenceStatus({
 
   return { status: "idle", label: "Class contributions idle" };
 }
-

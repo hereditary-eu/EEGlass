@@ -274,7 +274,11 @@ function buildCapabilitiesSnapshot(
           refPrefix,
           "Return to this dataset's patient directory.",
         ),
-        createActionDescriptor(TIMESERIES_ACTIONS.subjectNext, subjectRef, "Navigate to the next patient in the dataset."),
+        createActionDescriptor(
+          TIMESERIES_ACTIONS.subjectNext,
+          subjectRef,
+          "Navigate to the next patient in the dataset.",
+        ),
         createActionDescriptor(
           TIMESERIES_ACTIONS.subjectPrevious,
           subjectRef,

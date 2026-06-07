@@ -190,7 +190,10 @@ const Histogram: React.FC<HistogramProps> = ({
       .then((result) => {
         if (!finalized) {
           viewRef.current = result.view;
-          void result.view.resize().runAsync().catch(() => undefined);
+          void result.view
+            .resize()
+            .runAsync()
+            .catch(() => undefined);
         }
       })
       .catch(() => undefined);
@@ -213,7 +216,10 @@ const Histogram: React.FC<HistogramProps> = ({
     }
 
     const resizeObserver = new ResizeObserver(() => {
-      void viewRef.current?.resize().runAsync().catch(() => undefined);
+      void viewRef.current
+        ?.resize()
+        .runAsync()
+        .catch(() => undefined);
     });
 
     resizeObserver.observe(container);

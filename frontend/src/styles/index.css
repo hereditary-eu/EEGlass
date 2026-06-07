@@ -325,7 +325,8 @@ select {
     bottom: auto !important;
   }
 
-  html, body {
+  html,
+  body {
     height: 100%;
     overflow: hidden;
   }

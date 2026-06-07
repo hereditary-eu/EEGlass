@@ -181,11 +181,13 @@ export class ModelService {
   ): Promise<ModelFeatureImportanceResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelFeatureImportanceResponse>(
-      `${API_ROUTES.model.windowEmbeddingFeatureImportance(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({
-        source,
-        method,
-        target,
-      })}`,
+      `${API_ROUTES.model.windowEmbeddingFeatureImportance(datasetId, subjectId, resolvedModelName)}?${this.toQueryString(
+        {
+          source,
+          method,
+          target,
+        },
+      )}`,
     );
   }
 

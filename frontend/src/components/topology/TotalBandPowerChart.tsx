@@ -613,7 +613,11 @@ function createBandPowerLegendLayer() {
         type: "nominal" as const,
         scale: {
           domain: [...LEGEND_SERIES_DOMAIN],
-          range: [[1, 0], [4, 3], [1, 0]],
+          range: [
+            [1, 0],
+            [4, 3],
+            [1, 0],
+          ],
         },
       },
     },
