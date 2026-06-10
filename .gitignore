@@ -28,7 +28,6 @@ coverage
 .env.production.local
 .env.local
 
-
 # data
 data/datasets/
 
@@ -37,11 +36,8 @@ data/datasets/
 # data
 data/
 
-stuff/
-
+stuff
 local/
 *local*
-
-
 
 .vscode/tasks.json
