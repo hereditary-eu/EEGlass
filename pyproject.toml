@@ -29,11 +29,11 @@ torchaudio = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 
 [dependency-groups]
 dev = [
-  "ipykernel>=7.2.0",
+  "ipykernel>=7.3.0",
   "isort>=8.0.1",
   "mass-ts>=0.1.4",
   "pymupdf>=1.27.2.3",
-  "pypdf>=6.13.0",
+  "pypdf>=6.13.1",
   "ruff>=0.15.16",
   "selenium>=4.44.0",
   "selfeeg[interactive]>=0.2.1",
