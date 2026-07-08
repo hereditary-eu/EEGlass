@@ -1,5 +1,5 @@
-import { useCallback, useEffect } from "react";
-import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo } from "react";
+import { Link, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 
 import { BandActivationChart, ClassContributionsPanel } from "../components/classification";
 import { EegScalpTopologyPanel, TotalBandPowerChart } from "../components/topology";
@@ -7,16 +7,24 @@ import { getModelBandIds } from "../constants/eegModel";
 import { useTimeseriesData } from "../hooks/useTimeseriesData";
 import type { PatientViewOutletContext } from "../layouts/AppLayout";
 import { useAppStore } from "../stores/useAppStore";
+import type { TimeRange } from "../types";
 import { registerVacpTimeseries } from "../vacp/registerTimeseries";
 import { TimeseriesSlot } from "./TimeseriesSlot";
 import { WindowEmbeddingPanel } from "./WindowEmbeddingPanel";
 
 export function PatientView() {
   const { datasetId, subjectId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setPatientViewHeaderDetails } = useOutletContext<PatientViewOutletContext>();
-  const ts = useTimeseriesData({ datasetId, subjectId });
+  const timeseriesDisplayRange = useMemo(() => parseTimeseriesDisplayRange(searchParams), [searchParams]);
+  const ts = useTimeseriesData({ datasetId, subjectId, displayRange: timeseriesDisplayRange });
   const setSelectedScalpBand = useAppStore((state) => state.setSelectedScalpBand);
+  const setTimeseriesDisplayRange = useAppStore((state) => state.setTimeseriesDisplayRange);
+
+  useEffect(() => {
+    setTimeseriesDisplayRange(timeseriesDisplayRange);
+  }, [setTimeseriesDisplayRange, timeseriesDisplayRange]);
 
   const returnToPatientDirectory = useCallback(() => {
     if (!datasetId || !subjectId) {
@@ -273,4 +281,24 @@ function isEditableTarget(target: EventTarget | null): boolean {
 
   const tagName = target.tagName.toLowerCase();
   return target.isContentEditable || tagName === "input" || tagName === "textarea" || tagName === "select";
+}
+
+function parseTimeseriesDisplayRange(searchParams: URLSearchParams): TimeRange | null {
+  const startTime = parseOptionalPositiveNumber(searchParams.get("start_time"));
+  const endTime = parseOptionalPositiveNumber(searchParams.get("end_time"));
+
+  if (startTime === null || endTime === null || endTime <= startTime) {
+    return null;
+  }
+
+  return { start: startTime, end: endTime };
+}
+
+function parseOptionalPositiveNumber(value: string | null): number | null {
+  if (value === null || value.trim() === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }

@@ -8,6 +8,7 @@ export interface TimeseriesSlice {
   selectedTimeseriesSource: TimeseriesSource;
   selectedScalpBand: TimeseriesBandFilter;
   selectedTimeseriesBandFilter: TimeseriesBandFilter | null;
+  timeseriesDisplayRange: TimeRange | null;
   selectedTimeRange: TimeRange | null;
   hoveredPredictionWindowIndex: number | null;
   lockedPredictionWindowIndex: number | null;
@@ -16,6 +17,7 @@ export interface TimeseriesSlice {
   setSelectedTimeseriesSource: (source: TimeseriesSource) => void;
   setSelectedScalpBand: (band: TimeseriesBandFilter) => void;
   setSelectedTimeseriesBandFilter: (bandFilter: TimeseriesBandFilter | null) => void;
+  setTimeseriesDisplayRange: (timeRange: TimeRange | null) => void;
   setSelectedTimeRange: (timeRange: TimeRange | null) => void;
   setHoveredPredictionWindowIndex: (windowIndex: number | null) => void;
   setLockedPredictionWindowIndex: (windowIndex: number | null) => void;
@@ -27,6 +29,7 @@ export const createTimeseriesSlice: StateCreator<AppStoreState, [], [], Timeseri
   selectedTimeseriesSource: "derivatives",
   selectedScalpBand: "alpha",
   selectedTimeseriesBandFilter: null,
+  timeseriesDisplayRange: null,
   selectedTimeRange: null,
   hoveredPredictionWindowIndex: null,
   lockedPredictionWindowIndex: null,
@@ -35,6 +38,7 @@ export const createTimeseriesSlice: StateCreator<AppStoreState, [], [], Timeseri
   setSelectedTimeseriesSource: (selectedTimeseriesSource) => set({ selectedTimeseriesSource }),
   setSelectedScalpBand: (selectedScalpBand) => set({ selectedScalpBand }),
   setSelectedTimeseriesBandFilter: (selectedTimeseriesBandFilter) => set({ selectedTimeseriesBandFilter }),
+  setTimeseriesDisplayRange: (timeseriesDisplayRange) => set({ timeseriesDisplayRange }),
   setSelectedTimeRange: (selectedTimeRange) => set({ selectedTimeRange }),
   setHoveredPredictionWindowIndex: (hoveredPredictionWindowIndex) => set({ hoveredPredictionWindowIndex }),
   setLockedPredictionWindowIndex: (lockedPredictionWindowIndex) => set({ lockedPredictionWindowIndex }),

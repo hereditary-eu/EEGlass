@@ -4,6 +4,7 @@ import json
 import time
 import traceback
 from pathlib import Path
+from urllib.parse import urlencode
 
 import pymupdf
 from selenium import webdriver
@@ -26,15 +27,39 @@ INTROSPECTION_SCREEN_HEIGHT = 900
 INTROSPECTION_CROP_VERTICAL_PADDING_PX = 0.0
 
 PATIENT_VIEW_WINDOW_NUMBER = 53
+PATIENT_VIEW_WINDOW_SIZE_SECONDS = 4
+PATIENT_VIEW_RANGE_START_WINDOW = 37.5
+PATIENT_VIEW_RANGE_END_WINDOW = 62.5
 
 OUTPUT_DIR = Path("paper/figures/generated")
 
 APP_URL = "http://localhost:3000"
-PATIENT_URL = f"{APP_URL}/datasets/ds004504/patients/sub-023"
+
+
+def get_patient_view_time_range_from_windows() -> tuple[float, float]:
+    if PATIENT_VIEW_RANGE_START_WINDOW < 1:
+        raise ValueError("PATIENT_VIEW_RANGE_START_WINDOW is 1-based and must be at least 1")
+    if PATIENT_VIEW_RANGE_END_WINDOW < PATIENT_VIEW_RANGE_START_WINDOW:
+        raise ValueError("PATIENT_VIEW_RANGE_END_WINDOW must be greater than or equal to the start window")
+
+    start_time = (PATIENT_VIEW_RANGE_START_WINDOW - 1) * PATIENT_VIEW_WINDOW_SIZE_SECONDS
+    end_time = PATIENT_VIEW_RANGE_END_WINDOW * PATIENT_VIEW_WINDOW_SIZE_SECONDS
+    return float(start_time), float(end_time)
+
+
+def build_patient_url() -> str:
+    start_time, end_time = get_patient_view_time_range_from_windows()
+    query = urlencode({"start_time": start_time, "end_time": end_time})
+    return f"{APP_URL}/datasets/ds004504/patients/sub-023?{query}"
+
+
+PATIENT_URL = build_patient_url()
 
 
 chrome_options = Options()
-chrome_options.binary_location = "/usr/bin/brave-browser"
+# chrome_options.binary_location = "/usr/bin/brave-browser"
+chrome_options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+
 
 chrome_options.add_argument("--start-maximized")
 chrome_options.add_argument("--disable-infobars")

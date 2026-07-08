@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 
 import { useAppStore } from "../stores/useAppStore";
-import type { TimeseriesSource } from "../types";
+import type { TimeRange, TimeseriesSource } from "../types";
 import { DEFAULT_DATASET_ID, DEFAULT_SOURCE, DEFAULT_SUBJECT_ID } from "./timeseries/shared";
 import { useSelectedTimeseriesWindow } from "./timeseries/useSelectedTimeseriesWindow";
 import { useTimeseriesBandPower } from "./timeseries/useTimeseriesBandPower";
@@ -14,6 +14,7 @@ import { useTimeseriesSubjectSource } from "./timeseries/useTimeseriesSubjectSou
 interface UseTimeseriesDataOptions {
   datasetId?: string;
   subjectId?: string;
+  displayRange?: TimeRange | null;
 }
 
 export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
@@ -22,6 +23,7 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
   const selectedChannels = useAppStore((state) => state.selectedChannels);
   const source = useAppStore((state) => state.selectedTimeseriesSource);
   const selectedTimeseriesBandFilter = useAppStore((state) => state.selectedTimeseriesBandFilter);
+  const storedTimeseriesDisplayRange = useAppStore((state) => state.timeseriesDisplayRange);
   const selectedTimeRange = useAppStore((state) => state.selectedTimeRange);
   const hoveredPredictionWindowIndex = useAppStore((state) => state.hoveredPredictionWindowIndex);
   const lockedPredictionWindowIndex = useAppStore((state) => state.lockedPredictionWindowIndex);
@@ -32,6 +34,7 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
   const setHoveredPredictionWindowIndex = useAppStore((state) => state.setHoveredPredictionWindowIndex);
   const setLockedPredictionWindowIndex = useAppStore((state) => state.setLockedPredictionWindowIndex);
   const clearSelectedPredictionWindow = useAppStore((state) => state.clearSelectedPredictionWindow);
+  const displayRange = options.displayRange !== undefined ? options.displayRange : storedTimeseriesDisplayRange;
 
   const modelInfo = useTimeseriesModelInfo();
   const modelName = modelInfo?.name;
@@ -94,6 +97,7 @@ export function useTimeseriesData(options: UseTimeseriesDataOptions = {}) {
     source,
     selectedChannels,
     selectedTimeseriesBandFilter,
+    displayRange,
     channelsClearedByUser: channelsClearedByUserRef.current,
     setSelectedChannels,
     setHoveredChannel,
