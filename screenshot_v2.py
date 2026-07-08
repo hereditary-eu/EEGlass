@@ -19,6 +19,7 @@ PT_PER_INCH = 72
 PX_TO_PT = PT_PER_INCH / DPI
 CROP_PADDING_PX = 4.0
 PDF_SETTLE_SECONDS = 4
+PATIENT_SIGNAL_LOADED_SETTLE_SECONDS = 1
 
 SCREEN_WIDTH = 1728
 SCREEN_HEIGHT = 1094
@@ -28,8 +29,8 @@ INTROSPECTION_CROP_VERTICAL_PADDING_PX = 0.0
 
 PATIENT_VIEW_WINDOW_NUMBER = 53
 PATIENT_VIEW_WINDOW_SIZE_SECONDS = 4
-PATIENT_VIEW_RANGE_START_WINDOW = 37.5
-PATIENT_VIEW_RANGE_END_WINDOW = 62.5
+PATIENT_VIEW_RANGE_START_WINDOW = 26
+PATIENT_VIEW_RANGE_END_WINDOW = 75
 
 OUTPUT_DIR = Path("paper/figures/generated")
 
@@ -279,6 +280,49 @@ def select_patient_window(window_number: int):
     time.sleep(1)
 
 
+def wait_for_patient_signal_loaded():
+    print("Waiting for patient signal to finish loading")
+
+    def get_signal_state(active_driver):
+        return active_driver.execute_script(
+            """
+            const slot = document.querySelector(".timeseries-slot");
+            if (!slot) {
+              return { ready: false, reason: "missing timeseries slot" };
+            }
+
+            const indicator = slot.querySelector(".component-status-indicator");
+            const statusLabel = indicator?.getAttribute("aria-label") || indicator?.getAttribute("title") || "";
+            const statusTexts = [...slot.querySelectorAll(".timeseries-slot-status")]
+              .map((item) => item.textContent.trim())
+              .filter(Boolean);
+            const canvas = slot.querySelector(".eeg-timeseries-canvas");
+            const canvasRect = canvas?.getBoundingClientRect();
+            const canvasReady = Boolean(canvas && canvasRect && canvasRect.width > 0 && canvasRect.height > 0);
+            const hasPreviewBadge = statusTexts.includes("Preview");
+            const hasError = Boolean(slot.querySelector(".timeseries-slot-status--error"));
+
+            return {
+              ready: canvasReady && statusLabel === "Input signal loaded" && !hasPreviewBadge && !hasError,
+              statusLabel,
+              statusTexts,
+              canvasReady,
+              hasPreviewBadge,
+              hasError,
+            };
+            """
+        )
+
+    def is_loaded(active_driver):
+        state = get_signal_state(active_driver)
+        if state.get("hasError"):
+            raise RuntimeError(f"Patient signal failed to load: {state}")
+        return state.get("ready")
+
+    wait.until(is_loaded)
+    time.sleep(PATIENT_SIGNAL_LOADED_SETTLE_SECONDS)
+
+
 def open_introspection_view():
     driver.set_window_size(INTROSPECTION_SCREEN_WIDTH, INTROSPECTION_SCREEN_HEIGHT)
     click_when_ready(".window-embedding-panel .embedding-introspection-trigger")
@@ -343,8 +387,10 @@ def capture_overview():
 def open_patient_view():
     print(f"Opening patient view: {PATIENT_URL}")
     driver.get(PATIENT_URL)
-    time.sleep(5)
+    wait_for_visible(".timeseries-slot")
+    wait_for_patient_signal_loaded()
     select_patient_window(PATIENT_VIEW_WINDOW_NUMBER)
+    wait_for_patient_signal_loaded()
 
 
 def capture_patient_view():

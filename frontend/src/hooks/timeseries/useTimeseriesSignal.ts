@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { TimeseriesService } from "../../services/TimeseriesService";
 import type {
   ChannelId,
-  TimeRange,
   TimeseriesBandFilter,
   TimeseriesSignalResponse,
   TimeseriesSource,
@@ -24,7 +23,6 @@ interface UseTimeseriesSignalOptions {
   source: TimeseriesSource;
   selectedChannels: ChannelId[];
   selectedTimeseriesBandFilter: TimeseriesBandFilter | null;
-  displayRange: TimeRange | null;
   channelsClearedByUser: boolean;
   setSelectedChannels: (channels: ChannelId[]) => void;
   setHoveredChannel: (channel: ChannelId | null | ((channel: ChannelId | null) => ChannelId | null)) => void;
@@ -36,7 +34,6 @@ export function useTimeseriesSignal({
   source,
   selectedChannels,
   selectedTimeseriesBandFilter,
-  displayRange,
   channelsClearedByUser,
   setSelectedChannels,
   setHoveredChannel,
@@ -122,8 +119,6 @@ export function useTimeseriesSignal({
           {
             channels: nextChannels,
             source,
-            startTime: displayRange?.start,
-            endTime: displayRange?.end,
             maxPoints: DEFAULT_PREVIEW_MAX_POINTS,
             bandFilter: selectedTimeseriesBandFilter,
           },
@@ -143,13 +138,11 @@ export function useTimeseriesSignal({
           const fullSignal = await TimeseriesService.getSignal(
             datasetId,
             subjectId,
-          {
-            channels: nextChannels,
-            source,
-            startTime: displayRange?.start,
-            endTime: displayRange?.end,
-            bandFilter: selectedTimeseriesBandFilter,
-          },
+            {
+              channels: nextChannels,
+              source,
+              bandFilter: selectedTimeseriesBandFilter,
+            },
             {
               signal: abortController.signal,
             },
@@ -191,8 +184,6 @@ export function useTimeseriesSignal({
   }, [
     channelsClearedByUser,
     datasetId,
-    displayRange?.end,
-    displayRange?.start,
     selectedChannels,
     selectedTimeseriesBandFilter,
     setHoveredChannel,

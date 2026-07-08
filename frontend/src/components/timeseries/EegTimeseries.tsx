@@ -48,6 +48,7 @@ export interface EegTimeseriesProps {
   channels: ChannelId[];
   windowSizeSeconds?: number;
   timeOffsetSeconds?: number;
+  visibleTimeRange?: TimeRange | null;
   windowAnnotationRows?: TimeseriesWindowAnnotationRow[];
   selectedTimeRange?: TimeRange | null;
   defaultSelectedTimeRange?: TimeRange | null;
@@ -94,6 +95,7 @@ export function EegTimeseries({
   channels,
   windowSizeSeconds = DEFAULT_WINDOW_SIZE_SECONDS,
   timeOffsetSeconds = 0,
+  visibleTimeRange = null,
   windowAnnotationRows = DEFAULT_WINDOW_ANNOTATION_ROWS,
   selectedTimeRange,
   defaultSelectedTimeRange = null,
@@ -153,17 +155,27 @@ export function EegTimeseries({
       return;
     }
 
-    const nextView = mergeViewPreserveVisibleWindow(
-      viewRef.current,
-      viewSnapshotRef.current,
-      samples,
-      channels,
-      nextDuration,
-      plotWidth,
-    );
+    const nextView = visibleTimeRange
+      ? createViewForVisibleTimeRange(samples, channels, nextDuration, plotWidth, timeOffsetSeconds, visibleTimeRange)
+      : mergeViewPreserveVisibleWindow(
+          viewRef.current,
+          viewSnapshotRef.current,
+          samples,
+          channels,
+          nextDuration,
+          plotWidth,
+        );
     setSyncedView(nextView);
     viewSnapshotRef.current = { duration: nextDuration, plotWidth, timeOffsetSeconds };
-  }, [canvasSize.height, canvasSize.width, channels, samples, samplingFrequency, timeOffsetSeconds]);
+  }, [
+    canvasSize.height,
+    canvasSize.width,
+    channels,
+    samples,
+    samplingFrequency,
+    timeOffsetSeconds,
+    visibleTimeRange,
+  ]);
 
   useEffect(() => {
     if (previousResetViewSignalRef.current === resetViewSignal) {
@@ -171,11 +183,14 @@ export function EegTimeseries({
     }
 
     previousResetViewSignalRef.current = resetViewSignal;
-    const nextView = createInitialView(samples, channels);
-    setSyncedView(nextView);
     const sampleCount = getMaxSampleCount(samples, channels);
     const duration = samplingFrequency > 0 ? sampleCount / samplingFrequency : 0;
     const plotWidth = Math.max(1, canvasSize.width - PADDING.left - PADDING.right);
+    const nextView =
+      duration > 0 && visibleTimeRange
+        ? createViewForVisibleTimeRange(samples, channels, duration, plotWidth, timeOffsetSeconds, visibleTimeRange)
+        : createInitialView(samples, channels);
+    setSyncedView(nextView);
     if (duration > 0) {
       viewSnapshotRef.current = { duration, plotWidth, timeOffsetSeconds };
     }
@@ -189,6 +204,7 @@ export function EegTimeseries({
     samples,
     samplingFrequency,
     timeOffsetSeconds,
+    visibleTimeRange,
   ]);
 
   useEffect(() => {
@@ -1109,6 +1125,37 @@ function createInitialView(samples: TimeseriesSamples, channels: ChannelId[]): T
     xOffset: 0,
     yMin: min - padding,
     yMax: max + padding,
+  };
+}
+
+function createViewForVisibleTimeRange(
+  samples: TimeseriesSamples,
+  channels: ChannelId[],
+  duration: number,
+  plotWidth: number,
+  timeOffsetSeconds: number,
+  visibleTimeRange: TimeRange,
+): TimeseriesView {
+  const yView = createInitialView(samples, channels);
+  const domainStart = timeOffsetSeconds;
+  const domainEnd = timeOffsetSeconds + duration;
+  const startTime = Math.max(domainStart, Math.min(domainEnd, visibleTimeRange.start));
+  const endTime = Math.max(domainStart, Math.min(domainEnd, visibleTimeRange.end));
+  const visibleDuration = endTime - startTime;
+
+  if (duration <= 0 || visibleDuration <= 0 || !Number.isFinite(visibleDuration)) {
+    return yView;
+  }
+
+  const xScale = Math.max(1, duration / visibleDuration);
+  const localStart = startTime - timeOffsetSeconds;
+  const safePlotWidth = Math.max(1, plotWidth);
+  const xOffset = clampOffset(-(localStart / visibleDuration) * safePlotWidth, xScale, safePlotWidth);
+
+  return {
+    ...yView,
+    xScale,
+    xOffset,
   };
 }
 
