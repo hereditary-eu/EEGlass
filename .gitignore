@@ -41,3 +41,4 @@ local/
 *local*
 
 .vscode/tasks.json
+tinymist.lock
