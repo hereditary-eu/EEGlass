@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import base64
 import json
+import sys
 import time
 import traceback
 from pathlib import Path
@@ -58,9 +59,10 @@ PATIENT_URL = build_patient_url()
 
 
 chrome_options = Options()
-# chrome_options.binary_location = "/usr/bin/brave-browser"
-chrome_options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-
+if sys.platform == "win32":
+    chrome_options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+else:
+    chrome_options.binary_location = "/usr/bin/brave-browser"
 
 chrome_options.add_argument("--start-maximized")
 chrome_options.add_argument("--disable-infobars")
@@ -536,8 +538,8 @@ capture_overview()
 open_patient_view()
 capture_patient_view()
 capture_introspection_view()
-capture_total_band_power()
 capture_vacp_panel()
+capture_total_band_power()
 
 driver.close()
 driver.quit()
