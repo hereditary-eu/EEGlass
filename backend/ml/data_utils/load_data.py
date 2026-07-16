@@ -13,14 +13,21 @@ configure_mne_logging()
 MICROVOLTS_SCALE = 1_000_000.0
 
 
-def get_participant_id(participant_id_int):
+def get_participant_id_int(participant_id_str: str) -> int:
+    """
+    Converts a string participant ID to an integer. For example, if participant_id_str is 'sub-001', it will return 1.
+    """
+    return int(participant_id_str.split("-")[1])
+
+
+def get_participant_id(participant_id_int: int) -> str:
     """
     Converts an integer participant ID to a zero-padded string format. For example, if participant_id_int is 1, it will return '001'.
     """
     return f"{participant_id_int:03d}"
 
 
-def gen_filename(participant_id):
+def gen_filename(participant_id: str):
     """
     Generates the filename for the EEG data based on the participant ID. The filename format is 'sub-XXX/eeg/sub-XXX_task-eyesclosed_eeg.set', where XXX is the zero-padded participant ID.
     For example, if participant_id is '001', it will return 'sub-001/eeg/sub-001_task-eyesclosed_eeg.set'.
@@ -28,7 +35,7 @@ def gen_filename(participant_id):
     return os.path.join(f"sub-{participant_id}", "eeg", f"sub-{participant_id}_task-eyesclosed_eeg.set")
 
 
-def gen_derivative_filename(participant_id):
+def gen_derivative_filename(participant_id: str):
     """
     Generates the derivative EEG path for a participant.
     """
@@ -40,7 +47,7 @@ def gen_derivative_filename(participant_id):
     )
 
 
-def gen_participant_id_long(participant_id_int):
+def gen_participant_id_long(participant_id_int: int) -> str:
     """
     Generates the long participant ID format used in the EEG data from the integer participant ID.
     For example, if participant_id_int is 1, it will return 'sub-001'.
@@ -48,7 +55,7 @@ def gen_participant_id_long(participant_id_int):
     return f"sub-{get_participant_id(participant_id_int)}"
 
 
-def gen_model_input_filename(participant_id):
+def gen_model_input_filename(participant_id: str):
     """
     Generates the canonical model-input EEG path. Model workflows use derivatives only.
     """
