@@ -39,7 +39,7 @@ export function ModelScalpTopologyPanel({ modelName, compact = false }: ModelSca
   return (
     <div className={`topology-panel topology-panel--model${compact ? " topology-panel--compact" : ""}`}>
       <div className="topology-panel-header">
-        <h3 className="topology-panel-title">{compact ? "Spatial weights" : "Model scalp view"}</h3>
+        <h3 className="topology-panel-title">{compact ? "Spatial Weights" : "Model Scalp View"}</h3>
         <p className="topology-panel-stage">
           {EEG_MODEL_NOTATION_LABELS.spatialLayer} <MathFormula tex={EEG_MODEL_NOTATION.spatialWeight} />
         </p>

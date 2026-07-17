@@ -5,15 +5,15 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-  "fastapi[standard]>=0.136.3",
+  "fastapi[standard]>=0.139.0",
   "mne>=1.12.1",
-  "pydantic-settings>=2.14.1",
+  "pydantic-settings>=2.14.2",
   "python-dotenv>=1.2.2",
   "selfeeg>=0.2.1",
   "shap>=0.52.0",
-  "torch>=2.12.0",
+  "torch>=2.13.0",
   "torchaudio>=2.11.0",
-  "xgboost>=3.2.0",
+  "xgboost>=3.3.0",
 ]
 
 [tool.ruff]
@@ -29,12 +29,13 @@ torchaudio = [{ index = "pytorch-cpu", marker = "platform_system == 'Linux'" }]
 
 [dependency-groups]
 dev = [
-  "ipykernel>=7.2.0",
+  "ipykernel>=7.3.0",
   "isort>=8.0.1",
   "mass-ts>=0.1.4",
   "mne-connectivity>=0.8.1",
-  "pypdf>=6.12.2",
-  "ruff>=0.15.15",
-  "selenium>=4.44.0",
+  "pymupdf>=1.28.0",
+  "pypdf>=6.14.2",
+  "ruff>=0.15.20",
+  "selenium>=4.45.0",
   "selfeeg[interactive]>=0.2.1",
 ]

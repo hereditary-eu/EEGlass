@@ -237,7 +237,7 @@ export function ScalpTopologyPlot({
                 x={channel.x}
                 y={channel.y}
                 textAnchor="middle"
-                dominantBaseline="middle"
+                dy="0.08"
                 className={[
                   "topology-panel-electrode-label",
                   isChannelInteractive ? "topology-panel-electrode-label--interactive" : "",

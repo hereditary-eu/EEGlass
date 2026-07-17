@@ -293,7 +293,7 @@ export function EmbeddingIntrospectionPanel({
       <section className="embedding-introspection-cluster-section" aria-label="Pairwise feature clustering">
         <div className="embedding-introspection-section-header">
           <div>
-            <h3>Pairwise feature view</h3>
+            <h3>Pairwise Feature View</h3>
             <p>
               {activeFeaturePair
                 ? `${activeFeaturePair[0]} against ${activeFeaturePair[1]}`

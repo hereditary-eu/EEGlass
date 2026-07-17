@@ -15,7 +15,7 @@ from backend.pydantic_models.timeseries import TimeseriesSource
 
 PREPROCESSING_VERSION = MODEL_INPUT_PROTOCOL_VERSION
 PENULTIMATE_EMBEDDING_LAYER = "encoder"
-PENULTIMATE_EMBEDDING_LABEL = "penultimate embedding"
+PENULTIMATE_EMBEDDING_LABEL = "Patient Embeddings"
 WINDOW_EMBEDDING_CLUSTERING_METHOD = "dbscan"
 
 

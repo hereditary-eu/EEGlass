@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { ComponentStatusIndicator, EmbeddingIntrospectionPanel, EmbeddingScatterplot, MathFormula } from "../components";
+import {
+  ComponentStatusIndicator,
+  EmbeddingIntrospectionPanel,
+  EmbeddingScatterplot,
+  MathFormula,
+} from "../components";
 import type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from "../components";
 import { getEmbeddingClassColors, getModelClassLabels } from "../constants/eegModel";
 import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../constants/eegModelNotation";
@@ -195,7 +200,7 @@ export function WindowEmbeddingPanel({
     <section className="window-embedding-panel">
       <div className="window-embedding-header">
         <div>
-          <h3>Window embedding</h3>
+          <h3>Window Embeddings</h3>
           <p>
             {selectedWindowIndex === null ? "All prediction windows" : `Window ${selectedWindowIndex + 1}`}
             {embeddings ? ` - ${embeddings.points.length} windows / ${embeddings.reduction.source_dimension}D` : ""}
@@ -219,13 +224,13 @@ export function WindowEmbeddingPanel({
           minHeight={180}
           showStatusOverlay={false}
           showIntrospectionButton={Boolean(embeddings?.points.length)}
-          introspectionTitle="Window embedding introspection"
+          introspectionTitle="Window Embedding Introspection"
           introspectionSubtitle={
             embeddings
               ? `${embeddings.points.length} windows / ${embeddings.reduction.source_dimension}D source embedding`
               : undefined
           }
-          renderIntrospectionContent={() => (
+          renderIntrospectionContent={() =>
             isLoadingRawEmbeddings ? (
               <div className="embedding-introspection-empty">Loading raw embeddings...</div>
             ) : rawEmbeddingsError ? (
@@ -236,12 +241,12 @@ export function WindowEmbeddingPanel({
                 sourceDimension={rawEmbeddings?.reduction.source_dimension ?? embeddings?.reduction.source_dimension}
                 featureNames={rawEmbeddings?.feature_names ?? embeddings?.feature_names}
                 itemLabel="Window"
-                tableTitle="Window band activations"
+                tableTitle="Window Band Activations"
                 tableSubtitle="Window rows show per-window encoder activations. Select two activation columns to update the pairwise view."
                 featureImportanceRequest={featureImportanceRequest}
               />
             )
-          )}
+          }
           onIntrospectionOpen={loadRawEmbeddings}
           onPointClick={(point) => {
             if (typeof point.windowIndex === "number") {

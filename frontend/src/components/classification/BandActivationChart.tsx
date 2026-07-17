@@ -131,7 +131,7 @@ export function BandActivationChart({
     }
 
     container.innerHTML = "";
-    if (plotHeight <= 0) {
+    if (!values.length || plotHeight <= 0) {
       viewRef.current = null;
       return;
     }
@@ -146,7 +146,7 @@ export function BandActivationChart({
         resize: true,
       },
       background: "transparent",
-      data: { name: ACTIVATION_DATA_NAME, values: [] },
+      data: { name: ACTIVATION_DATA_NAME, values },
       layer: [
         {
           mark: {
@@ -240,7 +240,7 @@ export function BandActivationChart({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [activationScaleDomain, activationScaleDomainKey, plotHeight]);
+  }, [activationScaleDomain, activationScaleDomainKey, plotHeight, values.length]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -266,7 +266,7 @@ export function BandActivationChart({
     <div className="classification-band-activation-chart">
       <div className="classification-band-activation-chart-header">
         <div>
-          <h4>Band activations</h4>
+          <h4>Band Activations</h4>
           <p>
             {evidence
               ? `Window ${evidence.window_index + 1}: ${evidence.start_time.toFixed(1)}s-${evidence.end_time.toFixed(1)}s`
@@ -283,8 +283,7 @@ export function BandActivationChart({
             </>
           ) : (
             <>
-              {EEG_MODEL_NOTATION_LABELS.encoderOutputPrefix}{" "}
-              <MathFormula tex={EEG_MODEL_NOTATION.encoderOutput} />{" "}
+              {EEG_MODEL_NOTATION_LABELS.encoderOutputPrefix} <MathFormula tex={EEG_MODEL_NOTATION.encoderOutput} />{" "}
               {EEG_MODEL_NOTATION_LABELS.encoderBeforeDenseWeights}
             </>
           )}

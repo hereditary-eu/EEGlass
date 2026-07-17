@@ -210,7 +210,7 @@ export function DatasetSummaryCard({
       ) : null}
       <div className="overview-label-distribution">
         <div className="overview-label-distribution-header">
-          <h4>Label distribution</h4>
+          <h4>Label Distribution</h4>
           <span>{hasPredictedLabels ? "True vs predicted" : "True labels"}</span>
         </div>
         <div className="overview-label-distribution-plot" ref={containerRef} />

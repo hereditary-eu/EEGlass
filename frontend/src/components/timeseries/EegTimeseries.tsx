@@ -47,6 +47,8 @@ export interface EegTimeseriesProps {
   samplingFrequency: number;
   channels: ChannelId[];
   windowSizeSeconds?: number;
+  timeOffsetSeconds?: number;
+  visibleTimeRange?: TimeRange | null;
   windowAnnotationRows?: TimeseriesWindowAnnotationRow[];
   selectedTimeRange?: TimeRange | null;
   defaultSelectedTimeRange?: TimeRange | null;
@@ -79,10 +81,10 @@ const WINDOW_ANNOTATION_ROW_HEIGHT = 14;
 const WINDOW_ANNOTATION_ROW_GAP = 3;
 const WINDOW_ANNOTATION_TOP_GAP = 8;
 const DEFAULT_WINDOW_SIZE_SECONDS = 4;
-const WINDOW_ANNOTATION_FONT = "10px Inter, Segoe UI, sans-serif";
+const WINDOW_ANNOTATION_FONT = "10px Helvetica Neue, Helvetica, Arial, sans-serif";
 const WINDOW_ANNOTATION_TEXT_PADDING = 14;
 const WINDOW_ANNOTATION_MIN_LABEL_WIDTH = 42;
-const CHANNEL_LABEL_FONT = "11px Inter, Segoe UI, sans-serif";
+const CHANNEL_LABEL_FONT = "11px Helvetica Neue, Helvetica, Arial, sans-serif";
 const CHANNEL_LABEL_X = 32;
 const CHANNEL_COLORS = ["#0f6ea8", "#be185d", "#15803d", "#b45309", "#6d28d9"];
 const DEFAULT_WINDOW_ANNOTATION_ROWS: TimeseriesWindowAnnotationRow[] = [];
@@ -92,6 +94,8 @@ export function EegTimeseries({
   samplingFrequency,
   channels,
   windowSizeSeconds = DEFAULT_WINDOW_SIZE_SECONDS,
+  timeOffsetSeconds = 0,
+  visibleTimeRange = null,
   windowAnnotationRows = DEFAULT_WINDOW_ANNOTATION_ROWS,
   selectedTimeRange,
   defaultSelectedTimeRange = null,
@@ -112,7 +116,7 @@ export function EegTimeseries({
 }: EegTimeseriesProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previousResetViewSignalRef = useRef(resetViewSignal);
-  const viewSnapshotRef = useRef<{ duration: number; plotWidth: number } | null>(null);
+  const viewSnapshotRef = useRef<{ duration: number; plotWidth: number; timeOffsetSeconds: number } | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [view, setView] = useState<TimeseriesView>(() => createInitialView(samples, channels));
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -151,17 +155,27 @@ export function EegTimeseries({
       return;
     }
 
-    const nextView = mergeViewPreserveVisibleWindow(
-      viewRef.current,
-      viewSnapshotRef.current,
-      samples,
-      channels,
-      nextDuration,
-      plotWidth,
-    );
+    const nextView = visibleTimeRange
+      ? createViewForVisibleTimeRange(samples, channels, nextDuration, plotWidth, timeOffsetSeconds, visibleTimeRange)
+      : mergeViewPreserveVisibleWindow(
+          viewRef.current,
+          viewSnapshotRef.current,
+          samples,
+          channels,
+          nextDuration,
+          plotWidth,
+        );
     setSyncedView(nextView);
-    viewSnapshotRef.current = { duration: nextDuration, plotWidth };
-  }, [canvasSize.height, canvasSize.width, channels, samples, samplingFrequency]);
+    viewSnapshotRef.current = { duration: nextDuration, plotWidth, timeOffsetSeconds };
+  }, [
+    canvasSize.height,
+    canvasSize.width,
+    channels,
+    samples,
+    samplingFrequency,
+    timeOffsetSeconds,
+    visibleTimeRange,
+  ]);
 
   useEffect(() => {
     if (previousResetViewSignalRef.current === resetViewSignal) {
@@ -169,16 +183,29 @@ export function EegTimeseries({
     }
 
     previousResetViewSignalRef.current = resetViewSignal;
-    const nextView = createInitialView(samples, channels);
-    setSyncedView(nextView);
     const sampleCount = getMaxSampleCount(samples, channels);
     const duration = samplingFrequency > 0 ? sampleCount / samplingFrequency : 0;
     const plotWidth = Math.max(1, canvasSize.width - PADDING.left - PADDING.right);
+    const nextView =
+      duration > 0 && visibleTimeRange
+        ? createViewForVisibleTimeRange(samples, channels, duration, plotWidth, timeOffsetSeconds, visibleTimeRange)
+        : createInitialView(samples, channels);
+    setSyncedView(nextView);
     if (duration > 0) {
-      viewSnapshotRef.current = { duration, plotWidth };
+      viewSnapshotRef.current = { duration, plotWidth, timeOffsetSeconds };
     }
     onResetView?.();
-  }, [canvasSize.height, canvasSize.width, channels, onResetView, resetViewSignal, samples, samplingFrequency]);
+  }, [
+    canvasSize.height,
+    canvasSize.width,
+    channels,
+    onResetView,
+    resetViewSignal,
+    samples,
+    samplingFrequency,
+    timeOffsetSeconds,
+    visibleTimeRange,
+  ]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -219,6 +246,7 @@ export function EegTimeseries({
       hoveredChannel: resolvedHoveredChannel,
       drag,
       windowSizeSeconds,
+      timeOffsetSeconds,
       windowAnnotationRows,
       hoveredPredictionWindowIndex,
       lockedPredictionWindowIndex,
@@ -236,6 +264,7 @@ export function EegTimeseries({
     view,
     windowAnnotationRows,
     windowSizeSeconds,
+    timeOffsetSeconds,
   ]);
 
   const geometry = useMemo<PlotGeometry>(
@@ -262,6 +291,7 @@ export function EegTimeseries({
       geometry,
       currentView,
       duration,
+      timeOffsetSeconds,
       windowSizeSeconds,
       predictionWindowCount,
     );
@@ -272,7 +302,7 @@ export function EegTimeseries({
         startX: point.x,
         startY: point.y,
         startOffset: currentView.xOffset,
-        startTime: xToTime(point.x, geometry, currentView, duration),
+        startTime: xToTime(point.x, geometry, currentView, duration, timeOffsetSeconds),
         currentX: point.x,
       });
       return;
@@ -313,6 +343,7 @@ export function EegTimeseries({
         geometry,
         viewRef.current,
         duration,
+        timeOffsetSeconds,
         windowSizeSeconds,
         predictionWindowCount,
       );
@@ -348,6 +379,7 @@ export function EegTimeseries({
         geometry,
         viewRef.current,
         duration,
+        timeOffsetSeconds,
         windowSizeSeconds,
         predictionWindowCount,
       );
@@ -380,11 +412,13 @@ export function EegTimeseries({
     }
 
     if (activeDrag.mode === "select" && activeDrag.startTime !== undefined && activeDrag.currentX !== undefined) {
-      const endTime = xToTime(activeDrag.currentX, geometry, viewRef.current, duration);
+      const endTime = xToTime(activeDrag.currentX, geometry, viewRef.current, duration, timeOffsetSeconds);
+      const minTime = timeOffsetSeconds;
+      const maxTime = timeOffsetSeconds + duration;
       if (Math.abs(endTime - activeDrag.startTime) > 0.01) {
         setSelectedTimeRange({
-          start: Math.max(0, Math.min(activeDrag.startTime, endTime)),
-          end: Math.min(duration, Math.max(activeDrag.startTime, endTime)),
+          start: Math.max(minTime, Math.min(activeDrag.startTime, endTime)),
+          end: Math.min(maxTime, Math.max(activeDrag.startTime, endTime)),
         });
       }
     }
@@ -396,6 +430,7 @@ export function EegTimeseries({
         geometry,
         viewRef.current,
         duration,
+        timeOffsetSeconds,
         windowSizeSeconds,
         predictionWindowCount,
       );
@@ -429,13 +464,14 @@ export function EegTimeseries({
       const maxScale = Math.max(1, duration / 0.5);
       const nextScale = Math.max(1, Math.min(maxScale, current.xScale * zoomFactor));
       const currentVisibleDuration = duration / current.xScale;
-      const currentStart = getVisibleStartTime(current, geometry.plotWidth, duration);
+      const currentStart = getVisibleStartTime(current, geometry.plotWidth, duration, timeOffsetSeconds);
       const relativeX = Math.max(0, Math.min(geometry.plotWidth, point.x - PADDING.left));
       const anchorTime = currentStart + (relativeX / geometry.plotWidth) * currentVisibleDuration;
       const nextVisibleDuration = duration / nextScale;
       const nextStart = anchorTime - (relativeX / geometry.plotWidth) * nextVisibleDuration;
+      const nextLocalStart = nextStart - timeOffsetSeconds;
       const nextOffset = clampOffset(
-        (-nextStart / nextVisibleDuration) * geometry.plotWidth,
+        (-nextLocalStart / nextVisibleDuration) * geometry.plotWidth,
         nextScale,
         geometry.plotWidth,
       );
@@ -485,6 +521,7 @@ function renderTimeseries({
   hoveredChannel,
   drag,
   windowSizeSeconds,
+  timeOffsetSeconds,
   windowAnnotationRows,
   hoveredPredictionWindowIndex,
   lockedPredictionWindowIndex,
@@ -498,6 +535,7 @@ function renderTimeseries({
   hoveredChannel: ChannelId | null;
   drag: DragState | null;
   windowSizeSeconds: number;
+  timeOffsetSeconds: number;
   windowAnnotationRows: TimeseriesWindowAnnotationRow[];
   hoveredPredictionWindowIndex: number | null;
   lockedPredictionWindowIndex: number | null;
@@ -528,22 +566,40 @@ function renderTimeseries({
     return;
   }
 
-  const visibleStartTime = getVisibleStartTime(view, geometry.plotWidth, duration);
+  const visibleStartTime = getVisibleStartTime(view, geometry.plotWidth, duration, timeOffsetSeconds);
   const visibleDuration = duration / view.xScale;
-  const visibleEndTime = Math.min(duration, visibleStartTime + visibleDuration);
-  const startIndex = Math.max(0, Math.floor(visibleStartTime * samplingFrequency));
-  const endIndex = Math.min(sampleCount, Math.ceil(visibleEndTime * samplingFrequency));
+  const visibleEndTime = Math.min(timeOffsetSeconds + duration, visibleStartTime + visibleDuration);
+  const startIndex = Math.max(0, Math.floor((visibleStartTime - timeOffsetSeconds) * samplingFrequency));
+  const endIndex = Math.min(sampleCount, Math.ceil((visibleEndTime - timeOffsetSeconds) * samplingFrequency));
 
-  drawSelection(ctx, geometry, view, duration, selectedTimeRange, "rgb(14 116 144 / 18%)");
-  drawLockedPredictionWindowHighlight(ctx, geometry, view, duration, lockedPredictionWindowIndex, windowSizeSeconds);
+  drawSelection(ctx, geometry, view, duration, timeOffsetSeconds, selectedTimeRange, "rgb(14 116 144 / 18%)");
+  drawLockedPredictionWindowHighlight(
+    ctx,
+    geometry,
+    view,
+    duration,
+    timeOffsetSeconds,
+    lockedPredictionWindowIndex,
+    windowSizeSeconds,
+  );
   if (drag?.mode === "select" && drag.startTime !== undefined && drag.currentX !== undefined) {
-    drawDragSelection(ctx, geometry, view, duration, drag);
+    drawDragSelection(ctx, geometry, view, duration, timeOffsetSeconds, drag);
   }
 
-  drawGridAndAxes(ctx, geometry, view, duration, visibleStartTime, visibleDuration, windowSizeSeconds);
+  drawGridAndAxes(
+    ctx,
+    geometry,
+    view,
+    duration,
+    timeOffsetSeconds,
+    visibleStartTime,
+    visibleDuration,
+    windowSizeSeconds,
+  );
   drawWindowAnnotationRows(ctx, geometry, view, duration, visibleStartTime, visibleDuration, {
     rows: windowAnnotationRows,
     windowSizeSeconds,
+    timeOffsetSeconds,
     hoveredWindowIndex: hoveredPredictionWindowIndex,
     lockedWindowIndex: lockedPredictionWindowIndex,
   });
@@ -556,6 +612,7 @@ function renderTimeseries({
       channelCount: channels.length,
       color: CHANNEL_COLORS[index % CHANNEL_COLORS.length] ?? "#0f6ea8",
       samplingFrequency,
+      timeOffsetSeconds,
       startIndex,
       endIndex,
       visibleStartTime,
@@ -608,11 +665,13 @@ function drawWindowAnnotationRows(
   {
     rows,
     windowSizeSeconds,
+    timeOffsetSeconds,
     hoveredWindowIndex,
     lockedWindowIndex,
   }: {
     rows: TimeseriesWindowAnnotationRow[];
     windowSizeSeconds: number;
+    timeOffsetSeconds: number;
     hoveredWindowIndex: number | null;
     lockedWindowIndex: number | null;
   },
@@ -641,18 +700,25 @@ function drawWindowAnnotationRows(
       return;
     }
 
-    const firstWindowIndex = Math.max(0, Math.floor(visibleStartTime / safeWindowSizeSeconds));
-    const lastWindowIndex = Math.ceil(Math.min(duration, visibleStartTime + visibleDuration) / safeWindowSizeSeconds);
+    const domainStartTime = timeOffsetSeconds;
+    const domainEndTime = timeOffsetSeconds + duration;
+    const firstWindowIndex = Math.max(
+      0,
+      Math.floor(Math.max(domainStartTime, visibleStartTime) / safeWindowSizeSeconds),
+    );
+    const lastWindowIndex = Math.ceil(
+      Math.min(domainEndTime, visibleStartTime + visibleDuration) / safeWindowSizeSeconds,
+    );
 
     for (let windowIndex = firstWindowIndex; windowIndex <= lastWindowIndex; windowIndex += 1) {
       const startTime = windowIndex * safeWindowSizeSeconds;
-      const endTime = Math.min(duration, startTime + safeWindowSizeSeconds);
+      const endTime = Math.min(domainEndTime, startTime + safeWindowSizeSeconds);
       if (endTime <= visibleStartTime || startTime >= visibleStartTime + visibleDuration) {
         continue;
       }
 
-      const x1 = timeToX(startTime, geometry, view, duration);
-      const x2 = timeToX(endTime, geometry, view, duration);
+      const x1 = timeToX(startTime, geometry, view, duration, timeOffsetSeconds);
+      const x2 = timeToX(endTime, geometry, view, duration, timeOffsetSeconds);
       const left = Math.max(PADDING.left, Math.min(x1, x2));
       const right = Math.min(geometry.width - PADDING.right, Math.max(x1, x2));
       if (right <= left) {
@@ -703,7 +769,7 @@ function drawWindowAnnotationRows(
   });
 
   ctx.fillStyle = "#334155";
-  ctx.font = "11px Inter, Segoe UI, sans-serif";
+  ctx.font = "11px Helvetica Neue, Helvetica, Arial, sans-serif";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   normalizedRows.forEach((row, rowIndex) => {
@@ -735,6 +801,7 @@ function drawChannel(
     channelCount,
     color,
     samplingFrequency,
+    timeOffsetSeconds,
     startIndex,
     endIndex,
     visibleStartTime,
@@ -750,6 +817,7 @@ function drawChannel(
     channelCount: number;
     color: string;
     samplingFrequency: number;
+    timeOffsetSeconds: number;
     startIndex: number;
     endIndex: number;
     visibleStartTime: number;
@@ -783,7 +851,7 @@ function drawChannel(
 
   if (samplesPerPixel <= 1) {
     for (let index = startIndex; index < endIndex && index < values.length; index += 1) {
-      const time = index / samplingFrequency;
+      const time = timeOffsetSeconds + index / samplingFrequency;
       const x = PADDING.left + ((time - visibleStartTime) / visibleDuration) * geometry.plotWidth;
       const value = values[index];
       if (value === undefined) {
@@ -802,8 +870,8 @@ function drawChannel(
     for (let px = 0; px < geometry.plotWidth; px += 1) {
       const t0 = visibleStartTime + (px / geometry.plotWidth) * visibleDuration;
       const t1 = visibleStartTime + ((px + 1) / geometry.plotWidth) * visibleDuration;
-      const i0 = Math.max(startIndex, Math.floor(t0 * samplingFrequency));
-      const i1 = Math.min(endIndex, Math.ceil(t1 * samplingFrequency), values.length);
+      const i0 = Math.max(startIndex, Math.floor((t0 - timeOffsetSeconds) * samplingFrequency));
+      const i1 = Math.min(endIndex, Math.ceil((t1 - timeOffsetSeconds) * samplingFrequency), values.length);
       if (i0 >= i1) {
         continue;
       }
@@ -859,6 +927,7 @@ function drawGridAndAxes(
   geometry: PlotGeometry,
   view: TimeseriesView,
   duration: number,
+  timeOffsetSeconds: number,
   visibleStartTime: number,
   visibleDuration: number,
   windowSizeSeconds: number,
@@ -872,7 +941,7 @@ function drawGridAndAxes(
   ctx.lineTo(geometry.width - PADDING.right, geometry.axisY);
   ctx.stroke();
 
-  ctx.font = "10px Inter, Segoe UI, sans-serif";
+  ctx.font = "10px Helvetica Neue, Helvetica, Arial, sans-serif";
   ctx.fillStyle = "#5d6b78";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
@@ -896,12 +965,12 @@ function drawGridAndAxes(
   const minimumLabelSpacingPx = 56;
   const labelEvery = Math.max(1, Math.ceil(minimumLabelSpacingPx / Math.max(1, pixelsPerSecond * gridSpacingSeconds)));
   const firstGridTime = Math.max(0, Math.floor(visibleStartTime / gridSpacingSeconds) * gridSpacingSeconds);
-  const visibleEndTime = Math.min(duration, visibleStartTime + visibleDuration);
+  const visibleEndTime = Math.min(timeOffsetSeconds + duration, visibleStartTime + visibleDuration);
 
   let gridIndex = 0;
   for (let time = firstGridTime; time <= visibleEndTime + 1e-6; time += gridSpacingSeconds) {
-    const clampedTime = Math.min(duration, time);
-    const x = timeToX(clampedTime, geometry, view, duration);
+    const clampedTime = Math.min(timeOffsetSeconds + duration, Math.max(timeOffsetSeconds, time));
+    const x = timeToX(clampedTime, geometry, view, duration, timeOffsetSeconds);
     ctx.strokeStyle = "#e8eef3";
     ctx.beginPath();
     ctx.moveTo(x, PADDING.top);
@@ -922,6 +991,7 @@ function drawSelection(
   geometry: PlotGeometry,
   view: TimeseriesView,
   duration: number,
+  timeOffsetSeconds: number,
   selectedTimeRange: TimeRange | null,
   fillStyle: string,
 ) {
@@ -929,8 +999,12 @@ function drawSelection(
     return;
   }
 
-  const x1 = timeToX(selectedTimeRange.start, geometry, view, duration);
-  const x2 = timeToX(selectedTimeRange.end, geometry, view, duration);
+  const domainStartTime = timeOffsetSeconds;
+  const domainEndTime = timeOffsetSeconds + duration;
+  const selectionStart = Math.max(domainStartTime, Math.min(domainEndTime, selectedTimeRange.start));
+  const selectionEnd = Math.max(domainStartTime, Math.min(domainEndTime, selectedTimeRange.end));
+  const x1 = timeToX(selectionStart, geometry, view, duration, timeOffsetSeconds);
+  const x2 = timeToX(selectionEnd, geometry, view, duration, timeOffsetSeconds);
   const left = Math.max(PADDING.left, Math.min(x1, x2));
   const right = Math.min(geometry.width - PADDING.right, Math.max(x1, x2));
   if (right <= left) {
@@ -946,6 +1020,7 @@ function drawLockedPredictionWindowHighlight(
   geometry: PlotGeometry,
   view: TimeseriesView,
   duration: number,
+  timeOffsetSeconds: number,
   lockedWindowIndex: number | null,
   windowSizeSeconds: number,
 ) {
@@ -955,13 +1030,15 @@ function drawLockedPredictionWindowHighlight(
 
   const safeWindowSizeSeconds = Math.max(0.1, windowSizeSeconds);
   const startTime = lockedWindowIndex * safeWindowSizeSeconds;
-  const endTime = Math.min(duration, startTime + safeWindowSizeSeconds);
-  if (endTime <= 0 || startTime >= duration || endTime <= startTime) {
+  const domainStartTime = timeOffsetSeconds;
+  const domainEndTime = timeOffsetSeconds + duration;
+  const endTime = Math.min(domainEndTime, startTime + safeWindowSizeSeconds);
+  if (endTime <= domainStartTime || startTime >= domainEndTime || endTime <= startTime) {
     return;
   }
 
-  const x1 = timeToX(startTime, geometry, view, duration);
-  const x2 = timeToX(endTime, geometry, view, duration);
+  const x1 = timeToX(Math.max(domainStartTime, startTime), geometry, view, duration, timeOffsetSeconds);
+  const x2 = timeToX(endTime, geometry, view, duration, timeOffsetSeconds);
   const left = Math.max(PADDING.left, Math.min(x1, x2));
   const right = Math.min(geometry.width - PADDING.right, Math.max(x1, x2));
   if (right <= left) {
@@ -977,9 +1054,10 @@ function drawDragSelection(
   geometry: PlotGeometry,
   view: TimeseriesView,
   duration: number,
+  timeOffsetSeconds: number,
   drag: DragState,
 ) {
-  const startX = timeToX(drag.startTime ?? 0, geometry, view, duration);
+  const startX = timeToX(drag.startTime ?? timeOffsetSeconds, geometry, view, duration, timeOffsetSeconds);
   const currentX = Math.max(PADDING.left, Math.min(geometry.width - PADDING.right, drag.currentX ?? startX));
   const left = Math.min(startX, currentX);
   const right = Math.max(startX, currentX);
@@ -1003,6 +1081,7 @@ function drawEmptyAxes(
   drawWindowAnnotationRows(ctx, geometry, { xScale: 1, xOffset: 0, yMin: -1, yMax: 1 }, 0, 0, 0, {
     rows: windowAnnotationRows,
     windowSizeSeconds,
+    timeOffsetSeconds: 0,
     hoveredWindowIndex: null,
     lockedWindowIndex: null,
   });
@@ -1049,6 +1128,37 @@ function createInitialView(samples: TimeseriesSamples, channels: ChannelId[]): T
   };
 }
 
+function createViewForVisibleTimeRange(
+  samples: TimeseriesSamples,
+  channels: ChannelId[],
+  duration: number,
+  plotWidth: number,
+  timeOffsetSeconds: number,
+  visibleTimeRange: TimeRange,
+): TimeseriesView {
+  const yView = createInitialView(samples, channels);
+  const domainStart = timeOffsetSeconds;
+  const domainEnd = timeOffsetSeconds + duration;
+  const startTime = Math.max(domainStart, Math.min(domainEnd, visibleTimeRange.start));
+  const endTime = Math.max(domainStart, Math.min(domainEnd, visibleTimeRange.end));
+  const visibleDuration = endTime - startTime;
+
+  if (duration <= 0 || visibleDuration <= 0 || !Number.isFinite(visibleDuration)) {
+    return yView;
+  }
+
+  const xScale = Math.max(1, duration / visibleDuration);
+  const localStart = startTime - timeOffsetSeconds;
+  const safePlotWidth = Math.max(1, plotWidth);
+  const xOffset = clampOffset(-(localStart / visibleDuration) * safePlotWidth, xScale, safePlotWidth);
+
+  return {
+    ...yView,
+    xScale,
+    xOffset,
+  };
+}
+
 function getMaxSampleCount(samples: TimeseriesSamples, channels: ChannelId[]): number {
   return channels.reduce((max, channel) => Math.max(max, samples[channel]?.length ?? 0), 0);
 }
@@ -1059,21 +1169,38 @@ function valueToY(value: number, view: TimeseriesView, channelTop: number, chann
   return channelTop + channelHeight - normalized * channelHeight;
 }
 
-function getVisibleStartTime(view: TimeseriesView, plotWidth: number, duration: number): number {
+function getVisibleStartTime(
+  view: TimeseriesView,
+  plotWidth: number,
+  duration: number,
+  timeOffsetSeconds = 0,
+): number {
   const visibleDuration = duration / view.xScale;
   const clampedOffset = clampOffset(view.xOffset, view.xScale, plotWidth);
-  return Math.max(0, (-clampedOffset / plotWidth) * visibleDuration);
+  return timeOffsetSeconds + Math.max(0, (-clampedOffset / plotWidth) * visibleDuration);
 }
 
-function timeToX(time: number, geometry: PlotGeometry, view: TimeseriesView, duration: number): number {
+function timeToX(
+  time: number,
+  geometry: PlotGeometry,
+  view: TimeseriesView,
+  duration: number,
+  timeOffsetSeconds = 0,
+): number {
   const visibleDuration = duration / view.xScale;
-  const startTime = getVisibleStartTime(view, geometry.plotWidth, duration);
+  const startTime = getVisibleStartTime(view, geometry.plotWidth, duration, timeOffsetSeconds);
   return PADDING.left + ((time - startTime) / visibleDuration) * geometry.plotWidth;
 }
 
-function xToTime(x: number, geometry: PlotGeometry, view: TimeseriesView, duration: number): number {
+function xToTime(
+  x: number,
+  geometry: PlotGeometry,
+  view: TimeseriesView,
+  duration: number,
+  timeOffsetSeconds = 0,
+): number {
   const visibleDuration = duration / view.xScale;
-  const startTime = getVisibleStartTime(view, geometry.plotWidth, duration);
+  const startTime = getVisibleStartTime(view, geometry.plotWidth, duration, timeOffsetSeconds);
   const relativeX = Math.max(0, Math.min(geometry.plotWidth, x - PADDING.left));
   return startTime + (relativeX / geometry.plotWidth) * visibleDuration;
 }
@@ -1085,7 +1212,7 @@ function clampOffset(offset: number, scale: number, plotWidth: number): number {
 
 function mergeViewPreserveVisibleWindow(
   currentView: TimeseriesView,
-  previousSnapshot: { duration: number; plotWidth: number } | null,
+  previousSnapshot: { duration: number; plotWidth: number; timeOffsetSeconds: number } | null,
   samples: TimeseriesSamples,
   channels: ChannelId[],
   nextDuration: number,
@@ -1102,7 +1229,7 @@ function mergeViewPreserveVisibleWindow(
     return yView;
   }
 
-  const { duration: prevDuration, plotWidth: prevPlotWidth } = previousSnapshot;
+  const { duration: prevDuration, plotWidth: prevPlotWidth, timeOffsetSeconds: prevTimeOffsetSeconds } = previousSnapshot;
   const decodeWidth = Math.max(1, prevPlotWidth);
 
   const maxScale = Math.max(1, nextDuration / 0.5);
@@ -1112,7 +1239,8 @@ function mergeViewPreserveVisibleWindow(
     return { ...yView, xScale: 1, xOffset: 0 };
   }
 
-  const startTimeSec = getVisibleStartTime(currentView, decodeWidth, prevDuration);
+  const startTimeSec =
+    getVisibleStartTime(currentView, decodeWidth, prevDuration, prevTimeOffsetSeconds) - prevTimeOffsetSeconds;
   const maxStart = Math.max(0, nextDuration - visibleDurationSec);
   const clampedStart = Math.min(Math.max(0, startTimeSec), maxStart);
   const newOffset = clampOffset(-(clampedStart / visibleDurationSec) * safePlotWidth, xScale, safePlotWidth);
@@ -1161,6 +1289,7 @@ function getPredictionWindowIndexAtPoint(
   geometry: PlotGeometry,
   view: TimeseriesView,
   duration: number,
+  timeOffsetSeconds: number,
   windowSizeSeconds: number,
   predictionWindowCount: number,
 ): number | null {
@@ -1175,7 +1304,7 @@ function getPredictionWindowIndexAtPoint(
     return null;
   }
 
-  const time = xToTime(point.x, geometry, view, duration);
+  const time = xToTime(point.x, geometry, view, duration, timeOffsetSeconds);
   const windowIndex = Math.floor(time / Math.max(0.1, windowSizeSeconds));
   if (windowIndex < 0 || windowIndex >= predictionWindowCount) {
     return null;
