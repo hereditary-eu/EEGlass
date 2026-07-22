@@ -122,6 +122,27 @@ def load_multiple_eeg_windows(
     df_metadata: pd.DataFrame,
     sample_length: int | None = None,
     n_max: int | None = None,
+    subject_ids: list[int] | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Loads derivative EEG windows for multiple participants and matching class labels.
+    """
+    x, y, _ = load_multiple_eeg_windows_inner(
+        dir_data=dir_data,
+        participant_ids=participant_ids,
+        df_metadata=df_metadata,
+        sample_length=sample_length,
+        n_max=n_max,
+    )
+    return x, y
+
+
+def load_multiple_eeg_windows_inner(
+    dir_data: str,
+    participant_ids: list[int],
+    df_metadata: pd.DataFrame,
+    sample_length: int | None = None,
+    n_max: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Loads derivative EEG windows for multiple participants and matching class labels.
@@ -129,6 +150,7 @@ def load_multiple_eeg_windows(
     participant_dis_map = dict(zip(df_metadata["participant_id"], df_metadata["group_encoded"]))
     windows_by_subject = []
     labels_by_subject = []
+    subject_ids = []
 
     for participant_id_int in participant_ids:
         participant_id_long = gen_participant_id_long(participant_id_int)
@@ -145,14 +167,18 @@ def load_multiple_eeg_windows(
         labels_by_subject.append(
             np.full((windows.shape[0],), int(participant_dis_map[participant_id_long]), dtype=np.int64)
         )
+        np.array(subject_ids.append(np.full((windows.shape[0],), participant_id_int, dtype=np.int64))).flatten()
 
     if not windows_by_subject:
         raise ValueError("At least one participant is required to load model windows.")
 
     x = np.concatenate(windows_by_subject, axis=0).astype("float32", copy=False)
     y = np.concatenate(labels_by_subject, axis=0).astype(np.int64, copy=False)
+    subject_ids = np.concatenate(subject_ids, axis=0).astype(np.int64, copy=False)
+    subject_ids = np.array(subject_ids).flatten()
+
     print(f"Loaded derivative model windows: x shape {x.shape}, y shape {y.shape}")
-    return x, y
+    return x, y, subject_ids
 
 
 def load_preprocessed_raw_from_file(data_path: str):

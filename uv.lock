@@ -61,6 +61,7 @@ dev = [
     { name = "ipykernel", specifier = ">=7.3.0" },
     { name = "isort", specifier = ">=8.0.1" },
     { name = "mass-ts", specifier = ">=0.1.4" },
+    { name = "mne-connectivity", specifier = ">=0.8.1" },
     { name = "pymupdf", specifier = ">=1.28.0" },
     { name = "pypdf", specifier = ">=6.14.2" },
     { name = "ruff", specifier = ">=0.15.20" },

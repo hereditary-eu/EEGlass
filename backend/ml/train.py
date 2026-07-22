@@ -35,6 +35,85 @@ def save_model(model, model_path, df_metadata=None):
         metadata_path = resolved_model_path.with_name(f"{resolved_model_path.stem}_metadata.csv")
         df_metadata.to_csv(metadata_path, index=True)
 
+    print(f"Model saved to {resolved_model_path}")
+
+
+def get_train_val_test_loader(
+    dir_data: str,
+    participant_ids_train: list,
+    participant_ids_val: list,
+    df_metadata=None,
+    parameters: dict = PARAMETERS_DEFAULT,
+    # training_parameters: dict = TRAINING_PARAMETERS_DEFAULT,
+    n_max=None,
+):
+    """
+    Returns df_metadata, trainloader, valloader and testloader and the corresponding data arrays (x_train, y_train, x_val, y_val, x_test, y_test)
+    for the given data directory and participant IDs.
+    """
+
+    participant_ids_train_str = [gen_participant_id_long(pid) for pid in participant_ids_train]
+    participant_ids_val_str = [gen_participant_id_long(pid) for pid in participant_ids_val]
+
+    if df_metadata is None:
+        df_metadata = load_metadata(dir_data)
+        df_metadata.set_index("participant_id", inplace=True)
+        df_metadata.loc[participant_ids_train_str, "datasplit"] = "train"
+        df_metadata.loc[participant_ids_val_str, "datasplit"] = "val"
+
+        # set the rest to test
+        df_metadata["datasplit"] = df_metadata["datasplit"].fillna("test")
+
+        # df_metadata = df_metadata.loc[df_metadata['datasplit'].isin(['train', 'val']), :]
+        df_metadata.reset_index(inplace=True, drop=False)
+
+    x_train, y_train = load_multiple_eeg_windows(
+        dir_data,
+        participant_ids_train,
+        df_metadata,
+        sample_length=parameters["sample_length"],
+        n_max=n_max,
+    )
+    x_val, y_val = load_multiple_eeg_windows(
+        dir_data,
+        participant_ids_val,
+        df_metadata,
+        sample_length=parameters["sample_length"],
+        n_max=n_max,
+    )
+
+    x_test, y_test = load_multiple_eeg_windows(
+        dir_data,
+        df_metadata.loc[df_metadata["datasplit"] == "test", "participant_id_int"].tolist(),
+        df_metadata,
+        sample_length=parameters["sample_length"],
+        n_max=n_max,
+    )
+
+    trainloader = get_window_data_loader(
+        x_train,
+        y_train,
+        parameters["batchsize"],
+        parameters["workers"],
+    )
+    valloader = get_window_data_loader(
+        x_val,
+        y_val,
+        parameters["batchsize"],
+        parameters["workers"],
+        shuffle=False,
+    )
+
+    testloader = get_window_data_loader(
+        x_test,
+        y_test,
+        parameters["batchsize"],
+        parameters["workers"],
+        shuffle=False,
+    )
+
+    return df_metadata, trainloader, valloader, testloader, (x_train, y_train, x_val, y_val, x_test, y_test)
+
 
 def train_save_model(
     model_path: str,
@@ -67,50 +146,17 @@ def train_save_model(
     if model is None:
         model = build_xeegnet()
 
-    participant_ids_train_str = [gen_participant_id_long(pid) for pid in participant_ids_train]
-    participant_ids_val_str = [gen_participant_id_long(pid) for pid in participant_ids_val]
+    # participant_ids_train_str = [gen_participant_id_long(pid) for pid in participant_ids_train]
+    # participant_ids_val_str = [gen_participant_id_long(pid) for pid in participant_ids_val]
 
-    if df_metadata is None:
-        df_metadata = load_metadata(dir_data)
-        df_metadata.set_index("participant_id", inplace=True)
-        df_metadata.loc[participant_ids_train_str, "datasplit"] = "train"
-        df_metadata.loc[participant_ids_val_str, "datasplit"] = "val"
-
-        # set the rest to test
-        df_metadata["datasplit"] = df_metadata["datasplit"].fillna("test")
-
-        # df_metadata = df_metadata.loc[df_metadata['datasplit'].isin(['train', 'val']), :]
-        df_metadata.reset_index(inplace=True, drop=False)
-
-    x_train, y_train = load_multiple_eeg_windows(
-        dir_data,
-        participant_ids_train,
-        df_metadata,
-        sample_length=parameters["sample_length"],
+    df_metadata, trainloader, valloader, _, _ = get_train_val_test_loader(
+        dir_data=dir_data,
+        participant_ids_train=participant_ids_train,
+        participant_ids_val=participant_ids_val,
+        df_metadata=df_metadata,
+        parameters=parameters,
         n_max=n_max,
     )
-    x_val, y_val = load_multiple_eeg_windows(
-        dir_data,
-        participant_ids_val,
-        df_metadata,
-        sample_length=parameters["sample_length"],
-        n_max=n_max,
-    )
-
-    trainloader = get_window_data_loader(
-        x_train,
-        y_train,
-        parameters["batchsize"],
-        parameters["workers"],
-    )
-    valloader = get_window_data_loader(
-        x_val,
-        y_val,
-        parameters["batchsize"],
-        parameters["workers"],
-        shuffle=False,
-    )
-    del x_train, y_train, x_val, y_val
 
     # define optimizer, loss function and learning rate scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=training_parameters["lr"])

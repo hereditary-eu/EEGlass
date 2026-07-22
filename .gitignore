@@ -43,9 +43,7 @@ local/
 .vscode/tasks.json
 tinymist.lock
 
-backend\experiments_xeegnet*
 backend/experiments_xeegnet*
-backend\experiments_xeegnet\shallownetXAI_main*
-backend/experiments_xeegnet/shallownetXAI_main/*
+# backend/experiments_xeegnet/shallownetXAI_main/*
 
 
