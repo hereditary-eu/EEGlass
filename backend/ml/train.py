@@ -127,6 +127,7 @@ def train_save_model(
     device="cpu",
     df_metadata=None,
     n_max=None,
+    save_model_flag=True,
 ):
     """
     Trains the model and saves it to the specified path. The function loads derivative EEG data for the specified participants, prepares the data loaders, defines the optimizer, loss function and learning rate scheduler, and then trains the model using the train_model function from shallownetXAI_main. Finally, it saves the trained model to the specified path.
@@ -193,7 +194,8 @@ def train_save_model(
     )
 
     # del trainloader, valloader
-    save_model(model, model_path, df_metadata=df_metadata)
+    if save_model_flag:
+        save_model(model, model_path, df_metadata=df_metadata)
     return model, df_metadata
 
 
