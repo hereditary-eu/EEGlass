@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ComponentStatusIndicator, EmbeddingIntrospectionPanel, EmbeddingScatterplot } from "../../components";
+import {
+  ComponentStatusIndicator,
+  EmbeddingIntrospectionPanel,
+  EmbeddingReductionSelector,
+  EmbeddingScatterplot,
+  getEmbeddingAxisTitles,
+  getEmbeddingInsufficientDataMessage,
+  getEmbeddingReductionLabel,
+} from "../../components";
 import type {
   EmbeddingScatterplotPoint,
   EmbeddingScatterplotTooltipField,
@@ -9,6 +17,7 @@ import type {
 import type { ComponentStatus } from "../../components/ui";
 import { getAnnotationClassColor, getEmbeddingClassColors, getModelClassLabels } from "../../constants/eegModel";
 import { ModelService } from "../../services/ModelService";
+import { useAppStore } from "../../stores/useAppStore";
 import type { ModelInfoResponse, ModelPatientEmbeddingsResponse } from "../../types";
 import { registerVacpVegaLiteChart } from "../../vacp/registerVegaLiteChart";
 
@@ -61,9 +70,12 @@ export function PatientEmbeddingScatterplot({
   const [rawEmbeddings, setRawEmbeddings] = useState<ModelPatientEmbeddingsResponse | null>(null);
   const [isLoadingRawEmbeddings, setIsLoadingRawEmbeddings] = useState(false);
   const [rawEmbeddingsError, setRawEmbeddingsError] = useState<string | null>(null);
+  const selectedEmbeddingReductionMethod = useAppStore((state) => state.selectedEmbeddingReductionMethod);
+  const setSelectedEmbeddingReductionMethod = useAppStore((state) => state.setSelectedEmbeddingReductionMethod);
   const modelClasses = modelInfo?.classes ?? [];
   const modelClassLabels = useMemo(() => getModelClassLabels(modelClasses), [modelClasses]);
   const status = getPatientEmbeddingStatus({ embeddings, isLoading, error });
+  const [xAxisTitle, yAxisTitle] = getEmbeddingAxisTitles(selectedEmbeddingReductionMethod);
 
   const values = useMemo<PatientEmbeddingDatum[]>(
     () =>
@@ -195,10 +207,16 @@ export function PatientEmbeddingScatterplot({
     setLegendHighlightTarget(null);
   }, [selectionResetKey]);
 
+  useEffect(() => {
+    setBrushSelectedSubjectIds(null);
+    setLegendHighlightTarget(null);
+    onSelectedSubjectIdsChange(null);
+  }, [onSelectedSubjectIdsChange, selectedEmbeddingReductionMethod]);
+
   const emptyMessage = !modelInfo
     ? "Model metadata unavailable."
     : embeddings?.reduction.status === "insufficient_data"
-      ? "Need at least two cached patient embeddings."
+      ? getEmbeddingInsufficientDataMessage(selectedEmbeddingReductionMethod, "cached patient embeddings")
       : "Compute prediction cache to populate patient embeddings.";
   const highlightLegendLabel = (kind: LegendHighlightTarget["kind"], label: string) => {
     if (kind === "misclassified") {
@@ -234,14 +252,19 @@ export function PatientEmbeddingScatterplot({
     setIsLoadingRawEmbeddings(true);
     setRawEmbeddingsError(null);
 
-    ModelService.getPatientRawEmbeddings(embeddings.dataset_id, embeddings.source, modelInfo.name)
+    ModelService.getPatientRawEmbeddings(
+      embeddings.dataset_id,
+      embeddings.source,
+      modelInfo.name,
+      selectedEmbeddingReductionMethod,
+    )
       .then((response) => setRawEmbeddings(response))
       .catch((loadError) => {
         setRawEmbeddings(null);
         setRawEmbeddingsError(getPatientRawEmbeddingError(loadError));
       })
       .finally(() => setIsLoadingRawEmbeddings(false));
-  }, [embeddings, isLoadingRawEmbeddings, modelInfo?.name, rawEmbeddings]);
+  }, [embeddings, isLoadingRawEmbeddings, modelInfo?.name, rawEmbeddings, selectedEmbeddingReductionMethod]);
   const registerVacpChart = useCallback(
     ({ root, view, spec }: EmbeddingScatterplotVegaViewArgs) =>
       registerVacpVegaLiteChart({
@@ -263,6 +286,12 @@ export function PatientEmbeddingScatterplot({
           <h3>{embeddings?.embedding_label ?? (modelInfo ? "Patient embedding" : "Model unavailable")}</h3>
         </div>
         <div className="overview-embedding-meta-group">
+          <EmbeddingReductionSelector
+            value={selectedEmbeddingReductionMethod}
+            onChange={setSelectedEmbeddingReductionMethod}
+            disabled={isLoading}
+            ariaLabel="Overview embedding reduction method"
+          />
           {embeddings ? (
             <>
               {selectedSubjectIds ? (
@@ -293,10 +322,10 @@ export function PatientEmbeddingScatterplot({
           introspectionTitle="Patient embedding introspection"
           introspectionSubtitle={
             embeddings
-              ? `${embeddings.points.length} patients / ${embeddings.reduction.source_dimension}D source embedding`
+              ? `${getEmbeddingReductionLabel(selectedEmbeddingReductionMethod)} / ${embeddings.points.length} patients / ${embeddings.reduction.source_dimension}D source embedding`
               : undefined
           }
-          renderIntrospectionContent={() => (
+          renderIntrospectionContent={() =>
             isLoadingRawEmbeddings ? (
               <div className="embedding-introspection-empty">Loading raw embeddings...</div>
             ) : rawEmbeddingsError ? (
@@ -313,7 +342,7 @@ export function PatientEmbeddingScatterplot({
                 showCorrelationHeatmap
               />
             )
-          )}
+          }
           onIntrospectionOpen={loadRawEmbeddings}
           onPointClick={(point) => {
             if (typeof point.subjectId === "string") {
@@ -322,6 +351,8 @@ export function PatientEmbeddingScatterplot({
           }}
           onSelectionChange={selectBrushSubjects}
           onVegaViewReady={registerVacpChart}
+          xAxisTitle={xAxisTitle}
+          yAxisTitle={yAxisTitle}
         />
       </div>
 

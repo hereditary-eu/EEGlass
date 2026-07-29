@@ -25,8 +25,9 @@ from backend.pydantic_models.inference import (
     ModelWindowEmbeddingPoint,
     ModelWindowEmbeddingsResponse,
 )
+from backend.pydantic_models.embeddings import EmbeddingReductionMethod
 from backend.pydantic_models.timeseries import TimeseriesSource
-from backend.services.embedding_service import cluster_embeddings_density, reduce_embeddings_pca
+from backend.services.embedding_service import cluster_embeddings_density, reduce_embeddings
 from backend.services.prediction_cache_artifacts import (
     PENULTIMATE_EMBEDDING_LABEL,
     PENULTIMATE_EMBEDDING_LAYER,
@@ -233,6 +234,7 @@ class PredictionCacheService:
         model_name: str = DEFAULT_MODEL_NAME,
         source: TimeseriesSource = "derivatives",
         include_raw_embeddings: bool = False,
+        reduction_method: EmbeddingReductionMethod = "pca",
     ) -> ModelPatientEmbeddingsResponse:
         validate_model_input_source(source)
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
@@ -279,27 +281,32 @@ class PredictionCacheService:
                 checkpoint_signature=checkpoint_signature,
                 checkpoint_key=checkpoint_key,
                 source_dimension=source_dimension,
+                reduction_method=reduction_method,
                 reduction_status="insufficient_data",
                 explained_variance_ratio=[],
                 points=[],
             )
 
-        coordinates, explained_variance_ratio, reduction_status = reduce_embeddings_pca(
-            np.asarray(vectors, dtype=float)
+        coordinates, explained_variance_ratio, reduction_status = reduce_embeddings(
+            np.asarray(vectors, dtype=float), reduction_method
         )
-        points = [
-            ModelPatientEmbeddingPoint(
-                subject_id=summary.subject_id,
-                x=float(coordinate[0]),
-                y=float(coordinate[1]),
-                raw_embedding=list(vector) if include_raw_embeddings else None,
-                true_label=summary.true_label,
-                predicted_label=summary.predicted_label,
-                mean_confidence=summary.mean_confidence,
-                total_windows=summary.total_windows,
-            )
-            for summary, coordinate, vector in zip(summaries, coordinates, vectors, strict=True)
-        ]
+        points = (
+            [
+                ModelPatientEmbeddingPoint(
+                    subject_id=summary.subject_id,
+                    x=float(coordinate[0]),
+                    y=float(coordinate[1]),
+                    raw_embedding=list(vector) if include_raw_embeddings else None,
+                    true_label=summary.true_label,
+                    predicted_label=summary.predicted_label,
+                    mean_confidence=summary.mean_confidence,
+                    total_windows=summary.total_windows,
+                )
+                for summary, coordinate, vector in zip(summaries, coordinates, vectors, strict=True)
+            ]
+            if reduction_status == "ok"
+            else []
+        )
 
         return cls._patient_embeddings_response(
             dataset_id=dataset_id,
@@ -308,6 +315,7 @@ class PredictionCacheService:
             checkpoint_signature=checkpoint_signature,
             checkpoint_key=checkpoint_key,
             source_dimension=source_dimension,
+            reduction_method=reduction_method,
             reduction_status=reduction_status,
             explained_variance_ratio=explained_variance_ratio,
             points=points,
@@ -461,6 +469,7 @@ class PredictionCacheService:
         model_name: str = DEFAULT_MODEL_NAME,
         source: TimeseriesSource = "derivatives",
         include_raw_embeddings: bool = False,
+        reduction_method: EmbeddingReductionMethod = "pca",
     ) -> ModelWindowEmbeddingsResponse:
         validate_model_input_source(source)
         checkpoint_signature = ModelService.get_checkpoint_signature(model_name)
@@ -505,6 +514,7 @@ class PredictionCacheService:
             artifact=artifact,
             clustering_artifact=clustering_artifact,
             include_raw_embeddings=include_raw_embeddings,
+            reduction_method=reduction_method,
         )
 
     @classmethod
@@ -793,6 +803,7 @@ class PredictionCacheService:
         checkpoint_signature: str,
         checkpoint_key: str,
         source_dimension: int,
+        reduction_method: EmbeddingReductionMethod,
         reduction_status: Literal["ok", "insufficient_data"],
         explained_variance_ratio: list[float],
         points: list[ModelPatientEmbeddingPoint],
@@ -808,7 +819,7 @@ class PredictionCacheService:
             embedding_label=PENULTIMATE_EMBEDDING_LABEL,
             feature_names=get_embedding_feature_names(source_dimension),
             reduction=ModelPatientEmbeddingReduction(
-                method="pca",
+                method=reduction_method,
                 status=reduction_status,
                 source_dimension=source_dimension,
                 output_dimension=2 if reduction_status == "ok" else 0,
@@ -830,6 +841,7 @@ class PredictionCacheService:
         artifact: dict[str, Any] | None,
         clustering_artifact: dict[str, Any] | None,
         include_raw_embeddings: bool,
+        reduction_method: EmbeddingReductionMethod,
     ) -> ModelWindowEmbeddingsResponse:
         if not artifact or not isinstance(artifact.get("response"), dict):
             return ModelWindowEmbeddingsResponse(
@@ -842,7 +854,7 @@ class PredictionCacheService:
                 embedding_label=PENULTIMATE_EMBEDDING_LABEL,
                 feature_names=[],
                 reduction=ModelPatientEmbeddingReduction(
-                    method="pca",
+                    method=reduction_method,
                     status="insufficient_data",
                     source_dimension=0,
                     output_dimension=0,
@@ -881,7 +893,7 @@ class PredictionCacheService:
                 embedding_label=PENULTIMATE_EMBEDDING_LABEL,
                 feature_names=get_embedding_feature_names(source_dimension),
                 reduction=ModelPatientEmbeddingReduction(
-                    method="pca",
+                    method=reduction_method,
                     status="insufficient_data",
                     source_dimension=source_dimension,
                     output_dimension=0,
@@ -891,7 +903,7 @@ class PredictionCacheService:
             )
 
         vectors = np.asarray(embedding_rows, dtype=float)
-        coordinates, explained_variance_ratio, reduction_status = reduce_embeddings_pca(vectors)
+        coordinates, explained_variance_ratio, reduction_status = reduce_embeddings(vectors, reduction_method)
         if len(cached_cluster_ids) == len(embedding_rows):
             cluster_ids = cached_cluster_ids
         else:
@@ -936,7 +948,7 @@ class PredictionCacheService:
             embedding_label=PENULTIMATE_EMBEDDING_LABEL,
             feature_names=get_embedding_feature_names(source_dimension),
             reduction=ModelPatientEmbeddingReduction(
-                method="pca",
+                method=reduction_method,
                 status=reduction_status,
                 source_dimension=source_dimension,
                 output_dimension=2 if reduction_status == "ok" else 0,

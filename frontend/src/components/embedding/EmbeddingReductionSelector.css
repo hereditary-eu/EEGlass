@@ -1,0 +1,30 @@
+.embedding-reduction-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.embedding-reduction-selector select {
+  min-height: 1.7rem;
+  border: 1px solid #c8d4de;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #334155;
+  padding: 0.2rem 1.5rem 0.2rem 0.45rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.embedding-reduction-selector select:focus-visible {
+  outline: 2px solid rgb(14 116 144 / 32%);
+  outline-offset: 2px;
+}
+
+.embedding-reduction-selector select:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}

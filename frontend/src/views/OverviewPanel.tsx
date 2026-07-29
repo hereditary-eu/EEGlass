@@ -69,6 +69,7 @@ export function OverviewPanel() {
   const modelInfoError = useAppStore((state) => state.modelError);
   const initializeModelState = useAppStore((state) => state.initializeModelState);
   const setCurrentModel = useAppStore((state) => state.setCurrentModel);
+  const selectedEmbeddingReductionMethod = useAppStore((state) => state.selectedEmbeddingReductionMethod);
 
   const selectedDataset = useMemo(
     () => datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null,
@@ -297,7 +298,12 @@ export function OverviewPanel() {
     }
 
     setIsLoadingEmbeddings(true);
-    ModelService.getPatientEmbeddings(selectedDatasetId, "derivatives", activeModelName)
+    ModelService.getPatientEmbeddings(
+      selectedDatasetId,
+      "derivatives",
+      activeModelName,
+      selectedEmbeddingReductionMethod,
+    )
       .then((embeddings) => {
         if (isCurrent) {
           setPatientEmbeddings(embeddings);
@@ -317,7 +323,7 @@ export function OverviewPanel() {
     return () => {
       isCurrent = false;
     };
-  }, [activeModelName, selectedDatasetId, embeddingRefreshKey]);
+  }, [activeModelName, selectedDatasetId, embeddingRefreshKey, selectedEmbeddingReductionMethod]);
 
   useEffect(() => {
     let isCurrent = true;

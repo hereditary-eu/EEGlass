@@ -50,8 +50,9 @@ from backend.pydantic_models.inference import (
     ModelWindowEmbeddingsResponse,
     WindowPrediction,
 )
+from backend.pydantic_models.embeddings import EmbeddingReductionMethod
 from backend.pydantic_models.timeseries import TimeseriesSource
-from backend.services.embedding_service import cluster_embeddings_density, reduce_embeddings_pca
+from backend.services.embedding_service import cluster_embeddings_density, reduce_embeddings
 from backend.services.model_errors import (
     ModelDependencyUnavailableError,
     ModelInferenceUnavailableError,
@@ -974,6 +975,7 @@ class ModelService:
         subject_id: str,
         source: TimeseriesSource = "derivatives",
         model_name: str = DEFAULT_MODEL_NAME,
+        reduction_method: EmbeddingReductionMethod = "pca",
     ) -> ModelWindowEmbeddingsResponse:
         validate_model_input_source(source)
         cls._ensure_inference_available()
@@ -998,7 +1000,9 @@ class ModelService:
         )
 
         source_dimension = int(penultimate_embeddings.shape[1]) if penultimate_embeddings.ndim == 2 else 0
-        coordinates, explained_variance_ratio, reduction_status = reduce_embeddings_pca(penultimate_embeddings)
+        coordinates, explained_variance_ratio, reduction_status = reduce_embeddings(
+            penultimate_embeddings, reduction_method
+        )
         cluster_ids = cluster_embeddings_density(penultimate_embeddings) if reduction_status == "ok" else []
         points = (
             [
@@ -1031,7 +1035,7 @@ class ModelService:
             embedding_label="window penultimate embedding",
             feature_names=get_embedding_feature_names(source_dimension),
             reduction=ModelPatientEmbeddingReduction(
-                method="pca",
+                method=reduction_method,
                 status=reduction_status,
                 source_dimension=source_dimension,
                 output_dimension=2 if reduction_status == "ok" else 0,

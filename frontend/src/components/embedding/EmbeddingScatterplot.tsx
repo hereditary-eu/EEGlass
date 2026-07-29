@@ -51,6 +51,8 @@ interface EmbeddingScatterplotProps {
   onPointClick?: (point: EmbeddingScatterplotPoint) => void;
   onSelectionChange?: (selectedPointIds: string[] | null) => void;
   onVegaViewReady?: (args: EmbeddingScatterplotVegaViewArgs) => void | (() => void);
+  xAxisTitle?: string;
+  yAxisTitle?: string;
 }
 
 export function EmbeddingScatterplot({
@@ -72,6 +74,8 @@ export function EmbeddingScatterplot({
   onPointClick,
   onSelectionChange,
   onVegaViewReady,
+  xAxisTitle = "PC1",
+  yAxisTitle = "PC2",
 }: EmbeddingScatterplotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
@@ -181,12 +185,12 @@ export function EmbeddingScatterplot({
         x: {
           field: "x",
           type: "quantitative",
-          axis: createAxis("PC1"),
+          axis: createAxis(xAxisTitle),
         },
         y: {
           field: "y",
           type: "quantitative",
-          axis: createAxis("PC2"),
+          axis: createAxis(yAxisTitle),
         },
         fill: { field: "fillColor", type: "nominal", scale: null, legend: null },
         stroke: { field: "strokeColor", type: "nominal", scale: null, legend: null },
@@ -252,6 +256,8 @@ export function EmbeddingScatterplot({
     points,
     showStatusOverlay,
     tooltipFields,
+    xAxisTitle,
+    yAxisTitle,
   ]);
 
   return (

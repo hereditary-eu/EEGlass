@@ -44,6 +44,7 @@ OUTPUT_TBP_COMPONENT = "total-bandpower.pdf"
 
 chrome_options = Options()
 chrome_options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+# chrome_options.binary_location = "/usr/bin/google-chrome"
 
 chrome_options.add_argument("--start-maximized")
 chrome_options.add_argument("--disable-infobars")

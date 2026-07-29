@@ -7,6 +7,9 @@ from pydantic import BaseModel
 from backend.pydantic_models.timeseries import TimeseriesSource
 
 
+EmbeddingReductionMethod = Literal["pca", "tsne", "umap"]
+
+
 class ModelPatientEmbeddingPoint(BaseModel):
     subject_id: str
     x: float
@@ -19,7 +22,7 @@ class ModelPatientEmbeddingPoint(BaseModel):
 
 
 class ModelPatientEmbeddingReduction(BaseModel):
-    method: Literal["pca"]
+    method: EmbeddingReductionMethod
     status: Literal["ok", "insufficient_data"]
     source_dimension: int
     output_dimension: int

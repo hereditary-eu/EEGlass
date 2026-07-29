@@ -19,6 +19,7 @@ import type {
   ModelScalpTopologyResponse,
   ModelWindowEmbeddingsResponse,
   ModelWindowScalpTopologyResponse,
+  EmbeddingReductionMethod,
   TimeseriesSource,
 } from "../types";
 
@@ -112,10 +113,14 @@ export class ModelService {
     datasetId: string,
     source: TimeseriesSource = "derivatives",
     modelName?: string,
+    reductionMethod: EmbeddingReductionMethod = "pca",
   ): Promise<ModelPatientEmbeddingsResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelPatientEmbeddingsResponse>(
-      `${API_ROUTES.model.patientEmbeddings(datasetId, resolvedModelName)}?${this.toQueryString({ source })}`,
+      `${API_ROUTES.model.patientEmbeddings(datasetId, resolvedModelName)}?${this.toQueryString({
+        source,
+        reduction_method: reductionMethod,
+      })}`,
     );
   }
 
@@ -123,10 +128,14 @@ export class ModelService {
     datasetId: string,
     source: TimeseriesSource = "derivatives",
     modelName?: string,
+    reductionMethod: EmbeddingReductionMethod = "pca",
   ): Promise<ModelPatientEmbeddingsResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelPatientEmbeddingsResponse>(
-      `${API_ROUTES.model.patientRawEmbeddings(datasetId, resolvedModelName)}?${this.toQueryString({ source })}`,
+      `${API_ROUTES.model.patientRawEmbeddings(datasetId, resolvedModelName)}?${this.toQueryString({
+        source,
+        reduction_method: reductionMethod,
+      })}`,
     );
   }
 
@@ -152,10 +161,14 @@ export class ModelService {
     subjectId: string,
     source: TimeseriesSource = "derivatives",
     modelName?: string,
+    reductionMethod: EmbeddingReductionMethod = "pca",
   ): Promise<ModelWindowEmbeddingsResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelWindowEmbeddingsResponse>(
-      `${API_ROUTES.model.windowEmbeddings(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({ source })}`,
+      `${API_ROUTES.model.windowEmbeddings(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({
+        source,
+        reduction_method: reductionMethod,
+      })}`,
     );
   }
 
@@ -164,10 +177,14 @@ export class ModelService {
     subjectId: string,
     source: TimeseriesSource = "derivatives",
     modelName?: string,
+    reductionMethod: EmbeddingReductionMethod = "pca",
   ): Promise<ModelWindowEmbeddingsResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelWindowEmbeddingsResponse>(
-      `${API_ROUTES.model.windowRawEmbeddings(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({ source })}`,
+      `${API_ROUTES.model.windowRawEmbeddings(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({
+        source,
+        reduction_method: reductionMethod,
+      })}`,
     );
   }
 
@@ -181,11 +198,13 @@ export class ModelService {
   ): Promise<ModelFeatureImportanceResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelFeatureImportanceResponse>(
-      `${API_ROUTES.model.windowEmbeddingFeatureImportance(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({
-        source,
-        method,
-        target,
-      })}`,
+      `${API_ROUTES.model.windowEmbeddingFeatureImportance(datasetId, subjectId, resolvedModelName)}?${this.toQueryString(
+        {
+          source,
+          method,
+          target,
+        },
+      )}`,
     );
   }
 

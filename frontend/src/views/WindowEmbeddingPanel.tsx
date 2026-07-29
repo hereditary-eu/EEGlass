@@ -3,7 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ComponentStatusIndicator,
   EmbeddingIntrospectionPanel,
+  EmbeddingReductionSelector,
   EmbeddingScatterplot,
+  getEmbeddingAxisTitles,
+  getEmbeddingInsufficientDataMessage,
+  getEmbeddingReductionLabel,
   MathFormula,
 } from "../components";
 import type { EmbeddingScatterplotPoint, EmbeddingScatterplotTooltipField } from "../components";
@@ -11,6 +15,7 @@ import { getEmbeddingClassColors, getModelClassLabels } from "../constants/eegMo
 import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../constants/eegModelNotation";
 import { ModelService } from "../services/ModelService";
 import { MODEL_INPUT_SOURCE } from "../hooks/timeseries/shared";
+import { useAppStore } from "../stores/useAppStore";
 import type { ModelInfoResponse, ModelWindowEmbeddingsResponse } from "../types";
 import "./WindowEmbeddingPanel.css";
 
@@ -56,8 +61,11 @@ export function WindowEmbeddingPanel({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [legendHighlightTarget, setLegendHighlightTarget] = useState<WindowEmbeddingLegendTarget | null>(null);
+  const selectedEmbeddingReductionMethod = useAppStore((state) => state.selectedEmbeddingReductionMethod);
+  const setSelectedEmbeddingReductionMethod = useAppStore((state) => state.setSelectedEmbeddingReductionMethod);
   const modelClasses = modelInfo?.classes ?? [];
   const classLabels = useMemo(() => getModelClassLabels(modelClasses), [modelClasses]);
+  const [xAxisTitle, yAxisTitle] = getEmbeddingAxisTitles(selectedEmbeddingReductionMethod);
 
   useEffect(() => {
     if (!datasetId || !subjectId || !modelInfo?.name) {
@@ -68,10 +76,17 @@ export function WindowEmbeddingPanel({
     }
 
     let isCurrent = true;
+    setEmbeddings(null);
     setIsLoading(true);
     setError(null);
 
-    ModelService.getWindowEmbeddings(datasetId, subjectId, MODEL_INPUT_SOURCE, modelInfo.name)
+    ModelService.getWindowEmbeddings(
+      datasetId,
+      subjectId,
+      MODEL_INPUT_SOURCE,
+      modelInfo.name,
+      selectedEmbeddingReductionMethod,
+    )
       .then((response) => {
         if (isCurrent) {
           setEmbeddings(response);
@@ -94,7 +109,7 @@ export function WindowEmbeddingPanel({
     return () => {
       isCurrent = false;
     };
-  }, [datasetId, modelInfo?.name, subjectId]);
+  }, [datasetId, modelInfo?.name, selectedEmbeddingReductionMethod, subjectId]);
 
   useEffect(() => {
     setRawEmbeddings(null);
@@ -110,14 +125,20 @@ export function WindowEmbeddingPanel({
     setIsLoadingRawEmbeddings(true);
     setRawEmbeddingsError(null);
 
-    ModelService.getWindowRawEmbeddings(datasetId, subjectId, MODEL_INPUT_SOURCE, modelInfo.name)
+    ModelService.getWindowRawEmbeddings(
+      datasetId,
+      subjectId,
+      MODEL_INPUT_SOURCE,
+      modelInfo.name,
+      selectedEmbeddingReductionMethod,
+    )
       .then((response) => setRawEmbeddings(response))
       .catch((loadError) => {
         setRawEmbeddings(null);
         setRawEmbeddingsError(getWindowRawEmbeddingError(loadError));
       })
       .finally(() => setIsLoadingRawEmbeddings(false));
-  }, [datasetId, isLoadingRawEmbeddings, modelInfo?.name, rawEmbeddings, subjectId]);
+  }, [datasetId, isLoadingRawEmbeddings, modelInfo?.name, rawEmbeddings, selectedEmbeddingReductionMethod, subjectId]);
 
   const values = useMemo<WindowEmbeddingDatum[]>(
     () =>
@@ -192,7 +213,7 @@ export function WindowEmbeddingPanel({
   const emptyMessage = !modelInfo
     ? "Model metadata unavailable."
     : embeddings?.reduction.status === "insufficient_data"
-      ? "Need at least two prediction windows."
+      ? getEmbeddingInsufficientDataMessage(selectedEmbeddingReductionMethod, "prediction windows")
       : "Compute predictions to populate window embeddings.";
   const status = getWindowEmbeddingStatus({ embeddings, error, isLoading });
 
@@ -206,10 +227,18 @@ export function WindowEmbeddingPanel({
             {embeddings ? ` - ${embeddings.points.length} windows / ${embeddings.reduction.source_dimension}D` : ""}
           </p>
         </div>
-        <span>
-          {EEG_MODEL_NOTATION_LABELS.windowEmbeddingPrefix} <MathFormula tex={EEG_MODEL_NOTATION.classLogits} />
-          <ComponentStatusIndicator status={status.status} label={status.label} />
-        </span>
+        <div className="window-embedding-header-actions">
+          <EmbeddingReductionSelector
+            value={selectedEmbeddingReductionMethod}
+            onChange={setSelectedEmbeddingReductionMethod}
+            disabled={isLoading}
+            ariaLabel="Window embedding reduction method"
+          />
+          <span className="window-embedding-stage">
+            {EEG_MODEL_NOTATION_LABELS.windowEmbeddingPrefix} <MathFormula tex={EEG_MODEL_NOTATION.classLogits} />
+            <ComponentStatusIndicator status={status.status} label={status.label} />
+          </span>
+        </div>
       </div>
 
       <div className="window-embedding-plot-shell">
@@ -227,7 +256,7 @@ export function WindowEmbeddingPanel({
           introspectionTitle="Window Embedding Introspection"
           introspectionSubtitle={
             embeddings
-              ? `${embeddings.points.length} windows / ${embeddings.reduction.source_dimension}D source embedding`
+              ? `${getEmbeddingReductionLabel(selectedEmbeddingReductionMethod)} / ${embeddings.points.length} windows / ${embeddings.reduction.source_dimension}D source embedding`
               : undefined
           }
           renderIntrospectionContent={() =>
@@ -253,6 +282,8 @@ export function WindowEmbeddingPanel({
               onSelectedWindowIndexChange(point.windowIndex);
             }
           }}
+          xAxisTitle={xAxisTitle}
+          yAxisTitle={yAxisTitle}
         />
       </div>
 

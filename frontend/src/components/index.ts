@@ -4,7 +4,14 @@ export { DataTable } from "./data-table";
 export type { DataTableProps } from "./data-table";
 export { EegTimeseries } from "./timeseries";
 export type { EegTimeseriesProps, TimeseriesWindowAnnotationRow, TimeseriesWindowAnnotationValue } from "./timeseries";
-export { EmbeddingIntrospectionPanel, EmbeddingScatterplot } from "./embedding";
+export {
+  EmbeddingIntrospectionPanel,
+  EmbeddingReductionSelector,
+  EmbeddingScatterplot,
+  getEmbeddingAxisTitles,
+  getEmbeddingInsufficientDataMessage,
+  getEmbeddingReductionLabel,
+} from "./embedding";
 export type {
   EmbeddingFeatureImportanceRequest,
   EmbeddingIntrospectionRow,
