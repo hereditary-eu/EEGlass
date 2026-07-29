@@ -1,21 +1,39 @@
+import asyncio
+from contextlib import asynccontextmanager, suppress
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from backend.config import CONFIG
 from backend.routers import (
-    timeseries_router,
     model_router,
     settings_router,
+    timeseries_router,
 )
+from backend.services.embedding_service import warm_up_umap
 from backend.utils.mne_logging import configure_mne_logging
 
 configure_mne_logging()
 
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Prime UMAP's JIT.
+    warmup_task = asyncio.create_task(asyncio.to_thread(warm_up_umap))
+    try:
+        yield
+    finally:
+        if not warmup_task.done():
+            warmup_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await warmup_task
+
+
 def create_app():
     app = FastAPI(
         title=CONFIG.TITLE,
+        lifespan=lifespan,
     )
 
     app.add_middleware(

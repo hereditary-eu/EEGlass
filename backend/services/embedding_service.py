@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 
 from backend.pydantic_models.embeddings import EmbeddingReductionMethod
+
+logger = logging.getLogger(__name__)
 
 
 class EmbeddingReductionError(RuntimeError):
@@ -77,6 +81,14 @@ def reduce_embeddings_umap(vectors: np.ndarray) -> tuple[np.ndarray, list[float]
 
     coordinates = UMAP().fit_transform(vectors.astype(float, copy=False))
     return np.asarray(coordinates, dtype=float), [], "ok"
+
+
+def warm_up_umap() -> None:
+    vectors = np.random.default_rng(0).standard_normal((32, 8))
+    try:
+        reduce_embeddings_umap(vectors)
+    except Exception:
+        logger.exception("Unable to warm up UMAP.")
 
 
 def cluster_embeddings_density(vectors: np.ndarray) -> list[int | None]:
