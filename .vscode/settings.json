@@ -12,5 +12,8 @@
   },
   "notebook.defaultFormatter": "charliermarsh.ruff",
   "notebook.formatOnSave.enabled": true,
-  "prettier.trailingComma": "all"
+  "prettier.trailingComma": "all",
+  "[typst]": {
+    "editor.defaultFormatter": "myriad-dreamin.tinymist"
+  }
 }

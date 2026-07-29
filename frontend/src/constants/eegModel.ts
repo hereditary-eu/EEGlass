@@ -65,10 +65,7 @@ export function getModelBandIds(modelInfo: ModelInfoResponse | null | undefined)
   return getModelBands(modelInfo).map((modelBand) => modelBand.band);
 }
 
-export function getModelBandLabel(
-  band: string,
-  bands: ModelBandPresentation[] | null | undefined,
-): string {
+export function getModelBandLabel(band: string, bands: ModelBandPresentation[] | null | undefined): string {
   return bands?.find((modelBand) => modelBand.band === band)?.label ?? band;
 }
 

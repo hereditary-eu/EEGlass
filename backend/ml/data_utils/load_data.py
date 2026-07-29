@@ -13,14 +13,21 @@ configure_mne_logging()
 MICROVOLTS_SCALE = 1_000_000.0
 
 
-def get_participant_id(participant_id_int):
+def get_participant_id_int(participant_id_str: str) -> int:
+    """
+    Converts a string participant ID to an integer. For example, if participant_id_str is 'sub-001', it will return 1.
+    """
+    return int(participant_id_str.split("-")[1])
+
+
+def get_participant_id(participant_id_int: int) -> str:
     """
     Converts an integer participant ID to a zero-padded string format. For example, if participant_id_int is 1, it will return '001'.
     """
     return f"{participant_id_int:03d}"
 
 
-def gen_filename(participant_id):
+def gen_filename(participant_id: str):
     """
     Generates the filename for the EEG data based on the participant ID. The filename format is 'sub-XXX/eeg/sub-XXX_task-eyesclosed_eeg.set', where XXX is the zero-padded participant ID.
     For example, if participant_id is '001', it will return 'sub-001/eeg/sub-001_task-eyesclosed_eeg.set'.
@@ -28,7 +35,7 @@ def gen_filename(participant_id):
     return os.path.join(f"sub-{participant_id}", "eeg", f"sub-{participant_id}_task-eyesclosed_eeg.set")
 
 
-def gen_derivative_filename(participant_id):
+def gen_derivative_filename(participant_id: str):
     """
     Generates the derivative EEG path for a participant.
     """
@@ -40,7 +47,7 @@ def gen_derivative_filename(participant_id):
     )
 
 
-def gen_participant_id_long(participant_id_int):
+def gen_participant_id_long(participant_id_int: int) -> str:
     """
     Generates the long participant ID format used in the EEG data from the integer participant ID.
     For example, if participant_id_int is 1, it will return 'sub-001'.
@@ -48,7 +55,7 @@ def gen_participant_id_long(participant_id_int):
     return f"sub-{get_participant_id(participant_id_int)}"
 
 
-def gen_model_input_filename(participant_id):
+def gen_model_input_filename(participant_id: str):
     """
     Generates the canonical model-input EEG path. Model workflows use derivatives only.
     """
@@ -115,6 +122,27 @@ def load_multiple_eeg_windows(
     df_metadata: pd.DataFrame,
     sample_length: int | None = None,
     n_max: int | None = None,
+    subject_ids: list[int] | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Loads derivative EEG windows for multiple participants and matching class labels.
+    """
+    x, y, _ = load_multiple_eeg_windows_inner(
+        dir_data=dir_data,
+        participant_ids=participant_ids,
+        df_metadata=df_metadata,
+        sample_length=sample_length,
+        n_max=n_max,
+    )
+    return x, y
+
+
+def load_multiple_eeg_windows_inner(
+    dir_data: str,
+    participant_ids: list[int],
+    df_metadata: pd.DataFrame,
+    sample_length: int | None = None,
+    n_max: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Loads derivative EEG windows for multiple participants and matching class labels.
@@ -122,6 +150,7 @@ def load_multiple_eeg_windows(
     participant_dis_map = dict(zip(df_metadata["participant_id"], df_metadata["group_encoded"]))
     windows_by_subject = []
     labels_by_subject = []
+    subject_ids = []
 
     for participant_id_int in participant_ids:
         participant_id_long = gen_participant_id_long(participant_id_int)
@@ -138,14 +167,18 @@ def load_multiple_eeg_windows(
         labels_by_subject.append(
             np.full((windows.shape[0],), int(participant_dis_map[participant_id_long]), dtype=np.int64)
         )
+        np.array(subject_ids.append(np.full((windows.shape[0],), participant_id_int, dtype=np.int64))).flatten()
 
     if not windows_by_subject:
         raise ValueError("At least one participant is required to load model windows.")
 
     x = np.concatenate(windows_by_subject, axis=0).astype("float32", copy=False)
     y = np.concatenate(labels_by_subject, axis=0).astype(np.int64, copy=False)
+    subject_ids = np.concatenate(subject_ids, axis=0).astype(np.int64, copy=False)
+    subject_ids = np.array(subject_ids).flatten()
+
     print(f"Loaded derivative model windows: x shape {x.shape}, y shape {y.shape}")
-    return x, y
+    return x, y, subject_ids
 
 
 def load_preprocessed_raw_from_file(data_path: str):

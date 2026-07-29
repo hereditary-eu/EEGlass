@@ -62,8 +62,9 @@ def train_models():
         train(model_version)
 
 
-def load_participant_splits() -> dict[str, dict[str, list[int]]]:
-    split_path = Path("backend") / "ml" / "data_splits.json"
+def load_participant_splits(split_path=None) -> dict[str, dict[str, list[int]]]:
+    if split_path is None:
+        split_path = Path("backend") / "ml" / "data_splits.json"
     with split_path.open("r", encoding="utf-8") as file:
         return json.load(file)
 

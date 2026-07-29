@@ -35,37 +35,22 @@ def save_model(model, model_path, df_metadata=None):
         metadata_path = resolved_model_path.with_name(f"{resolved_model_path.stem}_metadata.csv")
         df_metadata.to_csv(metadata_path, index=True)
 
+    print(f"Model saved to {resolved_model_path}")
 
-def train_save_model(
-    model_path: str,
+
+def get_train_val_test_loader(
     dir_data: str,
     participant_ids_train: list,
     participant_ids_val: list,
-    model=None,
-    parameters: dict = PARAMETERS_DEFAULT,
-    training_parameters: dict = TRAINING_PARAMETERS_DEFAULT,
-    verbose=False,
-    device="cpu",
     df_metadata=None,
+    parameters: dict = PARAMETERS_DEFAULT,
+    # training_parameters: dict = TRAINING_PARAMETERS_DEFAULT,
     n_max=None,
 ):
     """
-    Trains the model and saves it to the specified path. The function loads derivative EEG data for the specified participants, prepares the data loaders, defines the optimizer, loss function and learning rate scheduler, and then trains the model using the train_model function from shallownetXAI_main. Finally, it saves the trained model to the specified path.
-    There are default parameters for the model and training, which can be overridden.
-    - model_path: Path to save the trained model.
-    - dir_data: Path to the data directory containing the EEG data and metadata.
-    - participant_ids_train: List of participant IDs to use for training.
-    - participant_ids_val: List of participant IDs to use for validation.
-    - model: The model to train (default is XEEG_MODEL_DEFAULT).
-    - parameters: Dictionary of parameters for data preparation and model training (default is PARAMETERS_DEFAULT).
-    - training_parameters: Dictionary of parameters for training (default is TRAINING_PARAMETERS_DEFAULT).
-    - verbose: Whether to print verbose output during training (default is False).
-    - device: Device to use for training (default is 'cpu').
-    - df_metadata: Metadata dataframe (optional). If not provided, it will be loaded from the data directory.
-    - n_max: Maximum number of samples to load per participant (default is None, i.e., load all samples). Only for debugging purposes to speed up training.
+    Returns df_metadata, trainloader, valloader and testloader and the corresponding data arrays (x_train, y_train, x_val, y_val, x_test, y_test)
+    for the given data directory and participant IDs.
     """
-    if model is None:
-        model = build_xeegnet()
 
     participant_ids_train_str = [gen_participant_id_long(pid) for pid in participant_ids_train]
     participant_ids_val_str = [gen_participant_id_long(pid) for pid in participant_ids_val]
@@ -97,6 +82,14 @@ def train_save_model(
         n_max=n_max,
     )
 
+    x_test, y_test = load_multiple_eeg_windows(
+        dir_data,
+        df_metadata.loc[df_metadata["datasplit"] == "test", "participant_id_int"].tolist(),
+        df_metadata,
+        sample_length=parameters["sample_length"],
+        n_max=n_max,
+    )
+
     trainloader = get_window_data_loader(
         x_train,
         y_train,
@@ -110,7 +103,61 @@ def train_save_model(
         parameters["workers"],
         shuffle=False,
     )
-    del x_train, y_train, x_val, y_val
+
+    testloader = get_window_data_loader(
+        x_test,
+        y_test,
+        parameters["batchsize"],
+        parameters["workers"],
+        shuffle=False,
+    )
+
+    return df_metadata, trainloader, valloader, testloader, (x_train, y_train, x_val, y_val, x_test, y_test)
+
+
+def train_save_model(
+    model_path: str,
+    dir_data: str,
+    participant_ids_train: list,
+    participant_ids_val: list,
+    model=None,
+    parameters: dict = PARAMETERS_DEFAULT,
+    training_parameters: dict = TRAINING_PARAMETERS_DEFAULT,
+    verbose=False,
+    device="cpu",
+    df_metadata=None,
+    n_max=None,
+    save_model_flag=True,
+):
+    """
+    Trains the model and saves it to the specified path. The function loads derivative EEG data for the specified participants, prepares the data loaders, defines the optimizer, loss function and learning rate scheduler, and then trains the model using the train_model function from shallownetXAI_main. Finally, it saves the trained model to the specified path.
+    There are default parameters for the model and training, which can be overridden.
+    - model_path: Path to save the trained model.
+    - dir_data: Path to the data directory containing the EEG data and metadata.
+    - participant_ids_train: List of participant IDs to use for training.
+    - participant_ids_val: List of participant IDs to use for validation.
+    - model: The model to train (default is XEEG_MODEL_DEFAULT).
+    - parameters: Dictionary of parameters for data preparation and model training (default is PARAMETERS_DEFAULT).
+    - training_parameters: Dictionary of parameters for training (default is TRAINING_PARAMETERS_DEFAULT).
+    - verbose: Whether to print verbose output during training (default is False).
+    - device: Device to use for training (default is 'cpu').
+    - df_metadata: Metadata dataframe (optional). If not provided, it will be loaded from the data directory.
+    - n_max: Maximum number of samples to load per participant (default is None, i.e., load all samples). Only for debugging purposes to speed up training.
+    """
+    if model is None:
+        model = build_xeegnet()
+
+    # participant_ids_train_str = [gen_participant_id_long(pid) for pid in participant_ids_train]
+    # participant_ids_val_str = [gen_participant_id_long(pid) for pid in participant_ids_val]
+
+    df_metadata, trainloader, valloader, _, _ = get_train_val_test_loader(
+        dir_data=dir_data,
+        participant_ids_train=participant_ids_train,
+        participant_ids_val=participant_ids_val,
+        df_metadata=df_metadata,
+        parameters=parameters,
+        n_max=n_max,
+    )
 
     # define optimizer, loss function and learning rate scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=training_parameters["lr"])
@@ -147,7 +194,8 @@ def train_save_model(
     )
 
     # del trainloader, valloader
-    save_model(model, model_path, df_metadata=df_metadata)
+    if save_model_flag:
+        save_model(model, model_path, df_metadata=df_metadata)
     return model, df_metadata
 
 

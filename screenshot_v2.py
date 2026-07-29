@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 import base64
 import json
-import os
+import sys
 import time
 import traceback
 from pathlib import Path
+from urllib.parse import urlencode
 
 import pymupdf
 from selenium import webdriver
@@ -19,6 +20,7 @@ PT_PER_INCH = 72
 PX_TO_PT = PT_PER_INCH / DPI
 CROP_PADDING_PX = 4.0
 PDF_SETTLE_SECONDS = 4
+PATIENT_SIGNAL_LOADED_SETTLE_SECONDS = 1
 
 SCREEN_WIDTH = 1728
 SCREEN_HEIGHT = 1094
@@ -27,24 +29,40 @@ INTROSPECTION_SCREEN_HEIGHT = 900
 INTROSPECTION_CROP_VERTICAL_PADDING_PX = 0.0
 
 PATIENT_VIEW_WINDOW_NUMBER = 53
+PATIENT_VIEW_WINDOW_SIZE_SECONDS = 4
+PATIENT_VIEW_RANGE_START_WINDOW = 26
+PATIENT_VIEW_RANGE_END_WINDOW = 75
 
 OUTPUT_DIR = Path("paper/figures/generated")
 
 APP_URL = "http://localhost:3000"
-PATIENT_URL = f"{APP_URL}/datasets/ds004504/patients/sub-023"
-
-OUTPUT_OVERVIEW = "overview.pdf"
-OUTPUT_PATIENT_VIEW = "patient_view.pdf"
-OUTPUT_VACP_OVERLAY = "vacp-panel.pdf"
-OUTPUT_INTROSPECTION = "introspection.pdf"
-OUTPUT_TBP_COMPONENT = "total-bandpower.pdf"
 
 
+def get_patient_view_time_range_from_windows() -> tuple[float, float]:
+    if PATIENT_VIEW_RANGE_START_WINDOW < 1:
+        raise ValueError("PATIENT_VIEW_RANGE_START_WINDOW is 1-based and must be at least 1")
+    if PATIENT_VIEW_RANGE_END_WINDOW < PATIENT_VIEW_RANGE_START_WINDOW:
+        raise ValueError("PATIENT_VIEW_RANGE_END_WINDOW must be greater than or equal to the start window")
+
+    start_time = (PATIENT_VIEW_RANGE_START_WINDOW - 1) * PATIENT_VIEW_WINDOW_SIZE_SECONDS
+    end_time = PATIENT_VIEW_RANGE_END_WINDOW * PATIENT_VIEW_WINDOW_SIZE_SECONDS
+    return float(start_time), float(end_time)
+
+
+def build_patient_url() -> str:
+    start_time, end_time = get_patient_view_time_range_from_windows()
+    query = urlencode({"start_time": start_time, "end_time": end_time})
+    return f"{APP_URL}/datasets/ds004504/patients/sub-023?{query}"
+
+
+PATIENT_URL = build_patient_url()
 
 
 chrome_options = Options()
-chrome_options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-# chrome_options.binary_location = "/usr/bin/google-chrome"
+if sys.platform == "win32":
+    chrome_options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+else:
+    chrome_options.binary_location = "/usr/bin/brave-browser"
 
 chrome_options.add_argument("--start-maximized")
 chrome_options.add_argument("--disable-infobars")
@@ -72,6 +90,7 @@ PDF_PARAMS = {
     "marginRight": 0,
     "pageRanges": "1",
 }
+
 
 def save_screenshot(filename: str, pdf_params=PDF_PARAMS):
     try:
@@ -110,15 +129,28 @@ def crop_pdf_to_rect(
         right_padding = padding_px if padding_right_px is None else padding_right_px
         top_padding = padding_px if padding_top_px is None else padding_top_px
         bottom_padding = padding_px if padding_bottom_px is None else padding_bottom_px
-        source_page_rect = source_pdf[0].rect
-        x0 = max(source_page_rect.x0, (rect["left"] - left_padding) * PX_TO_PT)
-        y0 = max(source_page_rect.y0, (rect["top"] - top_padding) * PX_TO_PT)
-        x1 = min(source_page_rect.x1, (rect["left"] + rect["width"] + right_padding) * PX_TO_PT)
-        y1 = min(source_page_rect.y1, (rect["top"] + rect["height"] + bottom_padding) * PX_TO_PT)
-
-        # Redrawing through PyMuPDF clips the page contents, so off-clip objects are pruned
-        # instead of merely hidden behind a cropbox.
+        full = source_pdf[0].rect
+        x0 = max(full.x0, (rect["left"] - left_padding) * PX_TO_PT)
+        y0 = max(full.y0, (rect["top"] - top_padding) * PX_TO_PT)
+        x1 = min(full.x1, (rect["left"] + rect["width"] + right_padding) * PX_TO_PT)
+        y1 = min(full.y1, (rect["top"] + rect["height"] + bottom_padding) * PX_TO_PT)
         clip = pymupdf.Rect(x0, y0, x1, y1)
+
+        # Redact the four strips outside the clip so their content is truly removed
+        # from the stream (not just hidden), making the result clean in Inkscape.
+        for strip in [
+            pymupdf.Rect(full.x0, full.y0, full.x1, clip.y0),
+            pymupdf.Rect(full.x0, clip.y1, full.x1, full.y1),
+            pymupdf.Rect(full.x0, clip.y0, clip.x0, clip.y1),
+            pymupdf.Rect(clip.x1, clip.y0, full.x1, clip.y1),
+        ]:
+            if not strip.is_empty:
+                source_pdf[0].add_redact_annot(strip)
+        source_pdf[0].apply_redactions(
+            images=pymupdf.PDF_REDACT_IMAGE_PIXELS,
+            graphics=pymupdf.PDF_REDACT_LINE_ART_REMOVE_IF_COVERED,
+        )
+
         cropped_page = cropped_pdf.new_page(width=clip.width, height=clip.height)
         cropped_page.show_pdf_page(cropped_page.rect, source_pdf, 0, clip=clip)
         return cropped_pdf.tobytes(garbage=4, deflate=True)
@@ -193,7 +225,9 @@ def close_vacp_chat_settings_if_open():
     if not driver.find_elements(By.CSS_SELECTOR, "[data-vacp-chat-settings-panel='1']"):
         return
 
-    close_buttons = driver.find_elements(By.CSS_SELECTOR, "[data-vacp-chat-settings-panel='1'] [aria-label='Close settings']")
+    close_buttons = driver.find_elements(
+        By.CSS_SELECTOR, "[data-vacp-chat-settings-panel='1'] [aria-label='Close settings']"
+    )
     if close_buttons:
         try:
             close_buttons[0].click()
@@ -241,11 +275,54 @@ def select_patient_window(window_number: int):
         raise RuntimeError(f"Unable to select patient window {window_number}: {result}")
 
     wait.until(
-        lambda active_driver: f"Window {window_number}:" in active_driver.find_element(
-            By.CSS_SELECTOR, ".timeseries-slot-subtitle"
-        ).text
+        lambda active_driver: (
+            f"Window {window_number}:" in active_driver.find_element(By.CSS_SELECTOR, ".timeseries-slot-subtitle").text
+        )
     )
     time.sleep(1)
+
+
+def wait_for_patient_signal_loaded():
+    print("Waiting for patient signal to finish loading")
+
+    def get_signal_state(active_driver):
+        return active_driver.execute_script(
+            """
+            const slot = document.querySelector(".timeseries-slot");
+            if (!slot) {
+              return { ready: false, reason: "missing timeseries slot" };
+            }
+
+            const indicator = slot.querySelector(".component-status-indicator");
+            const statusLabel = indicator?.getAttribute("aria-label") || indicator?.getAttribute("title") || "";
+            const statusTexts = [...slot.querySelectorAll(".timeseries-slot-status")]
+              .map((item) => item.textContent.trim())
+              .filter(Boolean);
+            const canvas = slot.querySelector(".eeg-timeseries-canvas");
+            const canvasRect = canvas?.getBoundingClientRect();
+            const canvasReady = Boolean(canvas && canvasRect && canvasRect.width > 0 && canvasRect.height > 0);
+            const hasPreviewBadge = statusTexts.includes("Preview");
+            const hasError = Boolean(slot.querySelector(".timeseries-slot-status--error"));
+
+            return {
+              ready: canvasReady && statusLabel === "Input signal loaded" && !hasPreviewBadge && !hasError,
+              statusLabel,
+              statusTexts,
+              canvasReady,
+              hasPreviewBadge,
+              hasError,
+            };
+            """
+        )
+
+    def is_loaded(active_driver):
+        state = get_signal_state(active_driver)
+        if state.get("hasError"):
+            raise RuntimeError(f"Patient signal failed to load: {state}")
+        return state.get("ready")
+
+    wait.until(is_loaded)
+    time.sleep(PATIENT_SIGNAL_LOADED_SETTLE_SECONDS)
 
 
 def open_introspection_view():
@@ -306,20 +383,22 @@ def capture_overview():
     wait_for_visible(".overview-panel")
     click_when_ready(".overview-dataset-row .overview-drill-button")
     wait_for_visible(".overview-patient-list")
-    save_screenshot(OUTPUT_OVERVIEW)
+    save_screenshot("overview.pdf")
 
 
 def open_patient_view():
     print(f"Opening patient view: {PATIENT_URL}")
     driver.get(PATIENT_URL)
-    time.sleep(5)
+    wait_for_visible(".timeseries-slot")
+    wait_for_patient_signal_loaded()
     select_patient_window(PATIENT_VIEW_WINDOW_NUMBER)
+    wait_for_patient_signal_loaded()
 
 
 def capture_patient_view():
     print("Capturing patient view")
     driver.set_window_size(SCREEN_WIDTH, SCREEN_HEIGHT)
-    save_screenshot(OUTPUT_PATIENT_VIEW)
+    save_screenshot("patient-view.pdf")
 
 
 def capture_introspection_view():
@@ -347,7 +426,7 @@ def capture_introspection_view():
 
         screenshot_element(
             ".embedding-introspection-dialog",
-            OUTPUT_INTROSPECTION,
+            "introspection.pdf",
             introspection_pdf_params,
             padding_top_px=INTROSPECTION_CROP_VERTICAL_PADDING_PX,
             padding_bottom_px=INTROSPECTION_CROP_VERTICAL_PADDING_PX,
@@ -368,12 +447,10 @@ def capture_total_band_power():
     print("Capturing total band power")
     driver.set_window_size(SCREEN_WIDTH, SCREEN_HEIGHT)
 
-    tbp_slot_selector = "article.patient-view-slot:has(> .topology-bandpower)" # select the containing article of the total band power slot
+    tbp_slot_selector = "article.patient-view-slot:has(> .topology-bandpower)"  # select the containing article of the total band power slot
     tbp_screenshot_layout_style_id = "tbp-screenshot-layout-order"
-    
-    
+
     # switches the top row and bottom row of the patient view panel
-    
 
     driver.execute_script(
         """
@@ -416,13 +493,15 @@ def capture_total_band_power():
     wait_for_visible(".topology-bandpower-cohort-selector")
     click_button_with_text(".topology-bandpower-cohort-selector", "H")
     wait.until(
-        lambda active_driver: "H patient means"
-        in active_driver.find_element(By.CSS_SELECTOR, ".topology-bandpower-range-controls > span").text
+        lambda active_driver: (
+            "H patient means"
+            in active_driver.find_element(By.CSS_SELECTOR, ".topology-bandpower-range-controls > span").text
+        )
     )
     wait_for_visible(".topology-bandpower-plot svg")
     time.sleep(1)
 
-    screenshot_element(tbp_slot_selector, OUTPUT_TBP_COMPONENT)
+    screenshot_element(tbp_slot_selector, "total-bandpower.pdf")
 
     # restore the patient view panel rows
     driver.execute_script(
@@ -439,18 +518,16 @@ def capture_vacp_panel():
     driver.set_window_size(SCREEN_WIDTH, SCREEN_HEIGHT)
     time.sleep(1)
     prepare_vacp_chat_prompt(
-        "Using the active patient view, select the predicted window whose predicted class is Healthy (H) "
-        "and whose confidence is highest."
+        "In the active patient view, take the highest confidence time window predicted as healthy."
     )
     time.sleep(1)
     screenshot_element(
         ".vacp-debug-ui-panel",
-        OUTPUT_VACP_OVERLAY,
-        padding_px=CROP_PADDING_PX,
-        padding_left_px=-14.0,
-        padding_right_px=14.0,
-        padding_bottom_px=-4.0,
-        padding_top_px=0.0,
+        "vacp-panel.pdf",
+        padding_left_px=1.0,
+        padding_right_px=-2.0,
+        padding_bottom_px=-2.0,
+        padding_top_px=1.0,
     )
 
 
@@ -461,9 +538,8 @@ capture_overview()
 open_patient_view()
 capture_patient_view()
 capture_introspection_view()
-capture_total_band_power()
 capture_vacp_panel()
-
+capture_total_band_power()
 
 driver.close()
 driver.quit()

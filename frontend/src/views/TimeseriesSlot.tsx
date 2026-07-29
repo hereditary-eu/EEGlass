@@ -142,6 +142,8 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
           samples={ts.signal?.samples ?? {}}
           samplingFrequency={ts.samplingFrequency}
           channels={ts.signal?.channels ?? ts.activeChannels}
+          timeOffsetSeconds={ts.signal?.start_time ?? 0}
+          visibleTimeRange={ts.timeseriesDisplayRange}
           selectedTimeRange={ts.selectedTimeRange}
           onSelectedTimeRangeChange={ts.setSelectedTimeRange}
           resetViewSignal={ts.resetViewSignal}

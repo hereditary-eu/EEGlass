@@ -69,8 +69,8 @@ export function ModelCard({
   const metadataEntries = Object.entries(modelInfo?.metadata ?? {});
   const [isModelSummaryOpen, setIsModelSummaryOpen] = useState(false);
   const [isModelConfigOpen, setIsModelConfigOpen] = useState(false);
-  const [draftAggregationSettings, setDraftAggregationSettings] = useState<PatientAggregationSettingsPayload>(
-    () => toPatientAggregationSettingsPayload(patientAggregationSettings ?? EMPTY_PATIENT_AGGREGATION_SETTINGS),
+  const [draftAggregationSettings, setDraftAggregationSettings] = useState<PatientAggregationSettingsPayload>(() =>
+    toPatientAggregationSettingsPayload(patientAggregationSettings ?? EMPTY_PATIENT_AGGREGATION_SETTINGS),
   );
   const [settingsSaveError, setSettingsSaveError] = useState<string | null>(null);
   const hasModelSummary = Boolean(modelInfo?.model_summary);
@@ -214,7 +214,9 @@ export function ModelCard({
                     type="button"
                     className="overview-model-reset-button"
                     disabled={
-                      isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings || !patientAggregationSettings
+                      isLoadingPatientAggregationSettings ||
+                      isSavingPatientAggregationSettings ||
+                      !patientAggregationSettings
                     }
                     onClick={() =>
                       void saveDraftAggregationSettings(
@@ -228,7 +230,9 @@ export function ModelCard({
                     type="button"
                     className="overview-model-save-button"
                     disabled={
-                      isLoadingPatientAggregationSettings || isSavingPatientAggregationSettings || !patientAggregationSettings
+                      isLoadingPatientAggregationSettings ||
+                      isSavingPatientAggregationSettings ||
+                      !patientAggregationSettings
                     }
                     onClick={() => void saveDraftAggregationSettings(draftAggregationSettings)}
                   >

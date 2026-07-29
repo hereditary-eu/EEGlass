@@ -205,7 +205,6 @@
   display: block;
 }
 
-
 .embedding-introspection-cluster-section {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
