@@ -10,14 +10,20 @@ from mne_connectivity import spectral_connectivity_time
 
 # Default bands used in your notebook
 BANDS = {
-    "delta": (0.5, 4.0),
+    "delta": (1, 4.0),
     "theta": (4.0, 8.0),
-    "alpha": (8.0, 13.0),
-    "beta1": (13.0, 17.0),
-    "beta2": (17.0, 21.0),
-    "beta3": (21.0, 25.0),
-    "gamma": (25.0, 45.0),
+    "alpha": (8.0, 12.0),
+    "beta1": (12.0, 16.0),
+    "beta2": (16.0, 20.0),
+    "beta3": (20.0, 28.0),
+    "gamma": (28.0, 45.0),
 }
+
+# class EEGWithSCC(Dataset):
+#     def __getitem__(self, i):
+#         x   = self.windows[i]            # (C, T) tensor
+#         scc = self.scc_cache[i]          # (n_bands,) precomputed once, loaded from .npy
+#         return [x, scc], self.labels[i]  # list -> train_model's non-tensor branch handles it
 
 class SpectralConnectivity(nn.Module):
     """Compute mean spectral connectivity per frequency band with MNE.
