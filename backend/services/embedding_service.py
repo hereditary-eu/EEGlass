@@ -1,6 +1,42 @@
 from __future__ import annotations
 
+import logging
+
 import numpy as np
+
+from backend.pydantic_models.embeddings import EmbeddingReductionMethod
+
+logger = logging.getLogger(__name__)
+
+
+class EmbeddingReductionError(RuntimeError):
+    pass
+
+
+def reduce_embeddings(
+    vectors: np.ndarray,
+    method: EmbeddingReductionMethod = "pca",
+) -> tuple[np.ndarray, list[float], str]:
+    minimum_samples = {"pca": 2, "tsne": 31, "umap": 4}
+    if method not in minimum_samples:
+        raise ValueError(f"Unsupported embedding reduction method: {method}")
+    if vectors.ndim != 2 or vectors.shape[0] < minimum_samples[method]:
+        return np.empty((0, 2), dtype=float), [], "insufficient_data"
+
+    try:
+        if method == "pca":
+            result = reduce_embeddings_pca(vectors)
+        elif method == "tsne":
+            result = reduce_embeddings_tsne(vectors)
+        else:
+            result = reduce_embeddings_umap(vectors)
+
+        coordinates, explained_variance_ratio, status = result
+        if status == "ok" and (coordinates.shape != (vectors.shape[0], 2) or not np.all(np.isfinite(coordinates))):
+            raise ValueError("Reducer returned invalid two-dimensional coordinates.")
+        return coordinates, explained_variance_ratio, status
+    except Exception as exc:
+        raise EmbeddingReductionError(f"Unable to reduce embeddings with {method}: {exc}") from exc
 
 
 def reduce_embeddings_pca(vectors: np.ndarray) -> tuple[np.ndarray, list[float], str]:
@@ -31,6 +67,28 @@ def reduce_embeddings_pca(vectors: np.ndarray) -> tuple[np.ndarray, list[float],
         explained = []
     explained = (explained + [0.0, 0.0])[:2]
     return coordinates[:, :2].astype(float, copy=False), explained, "ok"
+
+
+def reduce_embeddings_tsne(vectors: np.ndarray) -> tuple[np.ndarray, list[float], str]:
+    from sklearn.manifold import TSNE
+
+    coordinates = TSNE().fit_transform(vectors.astype(float, copy=False))
+    return np.asarray(coordinates, dtype=float), [], "ok"
+
+
+def reduce_embeddings_umap(vectors: np.ndarray) -> tuple[np.ndarray, list[float], str]:
+    from umap import UMAP
+
+    coordinates = UMAP().fit_transform(vectors.astype(float, copy=False))
+    return np.asarray(coordinates, dtype=float), [], "ok"
+
+
+def warm_up_umap() -> None:
+    vectors = np.random.default_rng(0).standard_normal((32, 8))
+    try:
+        reduce_embeddings_umap(vectors)
+    except Exception:
+        logger.exception("Unable to warm up UMAP.")
 
 
 def cluster_embeddings_density(vectors: np.ndarray) -> list[int | None]:

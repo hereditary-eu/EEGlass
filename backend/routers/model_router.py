@@ -30,7 +30,9 @@ from backend.pydantic_models.inference import (
     ModelWindowScalpTopologyResponse,
     SetCurrentModelRequest,
 )
+from backend.pydantic_models.embeddings import EmbeddingReductionMethod
 from backend.pydantic_models.timeseries import TimeseriesSource
+from backend.services.embedding_service import EmbeddingReductionError
 from backend.services.feature_importance_service import FeatureImportanceService
 from backend.services.prediction_cache_service import PredictionCacheService
 from backend.services.model_service import (
@@ -260,14 +262,16 @@ async def get_patient_embeddings(
     dataset_id: str,
     model_name: str = DEFAULT_MODEL_NAME,
     source: TimeseriesSource = Query("derivatives"),
+    reduction_method: EmbeddingReductionMethod = Query("pca"),
 ) -> ModelPatientEmbeddingsResponse:
     try:
         return PredictionCacheService.get_patient_embeddings(
             dataset_id=dataset_id,
             model_name=model_name,
             source=source,
+            reduction_method=reduction_method,
         )
-    except ModelServiceError as exc:
+    except (ModelServiceError, EmbeddingReductionError) as exc:
         raise _http_error(exc) from exc
 
 
@@ -279,6 +283,7 @@ async def get_patient_raw_embeddings(
     dataset_id: str,
     model_name: str = DEFAULT_MODEL_NAME,
     source: TimeseriesSource = Query("derivatives"),
+    reduction_method: EmbeddingReductionMethod = Query("pca"),
 ) -> ModelPatientEmbeddingsResponse:
     try:
         response = PredictionCacheService.get_patient_embeddings(
@@ -286,9 +291,10 @@ async def get_patient_raw_embeddings(
             model_name=model_name,
             source=source,
             include_raw_embeddings=True,
+            reduction_method=reduction_method,
         )
         return response
-    except ModelServiceError as exc:
+    except (ModelServiceError, EmbeddingReductionError) as exc:
         raise _http_error(exc) from exc
 
 
@@ -324,6 +330,7 @@ async def get_window_embeddings(
     subject_id: str,
     model_name: str = DEFAULT_MODEL_NAME,
     source: TimeseriesSource = Query("derivatives"),
+    reduction_method: EmbeddingReductionMethod = Query("pca"),
 ) -> ModelWindowEmbeddingsResponse:
     try:
         return PredictionCacheService.get_subject_window_embeddings(
@@ -331,8 +338,9 @@ async def get_window_embeddings(
             subject_id=subject_id,
             model_name=model_name,
             source=source,
+            reduction_method=reduction_method,
         )
-    except ModelServiceError as exc:
+    except (ModelServiceError, EmbeddingReductionError) as exc:
         raise _http_error(exc) from exc
 
 
@@ -345,6 +353,7 @@ async def get_window_raw_embeddings(
     subject_id: str,
     model_name: str = DEFAULT_MODEL_NAME,
     source: TimeseriesSource = Query("derivatives"),
+    reduction_method: EmbeddingReductionMethod = Query("pca"),
 ) -> ModelWindowEmbeddingsResponse:
     try:
         response = PredictionCacheService.get_subject_window_embeddings(
@@ -353,9 +362,10 @@ async def get_window_raw_embeddings(
             model_name=model_name,
             source=source,
             include_raw_embeddings=True,
+            reduction_method=reduction_method,
         )
         return response
-    except ModelServiceError as exc:
+    except (ModelServiceError, EmbeddingReductionError) as exc:
         raise _http_error(exc) from exc
 
 
@@ -468,11 +478,13 @@ async def watch_prediction_cache_job(websocket: WebSocket, job_id: str, model_na
         return
 
 
-def _http_error(exc: ModelServiceError) -> HTTPException:
+def _http_error(exc: ModelServiceError | EmbeddingReductionError) -> HTTPException:
     if isinstance(exc, ModelNotFoundError):
         return HTTPException(status_code=404, detail=str(exc))
     if isinstance(exc, ModelValidationError):
         return HTTPException(status_code=400, detail=str(exc))
+    if isinstance(exc, EmbeddingReductionError):
+        return HTTPException(status_code=422, detail=str(exc))
     if isinstance(exc, (ModelDependencyUnavailableError, ModelInferenceUnavailableError)):
         return HTTPException(status_code=503, detail=str(exc))
 

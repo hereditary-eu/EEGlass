@@ -1,6 +1,12 @@
 export { EmbeddingScatterplot } from "./EmbeddingScatterplot";
 export { EmbeddingIntrospectionPanel } from "./EmbeddingIntrospectionPanel";
 export { EmbeddingPairwiseScatterplot } from "./EmbeddingPairwiseScatterplot";
+export {
+  EmbeddingReductionSelector,
+  getEmbeddingAxisTitles,
+  getEmbeddingInsufficientDataMessage,
+  getEmbeddingReductionLabel,
+} from "./EmbeddingReductionSelector";
 export type {
   EmbeddingScatterplotPoint,
   EmbeddingScatterplotTooltipField,

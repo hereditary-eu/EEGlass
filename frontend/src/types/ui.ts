@@ -219,8 +219,10 @@ export interface ModelPatientEmbeddingPoint {
   total_windows: number;
 }
 
+export type EmbeddingReductionMethod = "pca" | "tsne" | "umap";
+
 export interface ModelPatientEmbeddingReduction {
-  method: "pca";
+  method: EmbeddingReductionMethod;
   status: "ok" | "insufficient_data";
   source_dimension: number;
   output_dimension: number;

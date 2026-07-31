@@ -32,7 +32,14 @@
   line-height: 1.2;
 }
 
-.window-embedding-header span {
+.window-embedding-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.window-embedding-stage {
   max-width: 18rem;
   display: inline-flex;
   align-items: center;
