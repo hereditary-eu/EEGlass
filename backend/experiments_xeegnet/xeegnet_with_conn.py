@@ -1,23 +1,12 @@
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from mne_connectivity import spectral_connectivity_time
+from backend.ml.scc_cache import DEFAULT_BANDS as SCC_DEFAULT_BANDS, SCCReducer
 
-
-# Default bands used in your notebook
-BANDS = {
-    "delta": (1, 4.0),
-    "theta": (4.0, 8.0),
-    "alpha": (8.0, 12.0),
-    "beta1": (12.0, 16.0),
-    "beta2": (16.0, 20.0),
-    "beta3": (20.0, 28.0),
-    "gamma": (28.0, 45.0),
-}
+BANDS = {name: (lo, hi) for name, lo, hi in SCC_DEFAULT_BANDS}
 
 # class EEGWithSCC(Dataset):
 #     def __getitem__(self, i):
@@ -25,124 +14,39 @@ BANDS = {
 #         scc = self.scc_cache[i]          # (n_bands,) precomputed once, loaded from .npy
 #         return [x, scc], self.labels[i]  # list -> train_model's non-tensor branch handles it
 
-class SpectralConnectivity(nn.Module):
-    """Compute mean spectral connectivity per frequency band with MNE.
-
-    The module uses `mne_connectivity.spectral_connectivity_time` on a single
-    epoch at a time and returns one scalar per band. The scalar is the mean
-    coherence across all unique off-diagonal channel pairs in that band.
-
-    Input: `x` shaped (B, C, T)
-    Output: tensor shaped (B, n_bands)
-    """
-
-    def __init__(
-        self,
-        bands: Dict[str, Tuple[float, float]] = BANDS,
-        Fs: int = 125,
-        freqs: Optional[np.ndarray] = None,
-        n_cycles: Optional[np.ndarray] = None,
-        mode: str = "cwt_morlet",
-        method: str = "coh",
-        faverage: bool = True,
-        average: bool = False,
-        verbose: str | bool | int | None = "ERROR",
-        n_fft: Optional[int] = None,
-        hop_length: Optional[int] = None,
-        window: Optional[torch.Tensor] = None,
-        **kwargs,
-    ):
-        super().__init__()
-        self.bands = list(bands.items())
-        self.band_names = [k for k, _ in self.bands]
-        self.n_bands = len(self.bands)
-        self.Fs = Fs
-        self.freqs = np.asarray(freqs if freqs is not None else np.arange(1.0, 45.5, 1.0), dtype=float)
-        self.n_cycles = np.asarray(n_cycles if n_cycles is not None else self.freqs / 2.0, dtype=float)
-        self.mode = mode
-        self.method = method
-        self.faverage = faverage
-        self.average = average
-        self.verbose = verbose
-        self.n_fft = n_fft
-        self.hop_length = hop_length
-        self.window = window
-
-        # one row/col index per unique channel pair, excluding the diagonal
-        self._pair_cache: dict[int, tuple[np.ndarray, np.ndarray]] = {}
-
-    def _pair_indices(self, n_channels: int) -> tuple[np.ndarray, np.ndarray]:
-        if n_channels not in self._pair_cache:
-            self._pair_cache[n_channels] = np.triu_indices(n_channels, k=1)
-        return self._pair_cache[n_channels]
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (B, C, T)
-        B, C, T = x.shape
-        device = x.device
-
-        rows, cols = self._pair_indices(C)
-
-        band_features = []
-        for batch_index in range(B):
-            sample = x[batch_index].detach().to("cpu", dtype=torch.float32).numpy()
-            sample = sample[np.newaxis, ...]  # (1, C, T)
-
-            con = spectral_connectivity_time(
-                sample,
-                freqs=self.freqs,
-                method=self.method,
-                average=self.average,
-                indices=(rows, cols),
-                sfreq=self.Fs,
-                fmin=tuple(lo for _, (lo, _) in self.bands),
-                fmax=tuple(hi for _, (_, hi) in self.bands),
-                faverage=self.faverage,
-                mode=self.mode,
-                n_cycles=self.n_cycles,
-                verbose=self.verbose,
-            )
-
-            data = con.get_data()
-            # expected shape for a single epoch: (1, n_pairs, n_bands)
-            if data.ndim == 3:
-                data = data[0]
-            elif data.ndim == 2:
-                # if average=True or a different backend shape appears
-                pass
-            else:
-                raise RuntimeError(f"Unexpected connectivity shape: {data.shape}")
-
-            # mean across unique pairs -> one scalar per band
-            band_features.append(torch.as_tensor(data.mean(axis=0), dtype=torch.float32, device=device))
-
-        return torch.stack(band_features, dim=0)
-
-
 class xEEGNetSCC(nn.Module):
-    """Wrapper for `selfeeg.models.xEEGNet` that appends per-band spectral
-    connectivity features to the encoder embedding before the final Dense.
+    """Wrapper for `selfeeg.models.xEEGNet` that consumes cached SCC pairs.
 
     Usage:
         base = selfeeg.models.xEEGNet(..., global_pooling=True)
-        wrapped = xEEGNetSCC(base_model=base, spec_kwargs={...})
+        wrapped = xEEGNetSCC(base_model=base)
+
+    The forward contract is now `forward([x, scc_pairs])` where:
+        x         -> (B, C, T) raw EEG windows
+        scc_pairs -> (B, n_bands, n_pairs) cached SCC pair vectors
     """
 
-    def __init__(self, base_model: nn.Module, spec_kwargs: Optional[dict] = None, freeze_base: bool = False):
+    def __init__(self, base_model: nn.Module, reducer_mode: str = "mean", freeze_base: bool = False):
         super().__init__()
         self.base = base_model
-        spec_kwargs = spec_kwargs or {}
-        # infer Fs from base encoder if present, otherwise require in spec_kwargs
-        Fs = getattr(getattr(self.base, "encoder", None), "Fs", spec_kwargs.get("Fs", 125))
-        spec_kwargs.setdefault("Fs", Fs)
-        self.spec = SpectralConnectivity(**spec_kwargs)
 
         # base must have emb_size attribute computed at init (xEEGNet does)
         emb_size = getattr(self.base, "emb_size", None)
         if emb_size is None:
             raise ValueError("base_model must expose `emb_size` attribute (xEEGNet does).")
 
-        self.n_bands = self.spec.n_bands
+        self.n_bands = len(BANDS)
+        self.n_channels = self._infer_n_channels(base_model)
+        if self.n_channels is None:
+            raise ValueError("base_model must expose the number of channels so SCCReducer can be built.")
+
+        self.n_pairs = self.n_channels * (self.n_channels - 1) // 2
+        self.reducer = SCCReducer(
+            n_bands=self.n_bands,
+            n_pairs=self.n_pairs,
+            n_channels=self.n_channels,
+            mode=reducer_mode,
+        )
 
         # create new Dense head that accepts concatenated features
         nb_out = 1 if self.base.nb_classes <= 2 else self.base.nb_classes
@@ -154,17 +58,34 @@ class xEEGNetSCC(nn.Module):
             hidden = 64
             self.Dense = nn.Sequential(nn.Linear(new_in, hidden), nn.ReLU(), nn.Linear(hidden, nb_out))
         else:
-            self.Dense = nn.Linear(new_in, nb_out, bias=getattr(self.base.Dense, "bias", True))
+            bias = getattr(self.base.Dense, "bias", None) is not None
+            self.Dense = nn.Linear(new_in, nb_out, bias=bias)
 
         # optionally freeze base encoder
         if freeze_base:
             for p in self.base.parameters():
                 p.requires_grad = False
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    @staticmethod
+    def _infer_n_channels(base_model: nn.Module) -> Optional[int]:
+        for candidate in (base_model, getattr(base_model, "encoder", None)):
+            if candidate is None:
+                continue
+            for attr in ("Chans", "chans", "n_channels", "num_channels"):
+                value = getattr(candidate, attr, None)
+                if value is not None:
+                    return int(value)
+        return None
+
+    def forward(self, X) -> torch.Tensor:
+        if not isinstance(X, (list, tuple)) or len(X) != 2:
+            raise TypeError("xEEGNetSCC now expects input as [x, scc_pairs].")
+
+        x, scc_pairs = X
+
         # encoder output (B, emb_size)
         emb = self.base.encoder(x)
-        conn = self.spec(x)  # (B, n_bands)
+        conn = self.reducer(scc_pairs)  # (B, n_bands)
         out = torch.cat([emb, conn], dim=1)
         out = self.Dense(out)
         if not (self.base.return_logits):

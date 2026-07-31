@@ -366,8 +366,9 @@ def build_x_y_scc(
     """
     Returns (x, y, scc, subject_ids), all concatenated in participant order.
       x:   (N, C, L)  float32
-      scc: (N, n_bands, n_pairs) float32   — raw pairs, reduce in the model
-      y, subject_ids: (N,) int64
+       y, subject_ids: (N,) true class labels, int
+      scc: (N, n_bands, n_pairs=C*(C-1)/2 ) float32 - spectral connectivity raw pairs, reduce in the model
+      sids: (N,) int64  — the participant ID for each window, useful for leave-one-subject-out
     """
     xs, ys, sccs, sids = [], [], [], []
     for pid in participant_ids:
