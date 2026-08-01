@@ -15,7 +15,7 @@ SCC does not depend on model weights):
     data/scc_cache/<dataset_id>/<scc_key>/subjects/<subject_id>.<source>.scc.json  (sidecar)
 
 Portability: the store/compute pieces are pure and dependency-injected. The
-notebook triggers compute lazily on a miss; EEGlas can run precompute_dataset()
+notebook triggers compute lazily on a miss; EEGlass can run precompute_dataset()
 as a background job over the same store — same code path, same files.
 """
 
@@ -38,7 +38,7 @@ except ImportError:  # tqdm optional -> fall back to a no-op wrapper
         return iterable if iterable is not None else iter(())
 
 
-# Bump if the on-disk schema changes (mirrors EEGlas PREPROCESSING_VERSION).
+# Bump if the on-disk schema changes (mirrors EEGlass PREPROCESSING_VERSION).
 SCC_CACHE_VERSION = 1
 
 # Fixed bands (must match the notebook / model bands exactly).
@@ -247,7 +247,7 @@ class SCCStore:
         if verbose:
             print(f"  saving SCC {tuple(array.shape)} -> {npy}")
 
-        # atomic-ish writes: temp then replace (matches EEGlas write pattern).
+        # atomic-ish writes: temp then replace (matches EEGlass write pattern).
         tmp_npy = npy.with_suffix(".npy.tmp")
         with open(tmp_npy, "wb") as fh:  # save via handle so np.save doesn't append .npy
             np.save(fh, array)
@@ -305,7 +305,7 @@ class SCCStore:
 
 
 # ---------------------------------------------------------------------------
-# Dataset-level precompute  (EEGlas job entry point)
+# Dataset-level precompute  (EEGlass job entry point)
 # ---------------------------------------------------------------------------
 def precompute_dataset(
     store: SCCStore,
