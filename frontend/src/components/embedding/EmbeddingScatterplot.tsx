@@ -185,11 +185,13 @@ export function EmbeddingScatterplot({
         x: {
           field: "x",
           type: "quantitative",
+          scale: { zero: false },
           axis: createAxis(xAxisTitle),
         },
         y: {
           field: "y",
           type: "quantitative",
+          scale: { zero: false },
           axis: createAxis(yAxisTitle),
         },
         fill: { field: "fillColor", type: "nominal", scale: null, legend: null },

@@ -79,11 +79,13 @@ export const EmbeddingPairwiseScatterplot = memo(function EmbeddingPairwiseScatt
         x: {
           field: "x",
           type: "quantitative",
+          scale: { zero: false },
           axis: createAxis(xLabel),
         },
         y: {
           field: "y",
           type: "quantitative",
+          scale: { zero: false },
           axis: createAxis(yLabel),
         },
         color: {
