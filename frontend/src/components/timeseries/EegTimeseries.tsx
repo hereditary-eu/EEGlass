@@ -167,15 +167,7 @@ export function EegTimeseries({
         );
     setSyncedView(nextView);
     viewSnapshotRef.current = { duration: nextDuration, plotWidth, timeOffsetSeconds };
-  }, [
-    canvasSize.height,
-    canvasSize.width,
-    channels,
-    samples,
-    samplingFrequency,
-    timeOffsetSeconds,
-    visibleTimeRange,
-  ]);
+  }, [canvasSize.height, canvasSize.width, channels, samples, samplingFrequency, timeOffsetSeconds, visibleTimeRange]);
 
   useEffect(() => {
     if (previousResetViewSignalRef.current === resetViewSignal) {
@@ -1169,12 +1161,7 @@ function valueToY(value: number, view: TimeseriesView, channelTop: number, chann
   return channelTop + channelHeight - normalized * channelHeight;
 }
 
-function getVisibleStartTime(
-  view: TimeseriesView,
-  plotWidth: number,
-  duration: number,
-  timeOffsetSeconds = 0,
-): number {
+function getVisibleStartTime(view: TimeseriesView, plotWidth: number, duration: number, timeOffsetSeconds = 0): number {
   const visibleDuration = duration / view.xScale;
   const clampedOffset = clampOffset(view.xOffset, view.xScale, plotWidth);
   return timeOffsetSeconds + Math.max(0, (-clampedOffset / plotWidth) * visibleDuration);
@@ -1229,7 +1216,11 @@ function mergeViewPreserveVisibleWindow(
     return yView;
   }
 
-  const { duration: prevDuration, plotWidth: prevPlotWidth, timeOffsetSeconds: prevTimeOffsetSeconds } = previousSnapshot;
+  const {
+    duration: prevDuration,
+    plotWidth: prevPlotWidth,
+    timeOffsetSeconds: prevTimeOffsetSeconds,
+  } = previousSnapshot;
   const decodeWidth = Math.max(1, prevPlotWidth);
 
   const maxScale = Math.max(1, nextDuration / 0.5);
