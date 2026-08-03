@@ -31,6 +31,12 @@ $M_{l,f} \hat{Z}_f$ gives the signed per-band class contribution shown in the da
 In short: fixed bandpass _filters_ $\rightarrow$ learned spatial _mixing_ $\rightarrow$ _bandpower_ $\rightarrow$ linear _classifier_.
 Every intermediate value has a direct physical meaning, so clinicians inspect architecture-intrinsic evidence rather than post-hoc saliency maps.
 
+## Example Use-Case
+
+As an example workflow, a user can start with a new participant by selecting a typical point in the window embedding (R2) to see the predicted output. The Total Band Power panel immediately shows how typical this window's band powers are for the patient, and whether the (e.g. alpha) bands align more with the healthy or AD/FTD cohort (R3). The Scalp View and Band Activations panel make explicit which channels and bands drove the prediction (R1).
+
+Inspecting the raw signal, the user can judge for themselves whether the window looks atypical, where, for each patient and time window individually, the topomap, band activations, and total band power panel indicate which channels and bandpowers are worth a closer look (the corresponding bandpass filter can also be applied to the time-series view), directing the user to the most interesting aspects and making comparison easy while keeping them in control.
+
 ## Contribute
 
 Combination of all frontend and backend utilities, and baseline for xEEG dashboard development.
