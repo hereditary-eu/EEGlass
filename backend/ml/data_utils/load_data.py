@@ -143,9 +143,10 @@ def load_multiple_eeg_windows_inner(
     df_metadata: pd.DataFrame,
     sample_length: int | None = None,
     n_max: int | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Loads derivative EEG windows for multiple participants and matching class labels.
+    Returns a tuple of (x, y, subject_ids), where x is the EEG data, y is the class labels, and subject_ids are the corresponding participant IDs for each window.
     """
     participant_dis_map = dict(zip(df_metadata["participant_id"], df_metadata["group_encoded"]))
     windows_by_subject = []

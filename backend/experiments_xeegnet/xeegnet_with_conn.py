@@ -47,6 +47,7 @@ class xEEGNetSCC(nn.Module):
             n_channels=self.n_channels,
             mode=reducer_mode,
         )
+        self.scc_norm = nn.BatchNorm1d(self.n_bands)   # 7 features in, 7 out
 
         # create new Dense head that accepts concatenated features
         nb_out = 1 if self.base.nb_classes <= 2 else self.base.nb_classes
@@ -86,7 +87,9 @@ class xEEGNetSCC(nn.Module):
         # encoder output (B, emb_size)
         emb = self.base.encoder(x)
         conn = self.reducer(scc_pairs)  # (B, n_bands)
-        out = torch.cat([emb, conn], dim=1)
+        # conn_normalized = F.normalize(conn, p=2, dim=1)  # L2 normalize across bands
+        conn_normalized = self.scc_norm(conn)
+        out = torch.cat([emb, conn_normalized], dim=1)
         out = self.Dense(out)
         if not (self.base.return_logits):
             if self.base.nb_classes <= 2:

@@ -362,6 +362,7 @@ def build_x_y_scc(
     source: str = "derivatives",
     sample_length: int | None = None,
     n_jobs: int = 1,
+    print_info: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Returns (x, y, scc, subject_ids), all concatenated in participant order.
@@ -375,7 +376,9 @@ def build_x_y_scc(
         subject_id = f"sub-{pid:03d}"
         windows, _sfreq, _ranges = load_model_windows_for_participant(dir_data, pid, sample_length=sample_length)
         windows = np.asarray(windows, dtype=np.float32)
-        scc = store.get_or_compute(dataset_id, subject_id, source, params, n_channels, windows, n_jobs=n_jobs)
+        scc = store.get_or_compute(
+            dataset_id, subject_id, source, params, n_channels, windows, n_jobs=n_jobs, verbose=print_info
+        )
         if subject_id not in label_of_subject:
             raise ValueError(f"Missing label for {subject_id}")
         xs.append(windows)
