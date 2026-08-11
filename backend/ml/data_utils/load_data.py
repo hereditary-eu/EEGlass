@@ -13,6 +13,26 @@ configure_mne_logging()
 MICROVOLTS_SCALE = 1_000_000.0
 
 
+__all__ = [
+    "get_participant_id_int",
+    "get_participant_id",
+    "gen_filename",
+    "gen_derivative_filename",
+    "gen_participant_id_long",
+    "gen_model_input_filename",
+    "load_eeg_df",
+    "load_model_windows_for_participant",
+    "load_multiple_eeg_windows",
+    "load_multiple_eeg_windows_inner",
+    "load_preprocessed_raw_from_file",
+    "preprocess_raw_for_xeegnet",
+    "preprocessed_raw_to_dataframe",
+    "preprocessed_raw_to_windows",
+    "load_multiple_eegfiles",
+    "load_metadata",
+]
+
+
 def get_participant_id_int(participant_id_str: str) -> int:
     """
     Converts a string participant ID to an integer. For example, if participant_id_str is 'sub-001', it will return 1.
