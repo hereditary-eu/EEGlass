@@ -199,7 +199,7 @@ def train_save_model(
     return model, df_metadata
 
 
-def load_model_weights(model_path: str, model=None, device="cpu"):
+def load_model_weights(model_path: str, model=None, device="cpu", verbose=True):
     """
     Loads a trained model from the specified path. The model has already to be defined, only loads the weights.
     - model_path: Path to the saved model.
@@ -209,7 +209,8 @@ def load_model_weights(model_path: str, model=None, device="cpu"):
     if model is None:
         model = build_xeegnet()
 
-    print(f"Loading model from {model_path}")
+    if verbose:
+        print(f"Loading model from {model_path}")
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.to(device)
     model.eval()
