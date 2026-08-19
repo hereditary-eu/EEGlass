@@ -3,7 +3,7 @@
 To make clinical diagnoses more understandable, we present EEGlass, a visual interactive dashboard on top of the efficient xEEGNet classifier network architecture, which puts a special emphasis on explainability of the model and outcome.
 This dataset and model focuses on Alzheimer’s Disease (AD) and Frontotemporal Dementia (FTD); every step in the classification is presented in a visual and understandable way, on top of an integrated Electroencephalography (EEG) database viewer.
 
-![EEGlass Preview](./frontend/screenshot.png)
+![EEGlass Preview](./figures/screenshot.png)
 
 ## The Model
 
@@ -33,7 +33,7 @@ Every intermediate value has a direct physical meaning, so clinicians inspect ar
 
 ## Supported Dimensionality Reductions
 
-<img src="./paper/figures/pca.png" width="32%"> <img src="./paper/figures/tsne.png" width="32%"> <img src="./paper/figures/umap.png" width="32%">
+<img src="./figures/pca.png" width="32%"> <img src="./figures/tsne.png" width="32%"> <img src="./figures/umap.png" width="32%">
 PCA, t-SNE and UMAP projections, selectable in all embedding views (PCA is the default).
 
 ## Example Use-Case
