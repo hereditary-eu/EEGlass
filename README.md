@@ -31,6 +31,11 @@ $M_{l,f} \hat{Z}_f$ gives the signed per-band class contribution shown in the da
 In short: fixed bandpass _filters_ $\rightarrow$ learned spatial _mixing_ $\rightarrow$ _bandpower_ $\rightarrow$ linear _classifier_.
 Every intermediate value has a direct physical meaning, so clinicians inspect architecture-intrinsic evidence rather than post-hoc saliency maps.
 
+## Supported Dimensionality Reductions
+
+<img src="./paper/figures/pca.png" width="32%"> <img src="./paper/figures/tsne.png" width="32%"> <img src="./paper/figures/umap.png" width="32%">
+PCA, t-SNE and UMAP projections, selectable in all embedding views (PCA is the default).
+
 ## Example Use-Case
 
 As an example workflow, a user can start with a new participant by selecting a typical point in the window embedding (R2) to see the predicted output. The Total Band Power panel immediately shows how typical this window's band powers are for the patient, and whether the (e.g. alpha) bands align more with the healthy or AD/FTD cohort (R3). The Scalp View and Band Activations panel make explicit which channels and bands drove the prediction (R1).
