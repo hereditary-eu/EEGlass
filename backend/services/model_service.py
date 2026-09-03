@@ -73,7 +73,7 @@ V = TypeVar("V")
 MIN_RELATIVE_POWER_FOR_DB = 1e-6
 
 
-def remember(cache: OrderedDict[K, V], key: K, value: V, limit: int) -> None:
+def remember[K, V](cache: OrderedDict[K, V], key: K, value: V, limit: int) -> None:
     cache[key] = value
     cache.move_to_end(key)
     while len(cache) > limit:

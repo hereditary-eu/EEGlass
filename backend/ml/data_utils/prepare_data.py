@@ -75,14 +75,14 @@ def split_participants_min_per_class(
         n = len(participants)
 
         # desired counts
-        n_train = max(1, int(round(n * ratios[0])))
+        n_train = max(1, round(n * ratios[0]))
         if ratios[1] > 0:
-            n_val = max(1, int(round(n * ratios[1])))
+            n_val = max(1, round(n * ratios[1]))
         else:
             print("Validation split is set to 0")
             n_val = 0
         if ratios[2] > 0:
-            n_test = max(1, int(round(n * ratios[2])))
+            n_test = max(1, round(n * ratios[2]))
         else:
             print("Test split is set to 0")
             n_test = 0

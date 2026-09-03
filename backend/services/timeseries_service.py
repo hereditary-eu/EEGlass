@@ -541,8 +541,8 @@ class TimeseriesService:
                 f"end_time must be less than or equal to recording duration ({duration:.3f}s)."
             )
 
-        start_sample = max(0, int(math.floor(resolved_start_time * sampling_frequency)))
-        end_sample = min(sample_count, int(math.ceil(resolved_end_time * sampling_frequency)))
+        start_sample = max(0, math.floor(resolved_start_time * sampling_frequency))
+        end_sample = min(sample_count, math.ceil(resolved_end_time * sampling_frequency))
         if end_sample <= start_sample:
             raise TimeseriesValidationError("Resolved sample range is empty.")
 
