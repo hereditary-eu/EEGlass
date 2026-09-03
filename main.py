@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-
 from backend.ml.model_registry import get_model_spec
 from backend.ml.model_vars import DEFAULT_MODEL_NAME
 
@@ -87,7 +86,8 @@ def load_data():
     """
 
     import numpy as np
-    from backend.ml.data_utils.load_data import load_metadata, load_multiple_eegfiles, gen_filename
+
+    from backend.ml.data_utils.load_data import gen_filename, load_metadata, load_multiple_eegfiles
 
     dir_data = DIR_DATA
     participant_ids = np.arange(1, 86).tolist()  # 1-85 inclusive

@@ -4,11 +4,6 @@ from pathlib import Path
 import torch
 from selfeeg.ssl import EarlyStopping
 
-from backend.experiments_xeegnet.shallownetXAI_main.AllFnc.training import (
-    lossBinary,
-    lossMulti,
-    train_model,
-)
 from backend.ml.data_utils.load_data import (
     gen_participant_id_long,
     load_metadata,
@@ -20,6 +15,12 @@ from backend.ml.model_vars import (
     PARAMETERS_DEFAULT,
     PRETRAINED_MODEL_DIR,
     TRAINING_PARAMETERS_DEFAULT,
+)
+
+from .shallownet_utils import (
+    lossBinary,
+    lossMulti,
+    train_model,
 )
 
 
