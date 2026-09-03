@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Literal
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -16,14 +16,14 @@ class ModelScalpTopologyChannel(BaseModel):
 
 class ModelScalpTopologyBand(BaseModel):
     band: str
-    channels: List[ModelScalpTopologyChannel]
-    grid_values: List[float]
+    channels: list[ModelScalpTopologyChannel]
+    grid_values: list[float]
 
 
 class ModelScalpTopologyGrid(BaseModel):
     resolution: int
-    x: List[float]
-    y: List[float]
+    x: list[float]
+    y: list[float]
 
 
 class ModelScalpTopologyResponse(BaseModel):
@@ -32,7 +32,7 @@ class ModelScalpTopologyResponse(BaseModel):
     global_min_weight: float
     global_max_weight: float
     grid: ModelScalpTopologyGrid
-    bands: List[ModelScalpTopologyBand]
+    bands: list[ModelScalpTopologyBand]
 
 
 class ModelWindowScalpTopologyChannel(BaseModel):
@@ -44,8 +44,8 @@ class ModelWindowScalpTopologyChannel(BaseModel):
 
 class ModelWindowScalpTopologyBand(BaseModel):
     band: str
-    channels: List[ModelWindowScalpTopologyChannel]
-    grid_values: List[float]
+    channels: list[ModelWindowScalpTopologyChannel]
+    grid_values: list[float]
 
 
 class ModelWindowScalpTopologyMode(BaseModel):
@@ -55,7 +55,7 @@ class ModelWindowScalpTopologyMode(BaseModel):
     color_scale: Literal["diverging", "sequential"]
     global_min_value: float
     global_max_value: float
-    bands: List[ModelWindowScalpTopologyBand]
+    bands: list[ModelWindowScalpTopologyBand]
 
 
 class ModelWindowScalpTopologyResponse(BaseModel):
@@ -69,4 +69,4 @@ class ModelWindowScalpTopologyResponse(BaseModel):
     end_time: float
     layer_name: str
     grid: ModelScalpTopologyGrid
-    modes: List[ModelWindowScalpTopologyMode]
+    modes: list[ModelWindowScalpTopologyMode]

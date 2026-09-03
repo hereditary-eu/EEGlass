@@ -11,8 +11,8 @@ from typing import Any
 
 import numpy as np
 
-from backend.ml.model_registry import get_model_spec
 from backend.config import CONFIG
+from backend.ml.model_registry import get_model_spec
 from backend.ml.model_vars import MODEL_BANDS
 from backend.pydantic_models.timeseries import (
     TimeseriesBandFilter,

@@ -3,9 +3,9 @@ from __future__ import annotations
 from itertools import chain, combinations
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from scipy.signal import firwin
+from torch import nn
 
 from backend.ml.model_vars import PARAMETERS_DEFAULT
 

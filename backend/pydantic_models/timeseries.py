@@ -1,7 +1,6 @@
-from typing import Dict, List, Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel
-
 
 TimeseriesSource = Literal["raw", "derivatives"]
 TimeseriesBandFilter = Literal["delta", "theta", "alpha", "beta1", "beta2", "beta3", "gamma"]
@@ -10,31 +9,31 @@ TimeseriesSubjectSplit = Literal["train", "val", "test"]
 
 class TimeseriesDatasetInfo(BaseModel):
     id: str
-    name: Optional[str] = None
+    name: str | None = None
     subject_count: int
-    sources: List[TimeseriesSource]
+    sources: list[TimeseriesSource]
 
 
 class TimeseriesDatasetListResponse(BaseModel):
-    datasets: List[TimeseriesDatasetInfo]
+    datasets: list[TimeseriesDatasetInfo]
 
 
 class TimeseriesSubjectInfo(BaseModel):
     id: str
-    sources: List[TimeseriesSource]
-    subject_label: Optional[str] = None
-    subject_split: Optional[TimeseriesSubjectSplit] = None
+    sources: list[TimeseriesSource]
+    subject_label: str | None = None
+    subject_split: TimeseriesSubjectSplit | None = None
 
 
 class TimeseriesSubjectListResponse(BaseModel):
     dataset_id: str
-    subjects: List[TimeseriesSubjectInfo]
+    subjects: list[TimeseriesSubjectInfo]
 
 
 class TimeseriesChannelMetadata(BaseModel):
     name: str
-    type: Optional[str] = None
-    units: Optional[str] = None
+    type: str | None = None
+    units: str | None = None
 
 
 class TimeseriesSubjectMetadata(BaseModel):
@@ -45,22 +44,22 @@ class TimeseriesSubjectMetadata(BaseModel):
     duration: float
     sample_count: int
     channel_count: int
-    channels: List[TimeseriesChannelMetadata]
+    channels: list[TimeseriesChannelMetadata]
     raw_available: bool
     derivatives_available: bool
-    subject_group: Optional[str] = None
-    subject_label: Optional[str] = None
-    task_name: Optional[str] = None
-    recording_type: Optional[str] = None
+    subject_group: str | None = None
+    subject_label: str | None = None
+    task_name: str | None = None
+    recording_type: str | None = None
 
 
 class TimeseriesSignalResponse(BaseModel):
     dataset_id: str
     subject_id: str
     source: TimeseriesSource
-    band_filter: Optional[TimeseriesBandFilter] = None
+    band_filter: TimeseriesBandFilter | None = None
     preview: bool
-    channels: List[str]
+    channels: list[str]
     sampling_frequency: float
     duration: float
     start_time: float
@@ -69,4 +68,4 @@ class TimeseriesSignalResponse(BaseModel):
     end_sample: int
     sample_count: int
     decimation: int
-    samples: Dict[str, List[float]]
+    samples: dict[str, list[float]]

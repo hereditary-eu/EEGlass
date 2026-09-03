@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, List
-
 from pydantic import BaseModel, field_validator
 
 from backend.ml.model_vars import normalize_model_class_label
@@ -80,7 +78,7 @@ class WindowPrediction(BaseModel):
     predicted_class_id: int
     predicted_label: str
     confidence: float
-    probabilities: Dict[str, float]
+    probabilities: dict[str, float]
 
     @field_validator("predicted_label")
     @classmethod
@@ -89,7 +87,7 @@ class WindowPrediction(BaseModel):
 
     @field_validator("probabilities")
     @classmethod
-    def normalize_probability_labels(cls, value: Dict[str, float]) -> Dict[str, float]:
+    def normalize_probability_labels(cls, value: dict[str, float]) -> dict[str, float]:
         return {normalize_model_class_label(label) or label: probability for label, probability in value.items()}
 
 
@@ -99,34 +97,34 @@ class ModelInferenceResponse(BaseModel):
     source: TimeseriesSource
     window_size_seconds: float
     sampling_frequency: float
-    predictions: List[WindowPrediction]
+    predictions: list[WindowPrediction]
 
 
 __all__ = [
+    "FeatureImportanceMethod",
+    "FeatureImportanceStatus",
+    "FeatureImportanceTargetColumn",
     "ModelBandPowerRequest",
     "ModelBandPowerResponse",
     "ModelBandPowerStatsResponse",
     "ModelBandPowerStatsValue",
     "ModelBandPowerValue",
+    "ModelBandPresentation",
     "ModelChannelBandPower",
     "ModelChannelBandPowerStats",
     "ModelClassEvidenceBand",
     "ModelClassEvidenceContribution",
     "ModelClassEvidenceRequest",
     "ModelClassEvidenceResponse",
+    "ModelClassPresentation",
     "ModelClassWeight",
     "ModelClassWeightsBand",
     "ModelClassWeightsResponse",
-    "ModelBandPresentation",
-    "ModelClassPresentation",
-    "FeatureImportanceMethod",
-    "FeatureImportanceStatus",
-    "FeatureImportanceTargetColumn",
     "ModelFeatureImportanceItem",
     "ModelFeatureImportanceResponse",
-    "ModelInfoResponse",
     "ModelInferenceRequest",
     "ModelInferenceResponse",
+    "ModelInfoResponse",
     "ModelListItem",
     "ModelListResponse",
     "ModelMetadataValue",

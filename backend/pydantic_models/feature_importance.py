@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import List, Literal
+from typing import Literal
 
 from pydantic import BaseModel
-
 
 FeatureImportanceMethod = Literal["shap"]
 FeatureImportanceStatus = Literal["ok", "insufficient_data", "insufficient_classes"]
@@ -21,4 +20,4 @@ class ModelFeatureImportanceResponse(BaseModel):
     backend_model: str
     target_column: FeatureImportanceTargetColumn
     unit_label: str
-    feature_importances: List[ModelFeatureImportanceItem]
+    feature_importances: list[ModelFeatureImportanceItem]

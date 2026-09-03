@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Literal
+from typing import Literal
 
 from pydantic import BaseModel
 
 from backend.pydantic_models.timeseries import TimeseriesSource
-
 
 EmbeddingReductionMethod = Literal["pca", "tsne", "umap"]
 
@@ -14,7 +13,7 @@ class ModelPatientEmbeddingPoint(BaseModel):
     subject_id: str
     x: float
     y: float
-    raw_embedding: List[float] | None = None
+    raw_embedding: list[float] | None = None
     true_label: str | None = None
     predicted_label: str | None = None
     mean_confidence: float | None = None
@@ -26,7 +25,7 @@ class ModelPatientEmbeddingReduction(BaseModel):
     status: Literal["ok", "insufficient_data"]
     source_dimension: int
     output_dimension: int
-    explained_variance_ratio: List[float]
+    explained_variance_ratio: list[float]
 
 
 class ModelPatientEmbeddingsResponse(BaseModel):
@@ -38,9 +37,9 @@ class ModelPatientEmbeddingsResponse(BaseModel):
     preprocessing_version: str
     embedding_layer: str
     embedding_label: str
-    feature_names: List[str]
+    feature_names: list[str]
     reduction: ModelPatientEmbeddingReduction
-    points: List[ModelPatientEmbeddingPoint]
+    points: list[ModelPatientEmbeddingPoint]
 
 
 class ModelWindowEmbeddingPoint(BaseModel):
@@ -49,7 +48,7 @@ class ModelWindowEmbeddingPoint(BaseModel):
     end_time: float
     x: float
     y: float
-    raw_embedding: List[float] | None = None
+    raw_embedding: list[float] | None = None
     predicted_label: str
     confidence: float
     cluster_id: int | None = None
@@ -63,6 +62,6 @@ class ModelWindowEmbeddingsResponse(BaseModel):
     checkpoint_signature: str
     embedding_layer: str
     embedding_label: str
-    feature_names: List[str]
+    feature_names: list[str]
     reduction: ModelPatientEmbeddingReduction
-    points: List[ModelWindowEmbeddingPoint]
+    points: list[ModelWindowEmbeddingPoint]
