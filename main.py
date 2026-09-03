@@ -7,12 +7,14 @@ from pathlib import Path
 from typing import Any
 import argparse
 
+
 from backend.ml.model_registry import get_model_spec
 from backend.ml.model_vars import DEFAULT_MODEL_NAME
 
 DEFAULT_DATASET_ID = "ds004504"
 DEFAULT_SOURCE = "derivatives"
 MODEL_SPLIT_COUNT = 5
+DIR_DATA = Path(__file__).resolve().parent / "data" / "datasets" / DEFAULT_DATASET_ID
 
 
 def main():
@@ -32,7 +34,7 @@ def train(model_version: int = 200):
     from backend.ml.model_vars import PRETRAINED_MODEL_DIR
     from backend.ml.train import train_save_model
 
-    dir_data = os.path.join("data", "datasets", "ds004504")
+    dir_data = DIR_DATA
     split_index = model_version - 200
     participants_split = load_participant_splits()[str(split_index)]
     modelname = f"xeegnet_model_v{model_version}.pt"
@@ -77,6 +79,29 @@ def load_model():
     model_path = PRETRAINED_MODEL_DIR / modelname
     model = load_model_weights(model_path)
     return model
+
+
+def load_data():
+    """
+    Loads the EEG data for all participants. Returns a DataFrame with the EEG data and metadata.
+    """
+
+    import numpy as np
+    from backend.ml.data_utils.load_data import load_metadata, load_multiple_eegfiles, gen_filename
+
+    dir_data = DIR_DATA
+    participant_ids = np.arange(1, 86).tolist()  # 1-85 inclusive
+    df_metadata = load_metadata(dir_data=dir_data)
+
+    df_eeg = load_multiple_eegfiles(
+        dir_data=dir_data,
+        participant_ids=participant_ids,  # , 43
+        gen_path_func=gen_filename,
+        df_metadata=df_metadata,
+        n_max=None,
+    )
+
+    return df_eeg
 
 
 def export_patient_embeddings(
