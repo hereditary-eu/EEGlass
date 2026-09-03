@@ -13,13 +13,14 @@ from backend.ml.model import build_xeegnet
 from backend.ml.model_registry import ModelSpec, get_model_spec, list_model_specs
 from backend.ml.model_vars import (
     DEFAULT_MODEL_NAME,
-    MODEL_INPUT_SOURCE,
     MODEL_BANDS,
     MODEL_CHANNELS,
     MODEL_CLASS_LABELS,
+    MODEL_INPUT_SOURCE,
     PARAMETERS_DEFAULT,
     get_embedding_feature_names,
 )
+from backend.pydantic_models.embeddings import EmbeddingReductionMethod
 from backend.pydantic_models.inference import (
     ModelBandPowerResponse,
     ModelBandPowerStatsResponse,
@@ -33,24 +34,23 @@ from backend.pydantic_models.inference import (
     ModelClassWeight,
     ModelClassWeightsBand,
     ModelClassWeightsResponse,
-    ModelInfoResponse,
     ModelInferenceResponse,
+    ModelInfoResponse,
     ModelListItem,
     ModelListResponse,
+    ModelPatientEmbeddingReduction,
     ModelScalpTopologyBand,
     ModelScalpTopologyChannel,
     ModelScalpTopologyGrid,
     ModelScalpTopologyResponse,
+    ModelWindowEmbeddingPoint,
+    ModelWindowEmbeddingsResponse,
     ModelWindowScalpTopologyBand,
     ModelWindowScalpTopologyChannel,
     ModelWindowScalpTopologyMode,
     ModelWindowScalpTopologyResponse,
-    ModelPatientEmbeddingReduction,
-    ModelWindowEmbeddingPoint,
-    ModelWindowEmbeddingsResponse,
     WindowPrediction,
 )
-from backend.pydantic_models.embeddings import EmbeddingReductionMethod
 from backend.pydantic_models.timeseries import TimeseriesSource
 from backend.services.embedding_service import cluster_embeddings_density, reduce_embeddings
 from backend.services.model_errors import (
@@ -73,7 +73,7 @@ V = TypeVar("V")
 MIN_RELATIVE_POWER_FOR_DB = 1e-6
 
 
-def remember(cache: OrderedDict[K, V], key: K, value: V, limit: int) -> None:
+def remember[K, V](cache: OrderedDict[K, V], key: K, value: V, limit: int) -> None:
     cache[key] = value
     cache.move_to_end(key)
     while len(cache) > limit:

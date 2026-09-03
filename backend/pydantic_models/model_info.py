@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import Dict, List
-
 from pydantic import BaseModel
 
-ModelMetadataValue = str | int | float | bool | List[str] | List[int] | List[float]
+ModelMetadataValue = str | int | float | bool | list[str] | list[int] | list[float]
 
 
 class ModelClassPresentation(BaseModel):
@@ -25,9 +23,9 @@ class ModelInfoResponse(BaseModel):
     display_name: str
     architecture: str
     model_summary: str
-    classes: List[ModelClassPresentation]
-    bands: List[ModelBandPresentation]
-    metadata: Dict[str, ModelMetadataValue]
+    classes: list[ModelClassPresentation]
+    bands: list[ModelBandPresentation]
+    metadata: dict[str, ModelMetadataValue]
 
 
 class ModelListItem(BaseModel):
@@ -39,7 +37,7 @@ class ModelListItem(BaseModel):
 
 class ModelListResponse(BaseModel):
     current_model_name: str
-    models: List[ModelListItem]
+    models: list[ModelListItem]
 
 
 class SetCurrentModelRequest(BaseModel):

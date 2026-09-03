@@ -4,7 +4,7 @@ import asyncio
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import partial
 from typing import Any, Literal
 
@@ -12,6 +12,7 @@ import numpy as np
 
 from backend.config import CONFIG
 from backend.ml.model_vars import DEFAULT_MODEL_NAME, get_embedding_feature_names
+from backend.pydantic_models.embeddings import EmbeddingReductionMethod
 from backend.pydantic_models.inference import (
     ModelBandPowerStatsResponse,
     ModelInferenceResponse,
@@ -25,9 +26,16 @@ from backend.pydantic_models.inference import (
     ModelWindowEmbeddingPoint,
     ModelWindowEmbeddingsResponse,
 )
-from backend.pydantic_models.embeddings import EmbeddingReductionMethod
 from backend.pydantic_models.timeseries import TimeseriesSource
 from backend.services.embedding_service import cluster_embeddings_density, reduce_embeddings
+from backend.services.model_service import (
+    ModelNotFoundError,
+    ModelService,
+    ModelServiceError,
+    ModelValidationError,
+    validate_model_input_source,
+)
+from backend.services.patient_aggregation_service import PatientAggregationService
 from backend.services.prediction_cache_artifacts import (
     PENULTIMATE_EMBEDDING_LABEL,
     PENULTIMATE_EMBEDDING_LAYER,
@@ -52,14 +60,6 @@ from backend.services.prediction_cache_band_power import (
     extract_band_power_mean_values,
 )
 from backend.services.prediction_cache_writers import write_clustering_artifact, write_prediction_artifact
-from backend.services.patient_aggregation_service import PatientAggregationService
-from backend.services.model_service import (
-    ModelNotFoundError,
-    ModelService,
-    ModelServiceError,
-    ModelValidationError,
-    validate_model_input_source,
-)
 from backend.services.timeseries_service import (
     TimeseriesNotFoundError,
     TimeseriesService,
@@ -722,7 +722,7 @@ class PredictionCacheService:
 
     @staticmethod
     def _now() -> str:
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
     @staticmethod
     def _checkpoint_key(checkpoint_signature: str) -> str:

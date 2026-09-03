@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -50,7 +50,7 @@ class ModelPredictionSummary(BaseModel):
     predicted_label: str | None = None
     mean_confidence: float | None = None
     total_windows: int = 0
-    windows_per_class: List[ModelPredictionClassWindowCount]
+    windows_per_class: list[ModelPredictionClassWindowCount]
 
     @field_validator("true_label", "predicted_label")
     @classmethod
@@ -69,6 +69,6 @@ class ModelPredictionCacheStatus(BaseModel):
     total_subjects: int
     completed_subjects: int
     failed_subjects: int
-    subject_summaries: List[ModelPredictionSummary] = Field(default_factory=list)
+    subject_summaries: list[ModelPredictionSummary] = Field(default_factory=list)
     manifest_path: str
     updated_at: str | None = None

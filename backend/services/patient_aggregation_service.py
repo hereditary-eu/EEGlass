@@ -15,7 +15,6 @@ from backend.pydantic_models.settings import PatientAggregationSettings, Patient
 from backend.services.model_errors import ModelValidationError
 from backend.services.prediction_cache_artifacts import read_json, write_json_atomic
 
-
 HEALTHY_LABEL = "Healthy"
 ALZHEIMER_LABEL = "Alzheimer Disease"
 FTD_LABEL = "Frontotemporal Dementia"

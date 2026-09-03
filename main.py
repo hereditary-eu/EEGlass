@@ -1,3 +1,4 @@
+import argparse
 import csv
 import hashlib
 import json
@@ -5,7 +6,6 @@ import logging
 import os
 from pathlib import Path
 from typing import Any
-import argparse
 
 
 from backend.ml.model_registry import get_model_spec

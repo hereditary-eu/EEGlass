@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, List
-
 from pydantic import BaseModel
 
 from backend.pydantic_models.timeseries import TimeseriesSource
@@ -29,12 +27,12 @@ class ModelClassWeight(BaseModel):
 class ModelClassEvidenceBand(BaseModel):
     band: str
     feature_value: float
-    class_contributions: List[ModelClassEvidenceContribution]
+    class_contributions: list[ModelClassEvidenceContribution]
 
 
 class ModelClassWeightsBand(BaseModel):
     band: str
-    class_weights: List[ModelClassWeight]
+    class_weights: list[ModelClassWeight]
 
 
 class ModelClassEvidenceResponse(BaseModel):
@@ -47,11 +45,11 @@ class ModelClassEvidenceResponse(BaseModel):
     predicted_class_id: int
     predicted_label: str
     confidence: float
-    probabilities: Dict[str, float]
-    logits: Dict[str, float]
+    probabilities: dict[str, float]
+    logits: dict[str, float]
     unit_label: str
     global_max_abs_contribution: float
-    bands: List[ModelClassEvidenceBand]
+    bands: list[ModelClassEvidenceBand]
 
 
 class ModelClassWeightsResponse(BaseModel):
@@ -60,4 +58,4 @@ class ModelClassWeightsResponse(BaseModel):
     layer_name: str
     unit_label: str
     global_max_abs_weight: float
-    bands: List[ModelClassWeightsBand]
+    bands: list[ModelClassWeightsBand]

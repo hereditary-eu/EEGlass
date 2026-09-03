@@ -23,10 +23,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 
@@ -69,7 +69,7 @@ class SCCParams:
     mode: str = "cwt_morlet"
 
     @classmethod
-    def default(cls, sfreq: float, sample_length: int) -> "SCCParams":
+    def default(cls, sfreq: float, sample_length: int) -> SCCParams:
         return cls(sfreq=float(sfreq), sample_length=int(sample_length))
 
     @property
@@ -270,7 +270,7 @@ class SCCStore:
             "sample_length": params.sample_length,
             "method": params.method,
             "mode": params.mode,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
         tmp_js = js.with_suffix(".json.tmp")
         tmp_js.write_text(json.dumps(meta, indent=2))
@@ -399,7 +399,7 @@ def build_x_y_scc(
 # ---------------------------------------------------------------------------
 try:
     import torch
-    import torch.nn as nn
+    from torch import nn
     from torch.utils.data import Dataset
 
     class CachedSCCDataset(Dataset):

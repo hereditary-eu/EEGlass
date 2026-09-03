@@ -49,7 +49,7 @@ class Settings(BaseSettings):
         return value
 
     @model_validator(mode="after")
-    def apply_patient_threshold_fallbacks(self) -> "Settings":
+    def apply_patient_threshold_fallbacks(self) -> Settings:
         if self.MODEL_PATIENT_ALZHEIMER_WINDOW_THRESHOLD is None:
             self.MODEL_PATIENT_ALZHEIMER_WINDOW_THRESHOLD = self.MODEL_PATIENT_DISEASE_WINDOW_THRESHOLD
         if self.MODEL_PATIENT_FTD_WINDOW_THRESHOLD is None:

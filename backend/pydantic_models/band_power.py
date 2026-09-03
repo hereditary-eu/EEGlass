@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Literal
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -24,7 +24,7 @@ class ModelBandPowerValue(BaseModel):
 
 class ModelChannelBandPower(BaseModel):
     channel: str
-    bands: List[ModelBandPowerValue]
+    bands: list[ModelBandPowerValue]
 
 
 class ModelBandPowerResponse(BaseModel):
@@ -35,7 +35,7 @@ class ModelBandPowerResponse(BaseModel):
     start_time: float
     end_time: float
     sampling_frequency: float
-    channels: List[ModelChannelBandPower]
+    channels: list[ModelChannelBandPower]
 
 
 class ModelBandPowerStatsValue(BaseModel):
@@ -50,7 +50,7 @@ class ModelBandPowerStatsValue(BaseModel):
 
 class ModelChannelBandPowerStats(BaseModel):
     channel: str
-    bands: List[ModelBandPowerStatsValue]
+    bands: list[ModelBandPowerStatsValue]
 
 
 class ModelBandPowerStatsResponse(BaseModel):
@@ -62,4 +62,4 @@ class ModelBandPowerStatsResponse(BaseModel):
     unit_label: str
     subject_count: int
     window_count: int
-    channels: List[ModelChannelBandPowerStats]
+    channels: list[ModelChannelBandPowerStats]

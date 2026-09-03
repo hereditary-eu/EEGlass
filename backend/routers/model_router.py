@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconn
 from uvicorn.protocols.utils import ClientDisconnected
 
 from backend.ml.model_vars import DEFAULT_MODEL_NAME
+from backend.pydantic_models.embeddings import EmbeddingReductionMethod
 from backend.pydantic_models.inference import (
     FeatureImportanceMethod,
     FeatureImportanceTargetColumn,
@@ -14,11 +15,11 @@ from backend.pydantic_models.inference import (
     ModelBandPowerStatsResponse,
     ModelClassEvidenceRequest,
     ModelClassEvidenceResponse,
-    ModelFeatureImportanceResponse,
     ModelClassWeightsResponse,
-    ModelInfoResponse,
+    ModelFeatureImportanceResponse,
     ModelInferenceRequest,
     ModelInferenceResponse,
+    ModelInfoResponse,
     ModelListResponse,
     ModelPatientEmbeddingsResponse,
     ModelPredictionCacheJobRequest,
@@ -30,11 +31,9 @@ from backend.pydantic_models.inference import (
     ModelWindowScalpTopologyResponse,
     SetCurrentModelRequest,
 )
-from backend.pydantic_models.embeddings import EmbeddingReductionMethod
 from backend.pydantic_models.timeseries import TimeseriesSource
 from backend.services.embedding_service import EmbeddingReductionError
 from backend.services.feature_importance_service import FeatureImportanceService
-from backend.services.prediction_cache_service import PredictionCacheService
 from backend.services.model_service import (
     ModelDependencyUnavailableError,
     ModelInferenceUnavailableError,
@@ -43,6 +42,7 @@ from backend.services.model_service import (
     ModelServiceError,
     ModelValidationError,
 )
+from backend.services.prediction_cache_service import PredictionCacheService
 
 logger = logging.getLogger(__name__)
 model_router = APIRouter(tags=["model"])

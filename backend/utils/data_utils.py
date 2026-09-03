@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -28,7 +28,7 @@ def _normalize_scalar(value: Any) -> Any:
     return value
 
 
-def sanitize_and_parse_dataset(data: List[Dict[str, Any]]) -> pd.DataFrame:
+def sanitize_and_parse_dataset(data: list[dict[str, Any]]) -> pd.DataFrame:
     """
     Convert raw JSON data to a pandas DataFrame and sanitize it by:
     1. Converting to appropriate data types
@@ -89,11 +89,11 @@ def sanitize_and_parse_dataset(data: List[Dict[str, Any]]) -> pd.DataFrame:
         return df
 
     except Exception as e:
-        logger.error(f"Error sanitizing dataset: {str(e)}")
-        raise RuntimeError(f"Failed to sanitize dataset: {str(e)}")
+        logger.error(f"Error sanitizing dataset: {e!s}")
+        raise RuntimeError(f"Failed to sanitize dataset: {e!s}")
 
 
-def dataframe_to_dict_list(df: pd.DataFrame) -> List[Dict[str, Any]]:
+def dataframe_to_dict_list(df: pd.DataFrame) -> list[dict[str, Any]]:
     """
     Convert a pandas DataFrame back to a list of dictionaries,
     ensuring all values are JSON serializable.
@@ -113,7 +113,7 @@ def dataframe_to_dict_list(df: pd.DataFrame) -> List[Dict[str, Any]]:
     return dict_list
 
 
-def get_numeric_columns(df: pd.DataFrame) -> List[str]:
+def get_numeric_columns(df: pd.DataFrame) -> list[str]:
     """
     Get list of numeric columns in DataFrame
 

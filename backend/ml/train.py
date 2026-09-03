@@ -1,25 +1,25 @@
-from selfeeg.ssl import EarlyStopping
 import os
 from pathlib import Path
 
 import torch
+from selfeeg.ssl import EarlyStopping
 
-from backend.ml.data_utils.load_data import (
-    load_metadata,
-    load_multiple_eeg_windows,
-    gen_participant_id_long,
-)
-from backend.ml.data_utils.prepare_data import get_window_data_loader
 from backend.experiments_xeegnet.shallownetXAI_main.AllFnc.training import (
     lossBinary,
     lossMulti,
     train_model,
 )
+from backend.ml.data_utils.load_data import (
+    gen_participant_id_long,
+    load_metadata,
+    load_multiple_eeg_windows,
+)
+from backend.ml.data_utils.prepare_data import get_window_data_loader
 from backend.ml.model import build_xeegnet
 from backend.ml.model_vars import (
     PARAMETERS_DEFAULT,
-    TRAINING_PARAMETERS_DEFAULT,
     PRETRAINED_MODEL_DIR,
+    TRAINING_PARAMETERS_DEFAULT,
 )
 
 
