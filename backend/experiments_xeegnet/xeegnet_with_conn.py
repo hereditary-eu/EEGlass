@@ -26,7 +26,7 @@ class xEEGNetSCC(nn.Module):
         scc_pairs -> (B, n_bands, n_pairs) cached SCC pair vectors
     """
 
-    def __init__(self, base_model: nn.Module, reducer_mode: str = "mean", freeze_base: bool = False):
+    def __init__(self, base_model: nn.Module, reducer_mode_scc: str = "mean", freeze_base: bool = False):
         super().__init__()
         self.base = base_model
 
@@ -45,7 +45,7 @@ class xEEGNetSCC(nn.Module):
             n_bands=self.n_bands,
             n_pairs=self.n_pairs,
             n_channels=self.n_channels,
-            mode=reducer_mode,
+            mode=reducer_mode_scc,
         )
         self.scc_norm = nn.BatchNorm1d(self.n_bands)   # 7 features in, 7 out
 
