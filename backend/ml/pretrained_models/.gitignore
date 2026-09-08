@@ -1,4 +1,9 @@
 *_test*
 
 *nmax*
-*xeegnet_scc*
+
+#*xeegnet_scc*
+
+# no metrics and metadata for scc models
+*metrics*.csv
+*scc_model*metadata*.csv

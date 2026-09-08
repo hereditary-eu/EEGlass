@@ -8,7 +8,28 @@ from backend.ml.data_utils.load_data import load_multiple_eeg_windows_inner
 from backend.ml.data_utils.prepare_data import get_window_data_loader
 
 
-__all__ = ["get_dataloaders_xysubjectids", "split_data"]
+__all__ = ["get_dataloaders_xysubjectids", "split_data", "generate_model_name", "MODEL_PREFIXES_BIB"]
+
+MODEL_PREFIXES_BIB = {"xeegnet": "xeegnet_model", "xeegnet_scc": "xeegnet_scc_model"}
+
+def generate_model_name(model_kind: str, model_version: int, n_max: int | None = None, reducer_mode_scc: str | None = None) -> str:
+
+    model_prefix = MODEL_PREFIXES_BIB[model_kind]
+
+    if model_kind == "xeegnet_scc":
+        if reducer_mode_scc in ["node", "edge"]:
+            model_name = f"{model_prefix}_reducermode_{reducer_mode_scc}_v{model_version}.pt"
+        elif reducer_mode_scc == "mean":
+            model_name = f"{model_prefix}_v{model_version}.pt"
+        else:
+            raise ValueError(f"Unsupported reducer_mode_scc: {reducer_mode_scc}")
+    elif model_kind == "xeegnet":
+        model_name = f"{model_prefix}_v{model_version}.pt"
+
+    if n_max is not None:
+        raise ValueError("n_max is not supported in generate_model_name yet.")
+
+    return model_name
 
 def get_dataloaders_xysubjectids(
     dir_data: str,
@@ -209,3 +230,6 @@ def split_data(
         x_val, y_val, subject_ids_val, scc_val,
         x_test, y_test, subject_ids_test, scc_test,
     )
+
+
+
