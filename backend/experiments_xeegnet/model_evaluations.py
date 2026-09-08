@@ -47,6 +47,7 @@ def get_dataloaders_xysubjectids(
     source: str = "derivatives",
     load_model_windows_for_participant=None,
     print_info: bool = False,
+    shuffle_train: bool = True,
     data_x_y_id: tuple[np.ndarray, np.ndarray, np.ndarray] | None = None,
     data_x_y_scc_id: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray] | None = None,
 ):
@@ -100,6 +101,7 @@ def get_dataloaders_xysubjectids(
             y_train,
             parameters["batchsize"],
             parameters["workers"],
+            shuffle=shuffle_train
         )
         valloader = get_window_data_loader(
             x_val,
@@ -168,7 +170,7 @@ def get_dataloaders_xysubjectids(
         trainloader = DataLoader(
             CachedSCCDataset(x_train, scc_train, y_train),
             batch_size=parameters["batchsize"],
-            shuffle=True,
+            shuffle=shuffle_train,
             num_workers=parameters["workers"],
         )
         valloader = DataLoader(
