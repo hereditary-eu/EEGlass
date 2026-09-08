@@ -19,7 +19,7 @@ def lossBinary(yhat, ytrue):
     with 0 or 1 based on the binary class.
     """
     yhat = yhat.flatten()
-    return F.binary_cross_entropy_with_logits(yhat, ytrue)
+    return F.binary_cross_entropy_with_logits(yhat, ytrue.float())
 
 
 def lossMulti(yhat, ytrue):
