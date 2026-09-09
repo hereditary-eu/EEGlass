@@ -8,7 +8,7 @@ from backend.ml.data_utils.load_data import load_multiple_eeg_windows_inner
 from backend.ml.data_utils.prepare_data import get_window_data_loader
 
 
-__all__ = ["get_dataloaders_xysubjectids", "split_data", "generate_model_name", "MODEL_PREFIXES_BIB"]
+__all__ = ["get_dataloaders_xysubjectids", "split_data", "generate_model_name", "MODEL_PREFIXES_BIB", "filter_results_dataframe"]
 
 MODEL_PREFIXES_BIB = {"xeegnet": "xeegnet_model", "xeegnet_scc": "xeegnet_scc_model"}
 
@@ -235,3 +235,17 @@ def split_data(
 
 
 
+
+def filter_results_dataframe(df, task=None, model_kind=None, reducer_mode_scc=None, datasplit=None, aggregation=None):
+    """Filter the DataFrame based on the provided criteria."""
+    if task is not None:
+        df = df[df['task'] == task]
+    if model_kind is not None:
+        df = df[df['model_kind'] == model_kind]
+    if reducer_mode_scc is not None:
+        df = df[df['reducer_mode_scc'] == reducer_mode_scc]
+    if datasplit is not None:
+        df = df[df['datasplit'] == datasplit]
+    if aggregation is not None:
+        df = df[df['aggregation'] == aggregation]
+    return df
