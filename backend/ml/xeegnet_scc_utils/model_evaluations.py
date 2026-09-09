@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
+from pathlib import Path
 
 from torch.utils.data import DataLoader
 from backend.ml.scc_cache import SCCStore, SCCParams, build_x_y_scc, CachedSCCDataset, SCCReducer, pairs_to_dense
@@ -8,11 +9,22 @@ from backend.ml.data_utils.load_data import load_multiple_eeg_windows_inner
 from backend.ml.data_utils.prepare_data import get_window_data_loader
 
 
-__all__ = ["get_dataloaders_xysubjectids", "split_data", "generate_model_name", "MODEL_PREFIXES_BIB", "filter_results_dataframe"]
+__all__ = [
+    "get_dataloaders_xysubjectids",
+    "split_data",
+    "generate_model_name",
+    "MODEL_PREFIXES_BIB",
+    "filter_results_dataframe",
+    "adapt_data_for_task",
+    "generate_model_path",
+]
 
 MODEL_PREFIXES_BIB = {"xeegnet": "xeegnet_model", "xeegnet_scc": "xeegnet_scc_model"}
 
-def generate_model_name(model_kind: str, model_version: int, n_max: int | None = None, reducer_mode_scc: str | None = None) -> str:
+
+def generate_model_name(
+    model_kind: str, model_version: int, n_max: int | None = None, reducer_mode_scc: str | None = None
+) -> str:
 
     model_prefix = MODEL_PREFIXES_BIB[model_kind]
 
@@ -30,6 +42,7 @@ def generate_model_name(model_kind: str, model_version: int, n_max: int | None =
         raise ValueError("n_max is not supported in generate_model_name yet.")
 
     return model_name
+
 
 def get_dataloaders_xysubjectids(
     dir_data: str,
@@ -84,9 +97,15 @@ def get_dataloaders_xysubjectids(
 
     if not use_cached_scc:
         (
-            x_train, y_train, subject_ids_train,
-            x_val, y_val, subject_ids_val,
-            x_test, y_test, subject_ids_test,
+            x_train,
+            y_train,
+            subject_ids_train,
+            x_val,
+            y_val,
+            subject_ids_val,
+            x_test,
+            y_test,
+            subject_ids_test,
         ) = split_data(
             data_x,
             data_y,
@@ -97,11 +116,7 @@ def get_dataloaders_xysubjectids(
         )
 
         trainloader = get_window_data_loader(
-            x_train,
-            y_train,
-            parameters["batchsize"],
-            parameters["workers"],
-            shuffle=shuffle_train
+            x_train, y_train, parameters["batchsize"], parameters["workers"], shuffle=shuffle_train
         )
         valloader = get_window_data_loader(
             x_val,
@@ -119,23 +134,32 @@ def get_dataloaders_xysubjectids(
         )
 
         xy_subjects = (
-            x_train, y_train, subject_ids_train,
-            x_val, y_val, subject_ids_val,
-            x_test, y_test, subject_ids_test,
+            x_train,
+            y_train,
+            subject_ids_train,
+            x_val,
+            y_val,
+            subject_ids_val,
+            x_test,
+            y_test,
+            subject_ids_test,
         )
 
     else:
-        if store is None or scc_params is None or dataset_id is None or n_channels is None or load_model_windows_for_participant is None:
+        if (
+            store is None
+            or scc_params is None
+            or dataset_id is None
+            or n_channels is None
+            or load_model_windows_for_participant is None
+        ):
             raise ValueError(
                 "use_cached_scc=True requires store, scc_params, dataset_id, n_channels, and load_model_windows_for_participant."
             )
 
         if data_x_y_scc_id is None:
             df = df_metadata.copy()
-            label_of = {
-                f"sub-{int(r.participant_id.split('-')[1]):03d}": int(r.group_encoded)
-                for r in df.itertuples()
-            }
+            label_of = {f"sub-{int(r.participant_id.split('-')[1]):03d}": int(r.group_encoded) for r in df.itertuples()}
             data_x, data_y, data_scc, data_subject_ids = build_x_y_scc(
                 dir_data,
                 participant_ids_train + participant_ids_val + participant_ids_test,
@@ -154,9 +178,18 @@ def get_dataloaders_xysubjectids(
             data_x, data_y, data_scc, data_subject_ids = data_x_y_scc_id
 
         (
-            x_train, y_train, subject_ids_train, scc_train,
-            x_val, y_val, subject_ids_val, scc_val,
-            x_test, y_test, subject_ids_test, scc_test,
+            x_train,
+            y_train,
+            subject_ids_train,
+            scc_train,
+            x_val,
+            y_val,
+            subject_ids_val,
+            scc_val,
+            x_test,
+            y_test,
+            subject_ids_test,
+            scc_test,
         ) = split_data(
             data_x,
             data_y,
@@ -187,9 +220,18 @@ def get_dataloaders_xysubjectids(
         )
 
         xy_subjects = (
-            x_train, y_train, subject_ids_train, scc_train,
-            x_val, y_val, subject_ids_val, scc_val,
-            x_test, y_test, subject_ids_test, scc_test,
+            x_train,
+            y_train,
+            subject_ids_train,
+            scc_train,
+            x_val,
+            y_val,
+            subject_ids_val,
+            scc_val,
+            x_test,
+            y_test,
+            subject_ids_test,
+            scc_test,
         )
 
     return trainloader, valloader, testloader, xy_subjects
@@ -218,9 +260,15 @@ def split_data(
 
     if scc is None:
         return (
-            x_train, y_train, subject_ids_train,
-            x_val, y_val, subject_ids_val,
-            x_test, y_test, subject_ids_test,
+            x_train,
+            y_train,
+            subject_ids_train,
+            x_val,
+            y_val,
+            subject_ids_val,
+            x_test,
+            y_test,
+            subject_ids_test,
         )
 
     scc_train = scc[train_mask]
@@ -228,24 +276,64 @@ def split_data(
     scc_test = scc[test_mask]
 
     return (
-        x_train, y_train, subject_ids_train, scc_train,
-        x_val, y_val, subject_ids_val, scc_val,
-        x_test, y_test, subject_ids_test, scc_test,
+        x_train,
+        y_train,
+        subject_ids_train,
+        scc_train,
+        x_val,
+        y_val,
+        subject_ids_val,
+        scc_val,
+        x_test,
+        y_test,
+        subject_ids_test,
+        scc_test,
     )
-
-
 
 
 def filter_results_dataframe(df, task=None, model_kind=None, reducer_mode_scc=None, datasplit=None, aggregation=None):
     """Filter the DataFrame based on the provided criteria."""
     if task is not None:
-        df = df[df['task'] == task]
+        df = df[df["task"] == task]
     if model_kind is not None:
-        df = df[df['model_kind'] == model_kind]
+        df = df[df["model_kind"] == model_kind]
     if reducer_mode_scc is not None:
-        df = df[df['reducer_mode_scc'] == reducer_mode_scc]
+        df = df[df["reducer_mode_scc"] == reducer_mode_scc]
     if datasplit is not None:
-        df = df[df['datasplit'] == datasplit]
+        df = df[df["datasplit"] == datasplit]
     if aggregation is not None:
-        df = df[df['aggregation'] == aggregation]
+        df = df[df["aggregation"] == aggregation]
     return df
+
+
+def adapt_data_for_task(data_x_y_scc_id, task):
+    """Filter subjects and remap labels for a classification task.
+    SCC is label-independent, so this only subsets rows — no recompute."""
+    x, y, scc, sids = data_x_y_scc_id
+
+    if task == "three_class":
+        return x.copy(), y.copy(), scc.copy(), sids.copy()
+
+    if task == "cn_ad":
+        mask = np.isin(y, [0, 1])
+        y_new = np.where(y[mask] == 1, 1, 0)  # AD -> 1, CN -> 0
+    elif task == "cn_ftd":
+        mask = np.isin(y, [0, 2])
+        y_new = np.where(y[mask] == 2, 1, 0)  # FTD -> 1, CN -> 0
+    elif task == "cn_disease":
+        mask = np.ones(len(y), dtype=bool)  # keep all
+        y_new = (y[mask] > 0).astype(int)  # any dementia -> 1
+    else:
+        raise ValueError(f"Unsupported task: {task}")
+
+    y_new = y_new.astype("float32")  # BCE-with-logits needs float
+    return x[mask], y_new, scc[mask], sids[mask]
+
+
+def generate_model_path(pretrained_model_dir, task, name):
+    """Generate a model path based on the task and name."""
+
+    if task == "three_class":
+        return Path(pretrained_model_dir) / name
+    else:
+        return Path(pretrained_model_dir) / task / name

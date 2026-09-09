@@ -8,7 +8,7 @@ from scipy.signal import firwin
 from torch import nn
 
 from backend.ml.model_vars import PARAMETERS_DEFAULT
-from backend.experiments_xeegnet.xeegnet_with_conn import xEEGNetSCC
+from backend.ml.xeegnet_scc_utils.xeegnet_with_conn import xEEGNetSCC
 
 
 class XEEGNetEncoder(nn.Module):

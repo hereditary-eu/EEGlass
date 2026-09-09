@@ -5,7 +5,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from backend.ml.scc_cache import DEFAULT_BANDS as SCC_DEFAULT_BANDS, SCCReducer, pairs_to_dense, calc_mean_scc_per_channel
+from backend.ml.scc_cache import (
+    DEFAULT_BANDS as SCC_DEFAULT_BANDS,
+    SCCReducer,
+    pairs_to_dense,
+    calc_mean_scc_per_channel,
+)
 
 BANDS = {name: (lo, hi) for name, lo, hi in SCC_DEFAULT_BANDS}
 
@@ -14,6 +19,7 @@ BANDS = {name: (lo, hi) for name, lo, hi in SCC_DEFAULT_BANDS}
 #         x   = self.windows[i]            # (C, T) tensor
 #         scc = self.scc_cache[i]          # (n_bands,) precomputed once, loaded from .npy
 #         return [x, scc], self.labels[i]  # list -> train_model's non-tensor branch handles it
+
 
 class xEEGNetSCC(nn.Module):
     """Wrapper for `selfeeg.models.xEEGNet` that consumes cached SCC pairs.
@@ -43,7 +49,6 @@ class xEEGNetSCC(nn.Module):
 
         self.n_pairs = self.n_channels * (self.n_channels - 1) // 2
 
-
         self.reducer = SCCReducer(
             n_bands=self.n_bands,
             n_pairs=self.n_pairs,
@@ -51,7 +56,7 @@ class xEEGNetSCC(nn.Module):
             mode=reducer_mode_scc,
         )
 
-        self.scc_norm = nn.BatchNorm1d(self.n_bands)   # 7 features in, 7 out
+        self.scc_norm = nn.BatchNorm1d(self.n_bands)  # 7 features in, 7 out
 
         # create new Dense head that accepts concatenated features
         nb_out = 1 if self.base.nb_classes <= 2 else self.base.nb_classes
@@ -92,29 +97,38 @@ class xEEGNetSCC(nn.Module):
         scc_mean_per_channel = calc_mean_scc_per_channel(scc_pairs, n_channels=self.n_channels)  # (B,7,C)
 
         node_contribution = (
-            self.reducer._node_contrib(scc_pairs).cpu().numpy()
-            if self.reducer.mode == "node" else None
-        )                                                                                          # (B,7,C) or None
+            self.reducer._node_contrib(scc_pairs).cpu().numpy() if self.reducer.mode == "node" else None
+        )  # (B,7,C) or None
+
+        # spatial model weights for topomap: (C,7) =
+        node_spatial_model_weights = self.reducer.w
 
         # --- Band Activations (SCC branch): the 7-dim input to the head ---
-        conn = self.reducer(scc_pairs)          # (B, 7)  raw reduced SCC
-        dense_input_scc = self.scc_norm(conn)   # (B, 7)  normalised — what the head actually sees
+        conn = self.reducer(scc_pairs)  # (B, 7)  raw reduced SCC
+        dense_input_scc = self.scc_norm(conn)  # (B, 7)  normalised — what the head actually sees
 
         # --- Class contributions (SCC branch), 3-class only ---
         class_contrib_scc = None
         if self.base.nb_classes == 3 and isinstance(self.Dense, nn.Linear):
-            W = self.Dense.weight                # (3, 14) = (nb_out, emb+7)
-            W_scc = W[:, -self.n_bands:]          # (3, 7) — SCC columns (last 7)
+            W = self.Dense.weight  # (3, 14) = (nb_out, emb+7)
+            W_scc = W[:, -self.n_bands :]  # (3, 7) — SCC columns (last 7)
             # per-class, per-band contribution = input_band * weight[class, band]
             class_contrib_scc = (
-                dense_input_scc.unsqueeze(1) * W_scc.unsqueeze(0)   # (B,3,7)
-            ).cpu().numpy()
+                (
+                    dense_input_scc.unsqueeze(1) * W_scc.unsqueeze(0)  # (B,3,7)
+                )
+                .cpu()
+                .numpy()
+            )
 
         return {
-            "scc_mean_per_channel": np.asarray(scc_mean_per_channel),      # (B,7,C)            -> total bandpower plot scc version, optional!
-            "node_contribution": node_contribution,                        # (B,7,C) or None    -> for topomap
-            "band_activation_scc": dense_input_scc.cpu().numpy(),          # (B,7)              -> for band activation plot
-            "class_contribution_scc": class_contrib_scc,                   # (B,3,7) or None    -> for class contribution plot (or weighted band activation)
+            "scc_mean_per_channel": np.asarray(
+                scc_mean_per_channel
+            ),  # (B,7,C)            -> total bandpower plot scc version, optional!
+            "spatial_node_weights": node_spatial_model_weights,  # (C,7)              -> for topomap weight overview (plain weights in overview channel!)
+            "node_contribution": node_contribution,  # (B,7,C) or None    -> for topomap
+            "band_activation_scc": dense_input_scc.cpu().numpy(),  # (B,7)              -> for band activation plot
+            "class_contribution_scc": class_contrib_scc,  # (B,3,7) or None    -> for class contribution plot (or weighted band activation)
         }
 
     def forward(self, X) -> torch.Tensor:
@@ -123,7 +137,7 @@ class xEEGNetSCC(nn.Module):
         x, scc_pairs = X
 
         # encoder output (B, emb_size)
-        emb = self.base.encoder(x) # (B, emb_size=n_bands=7?)
+        emb = self.base.encoder(x)  # (B, emb_size=n_bands=7?)
         conn = self.reducer(scc_pairs)  # (B, n_bands)?
 
         # conn_normalized = F.normalize(conn, p=2, dim=1)  # L2 normalize across bands
@@ -136,8 +150,3 @@ class xEEGNetSCC(nn.Module):
             else:
                 out = F.softmax(out, dim=1)
         return out
-
-
-class xEEGNetWithConnectivity(xEEGNetSCC):
-    """Alias with a more descriptive name."""
-
