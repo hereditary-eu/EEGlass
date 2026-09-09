@@ -125,6 +125,16 @@ def pairs_to_dense(pairs: np.ndarray, n_channels: int, fill_diagonal: float = 0.
     return out
 
 
+def calc_mean_scc_per_channel(scc_pairs, n_channels=19):
+    """(..., n_bands, n_pairs) -> (..., n_bands, n_channels) = mean coherence of
+    each channel with all others, per band. This is DICE's per-channel SCC.
+    Can be used for ###visualization### in the total band power panel bottom left of the dashboard.
+    """
+    dense = pairs_to_dense(np.asarray(scc_pairs), n_channels, fill_diagonal=0.0)  # (..., bands, C, C)
+    # each channel's mean coherence with the other C-1 channels (diagonal excluded)
+    return dense.sum(axis=-1) / (n_channels - 1)  # (..., bands, C)
+
+
 # ---------------------------------------------------------------------------
 # Compute  — pure function, MNE inside, one batched call per subject
 # ---------------------------------------------------------------------------
@@ -437,18 +447,28 @@ try:
             elif mode != "mean":
                 raise ValueError(mode)
 
+        def _node_contrib(self, pairs):
+            """pairs: (B, bands, n_pairs) -> per-channel contributions (B, bands, C).
+            Summing the last axis gives the scalar reducer output wᵀMw.
+            Can be used for ###visualization### in the topomap panel bottom middle of the dashboard, output shape (bands=7, C=19).
+            """
+            B, Fb, _ = pairs.shape
+            C = self.n_channels
+            M = pairs.new_zeros(B, Fb, C, C)
+            M[:, :, self.rows, self.cols] = pairs
+            M[:, :, self.cols, self.rows] = pairs
+            # Mw: (B, bands, C)  — for each channel i, sum_j M_ij * w_j
+            Mw = torch.einsum("bfij,fj->bfi", M, self.w)
+            # per-channel contribution: w_i * (Mw)_i
+            return self.w.unsqueeze(0) * Mw  # (B, bands, C)
+
         def forward(self, pairs: torch.Tensor) -> torch.Tensor:
             if self.mode == "mean":
                 return pairs.mean(-1)
             if self.mode == "edge":
                 return torch.einsum("bfe,fe->bf", pairs, self.w) + self.b
             # node: rebuild symmetric dense, then bilinear w^T M w
-            B, Fb, _ = pairs.shape
-            C = self.n_channels
-            M = pairs.new_zeros(B, Fb, C, C)
-            M[:, :, self.rows, self.cols] = pairs
-            M[:, :, self.cols, self.rows] = pairs
-            return torch.einsum("bfij,fi,fj->bf", M, self.w, self.w)
+            return self._node_contrib(pairs).sum(-1)  # (B, bands) — identical to old wᵀMw
 
 except ImportError:  # torch not present -> cache/compute still importable
     pass

@@ -8,6 +8,7 @@ from scipy.signal import firwin
 from torch import nn
 
 from backend.ml.model_vars import PARAMETERS_DEFAULT
+from backend.experiments_xeegnet.xeegnet_with_conn import xEEGNetSCC
 
 
 class XEEGNetEncoder(nn.Module):
@@ -193,6 +194,15 @@ def build_xeegnet():
         samples=PARAMETERS_DEFAULT["sample_length"],
         sampling_frequency=PARAMETERS_DEFAULT["srate"],
         global_pooling=True,
+    )
+
+
+def build_xeegnet_with_conn():
+    return xEEGNetSCC(
+        base_model=build_xeegnet(),
+        n_bands=PARAMETERS_DEFAULT["n_bands"],
+        reducer_mode_scc=PARAMETERS_DEFAULT["reducer_mode_scc"],
+        freeze_base=False,
     )
 
 
