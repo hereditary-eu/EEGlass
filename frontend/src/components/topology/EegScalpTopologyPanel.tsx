@@ -1,3 +1,5 @@
+import { BranchToggle } from "../ui/BranchToggle";
+import { useFeatureMode } from "../../vacp/useFeatureMode";
 import { useEffect, useMemo, useState } from "react";
 
 import { ModelService } from "../../services/ModelService";
@@ -46,6 +48,12 @@ export function EegScalpTopologyPanel({
   const setSelectedScalpBand = useAppStore((state) => state.setSelectedScalpBand);
   const selectedTimeseriesBandFilter = useAppStore((state) => state.selectedTimeseriesBandFilter);
   const setSelectedTimeseriesBandFilter = useAppStore((state) => state.setSelectedTimeseriesBandFilter);
+  const [branch, setBranch] = useFeatureMode(
+    "patient-view/scalp-branch",
+    modelInfo?.model_kind === "xeegnet_scc",
+    "bp",
+    ["bp", "scc"] as const,
+  );
   const modelName = modelInfo?.name ?? undefined;
 
   useEffect(() => {
@@ -60,7 +68,7 @@ export function EegScalpTopologyPanel({
 
     setIsLoading(true);
     setError(null);
-    ModelService.getWindowScalpTopologies(datasetId, subjectId, windowIndex, MODEL_INPUT_SOURCE, modelName)
+    ModelService.getWindowScalpTopologies(datasetId, subjectId, windowIndex, MODEL_INPUT_SOURCE, modelName, branch)
       .then((response) => {
         if (!isCurrent) {
           return;
@@ -85,29 +93,34 @@ export function EegScalpTopologyPanel({
     return () => {
       isCurrent = false;
     };
-  }, [datasetId, modelName, subjectId, windowIndex]);
+  }, [datasetId, modelName, subjectId, windowIndex, branch]);
 
   const activeMode = useMemo(
-    () => scalpTopologies?.modes.find((mode) => mode.mode === "weighted_contribution") ?? null,
-    [scalpTopologies],
+    () =>
+      scalpTopologies?.modes.find(
+        (mode) => mode.mode === (branch === "scc" ? "scc_node_contribution" : "weighted_contribution"),
+      ) ?? null,
+    [scalpTopologies, branch],
   );
   const activeBand = useMemo(
     () => activeMode?.bands.find((band) => band.band === selectedScalpBand) ?? activeMode?.bands[0] ?? null,
     [activeMode, selectedScalpBand],
   );
   const activeBandId = activeBand?.band ?? selectedScalpBand;
-  const activeBandLabel = getModelBandLabel(activeBandId, modelInfo?.bands);
+  const activeBandLabel = getModelBandLabel(activeBandId, branch === "scc" ? modelInfo?.scc_bands : modelInfo?.bands);
   const bandOptions = useMemo(
     () =>
       modelInfo?.bands.length
-        ? modelInfo.bands
+        ? branch === "scc"
+          ? modelInfo.scc_bands
+          : modelInfo.bands
         : (activeMode?.bands ?? []).map((band) => ({
             band: band.band,
             label: band.band,
             start_hz: 0,
             end_hz: 0,
           })),
-    [activeMode, modelInfo],
+    [activeMode, modelInfo, branch],
   );
   const bandValueRange = useMemo(() => getPerBandDivergingValueRange(activeBand), [activeBand]);
   const channels = useMemo<ScalpTopologyValueChannel[]>(
@@ -122,7 +135,7 @@ export function EegScalpTopologyPanel({
   );
   const subtitle =
     scalpTopologies && activeMode
-      ? `Window ${scalpTopologies.window_index + 1}: ${scalpTopologies.start_time.toFixed(1)}s-${scalpTopologies.end_time.toFixed(1)}s - ${activeBandLabel} spatial evidence`
+      ? `Window ${scalpTopologies.window_index + 1}: ${scalpTopologies.start_time.toFixed(1)}s-${scalpTopologies.end_time.toFixed(1)}s - ${activeBandLabel} ${branch === "scc" ? "SCC node contribution before batch normalization" : "spatial evidence"}`
       : "";
   const status = getScalpStatus({ error, isLoading, scalpTopologies });
 
@@ -167,15 +180,31 @@ export function EegScalpTopologyPanel({
           <p className="topology-panel-subtitle">{subtitle}</p>
         </div>
         <p className="topology-panel-stage">
-          <span className="topology-panel-stage-text">
-            {EEG_MODEL_NOTATION_LABELS.spatialEvidencePrefix} <MathFormula tex={EEG_MODEL_NOTATION.spatialWeight} />{" "}
-            {EEG_MODEL_NOTATION_LABELS.spatialEvidenceConnector}{" "}
-            <MathFormula tex={EEG_MODEL_NOTATION.spatialEvidence} />
+          <span
+            className="topology-panel-stage-text"
+            title={
+              branch === "scc"
+                ? "Electrode contributions wᵢ(Mw)ᵢ sum to the reduced SCC feature before batch normalization."
+                : undefined
+            }
+          >
+            {branch === "scc" ? (
+              <MathFormula tex={"w_i(Mw)_i"} />
+            ) : (
+              <>
+                {EEG_MODEL_NOTATION_LABELS.spatialEvidencePrefix} <MathFormula tex={EEG_MODEL_NOTATION.spatialWeight} />{" "}
+                {EEG_MODEL_NOTATION_LABELS.spatialEvidenceConnector}{" "}
+                <MathFormula tex={EEG_MODEL_NOTATION.spatialEvidence} />
+              </>
+            )}
           </span>
           <ComponentStatusIndicator status={status.status} label={status.label} />
         </p>
       </div>
 
+      {modelInfo?.model_kind === "xeegnet_scc" && (
+        <BranchToggle value={branch} onChange={setBranch} label="Scalp view branch" />
+      )}
       <div className="topology-panel-controls">
         <BandSelector bands={bandOptions} selectedBand={activeBandId} onSelectedBandChange={setSelectedScalpBand} />
       </div>
@@ -190,9 +219,13 @@ export function EegScalpTopologyPanel({
             setSelectedTimeseriesBandFilter(shouldApplyFilter ? activeBandId : null);
           }}
         />
-        <span>Apply selected band to timeseries clicks</span>
+        <span>Apply BP-band filtering to timeseries clicks</span>
         {selectedTimeseriesBandFilter ? (
-          <strong className="topology-panel-filter-state">{selectedTimeseriesBandFilter}</strong>
+          <strong className="topology-panel-filter-state">
+            {selectedTimeseriesBandFilter} (
+            {modelInfo?.bands.find((b) => b.band === selectedTimeseriesBandFilter)?.start_hz}–
+            {modelInfo?.bands.find((b) => b.band === selectedTimeseriesBandFilter)?.end_hz} Hz)
+          </strong>
         ) : null}
       </label>
 
@@ -202,7 +235,7 @@ export function EegScalpTopologyPanel({
           gridValues={activeBand?.grid_values ?? []}
           channels={channels}
           valueRange={bandValueRange}
-          unitLabel="evidence"
+          unitLabel={branch === "scc" ? "SCC contribution" : "evidence"}
           colorMode="diverging"
           selectedChannels={selectedChannels}
           onChannelSelect={(channel) => {

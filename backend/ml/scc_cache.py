@@ -222,6 +222,12 @@ class SCCStore:
             and meta.get("subject_id") == subject_id
             and meta.get("source") == source
             and meta.get("scc_key") == params.key()
+            and meta.get("sfreq") == params.sfreq
+            and meta.get("sample_length") == params.sample_length
+            and meta.get("method") == params.method
+            and meta.get("mode") == params.mode
+            and meta.get("band_names") == params.band_names
+            and meta.get("band_edges") == [[lo, hi] for _, lo, hi in params.bands]
         )
 
     def get(self, dataset_id: str, subject_id: str, source: str, params: SCCParams) -> np.ndarray | None:
@@ -235,7 +241,19 @@ class SCCStore:
             return None
         if not self._is_valid(meta, dataset_id, subject_id, source, params):
             return None
-        return np.load(npy)
+        array = np.load(npy, allow_pickle=False)
+        n_channels = meta.get("n_channels", 0)
+        if not isinstance(n_channels, int) or n_channels < 2:
+            return None
+        expected = (meta.get("n_windows"), len(params.bands), n_channels * (n_channels - 1) // 2)
+        if (
+            array.shape != expected
+            or meta.get("n_bands") != expected[1]
+            or meta.get("n_pairs") != expected[2]
+            or meta.get("pair_convention") != f"np.triu_indices({n_channels}, k=1)"
+        ):
+            return None
+        return array
 
     def put(
         self,

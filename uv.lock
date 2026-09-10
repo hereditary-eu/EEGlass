@@ -26,6 +26,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "mne" },
+    { name = "mne-connectivity" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
     { name = "scikit-learn" },
@@ -44,7 +45,6 @@ dev = [
     { name = "ipykernel" },
     { name = "isort" },
     { name = "mass-ts" },
-    { name = "mne-connectivity" },
     { name = "pymupdf" },
     { name = "pypdf" },
     { name = "ruff" },
@@ -56,6 +56,7 @@ dev = [
 requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.141.1" },
     { name = "mne", specifier = ">=1.12.1" },
+    { name = "mne-connectivity", specifier = ">=0.9.0" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "python-dotenv", specifier = ">=1.2.3" },
     { name = "scikit-learn", specifier = ">=1.9.0" },
@@ -74,7 +75,6 @@ dev = [
     { name = "ipykernel", specifier = ">=7.3.0" },
     { name = "isort", specifier = ">=9.0.1" },
     { name = "mass-ts", specifier = ">=0.1.4" },
-    { name = "mne-connectivity", specifier = ">=0.9.0" },
     { name = "pymupdf", specifier = ">=1.28.2" },
     { name = "pypdf", specifier = ">=6.16.2" },
     { name = "ruff", specifier = ">=0.16.5" },

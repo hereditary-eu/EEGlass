@@ -1,8 +1,9 @@
+import { SpectralMeasurementsPanel } from "../components/topology/SpectralMeasurementsPanel";
 import { useCallback, useEffect, useMemo } from "react";
 import { Link, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 
 import { BandActivationChart, ClassContributionsPanel } from "../components/classification";
-import { EegScalpTopologyPanel, TotalBandPowerChart } from "../components/topology";
+import { EegScalpTopologyPanel } from "../components/topology";
 import { getModelBandIds } from "../constants/eegModel";
 import { useTimeseriesData } from "../hooks/useTimeseriesData";
 import type { PatientViewOutletContext } from "../layouts/AppLayout";
@@ -219,7 +220,11 @@ export function PatientView() {
       </article>
 
       <article className="patient-view-slot">
-        <TotalBandPowerChart
+        <SpectralMeasurementsPanel
+          key={ts.modelInfo?.name}
+          datasetId={ts.datasetId}
+          subjectId={ts.subjectId}
+          modelInfo={ts.modelInfo}
           bandPower={ts.bandPower}
           bandPowerStats={ts.bandPowerStats}
           bandPowerStatsMode={ts.bandPowerStatsMode}
@@ -243,6 +248,7 @@ export function PatientView() {
 
       <article className="patient-view-slot">
         <EegScalpTopologyPanel
+          key={ts.modelInfo?.name}
           datasetId={ts.datasetId}
           subjectId={ts.subjectId}
           source={ts.source}
@@ -255,6 +261,7 @@ export function PatientView() {
 
       <article className="patient-view-slot patient-view-slot--classification-stack">
         <BandActivationChart
+          key={`activations:${ts.modelInfo?.name}`}
           datasetId={ts.datasetId}
           subjectId={ts.subjectId}
           source={ts.source}
@@ -262,6 +269,7 @@ export function PatientView() {
           windowIndex={ts.lockedPredictionWindowIndex}
         />
         <ClassContributionsPanel
+          key={`contributions:${ts.modelInfo?.name}`}
           datasetId={ts.datasetId}
           subjectId={ts.subjectId}
           source={ts.source}

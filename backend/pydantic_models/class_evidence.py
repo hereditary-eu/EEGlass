@@ -26,16 +26,29 @@ class ModelClassWeight(BaseModel):
 
 class ModelClassEvidenceBand(BaseModel):
     band: str
+    start_hz: float = 0
+    end_hz: float = 0
     feature_value: float
     class_contributions: list[ModelClassEvidenceContribution]
 
 
 class ModelClassWeightsBand(BaseModel):
     band: str
+    start_hz: float = 0
+    end_hz: float = 0
     class_weights: list[ModelClassWeight]
 
 
+class ModelSCCEvidence(BaseModel):
+    bands: list[ModelClassEvidenceBand]
+
+
+class ModelSCCWeights(BaseModel):
+    bands: list[ModelClassWeightsBand]
+
+
 class ModelClassEvidenceResponse(BaseModel):
+    scc: ModelSCCEvidence | None = None
     dataset_id: str
     subject_id: str
     source: TimeseriesSource
@@ -53,6 +66,7 @@ class ModelClassEvidenceResponse(BaseModel):
 
 
 class ModelClassWeightsResponse(BaseModel):
+    scc: ModelSCCWeights | None = None
     model_name: str
     checkpoint_signature: str
     layer_name: str

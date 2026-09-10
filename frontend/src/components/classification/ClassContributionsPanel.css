@@ -111,7 +111,7 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 0.55rem;
   border: 1px solid #d7e0e8;
   border-radius: 12px;
@@ -312,8 +312,8 @@
   position: relative;
   min-width: 0;
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 0.2rem;
   border: 1px solid #e3ebf1;
   border-radius: 10px;
@@ -322,6 +322,8 @@
 }
 
 .classification-band-activation-class-selector {
+  align-self: flex-end;
+  flex-shrink: 0;
   justify-self: end;
   display: inline-flex;
   align-items: center;
@@ -362,7 +364,35 @@
   min-width: 0;
   min-height: 0;
   width: 100%;
-  height: 100%;
+  flex: 1;
+  height: auto;
+}
+
+.classification-band-activation-chart-shell > .feature-branch-toggle,
+.classification-band-activation-chart-shell > .feature-branch-legend {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.classification-band-activation-chart-shell > .feature-branch-legend {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.45rem;
+}
+
+.classification-evidence--compact:has(.feature-branch-toggle) .classification-evidence-footer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 6px;
+}
+
+.classification-evidence--compact:has(.feature-branch-toggle) .classification-evidence-decision {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.classification-evidence--compact:has(.feature-branch-toggle) .classification-evidence-chart-grid {
+  min-height: 86px;
 }
 
 .classification-band-activation-chart-plot > div {

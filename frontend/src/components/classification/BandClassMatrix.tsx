@@ -21,6 +21,7 @@ export interface BandClassMatrixCell {
 
 export interface BandClassMatrixProps {
   cells: BandClassMatrixCell[];
+  onBandClick?: (band: string) => void;
   className?: string;
   rowHeight?: number;
   minHeight?: number;
@@ -31,6 +32,7 @@ export interface BandClassMatrixProps {
 
 export function BandClassMatrix({
   cells,
+  onBandClick,
   className,
   rowHeight = 76,
   minHeight = 120,
@@ -128,6 +130,24 @@ export function BandClassMatrix({
       .then((result) => {
         if (!finalized) {
           viewRef.current = result.view;
+          if (onBandClick)
+            result.view.addEventListener("click", (_event, item) => {
+              const datum = item?.datum;
+              const band = datum?.band ?? datum?.value;
+              if (typeof band === "string") onBandClick(band);
+            });
+          // Vega's axis labels are non-interactive by default. Enable the total
+          // headers explicitly so they have the same behavior as their cells.
+          if (onBandClick)
+            container.querySelectorAll<SVGTextElement>(".role-axis-label text").forEach((label) => {
+              if (!label.textContent?.startsWith("Σ")) return;
+              label.style.pointerEvents = "all";
+              label.style.cursor = "pointer";
+              label.addEventListener("click", (event) => {
+                event.stopPropagation();
+                onBandClick(label.textContent!);
+              });
+            });
           resizeVegaView(result.view);
         }
       })
@@ -142,7 +162,7 @@ export function BandClassMatrix({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [cells, minHeight, rowHeight, showClassAxis, tooltip, topPadding]);
+  }, [cells, minHeight, rowHeight, showClassAxis, tooltip, topPadding, onBandClick]);
 
   return <div className={className} ref={containerRef} />;
 }

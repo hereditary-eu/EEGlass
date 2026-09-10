@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 ModelMetadataValue = str | int | float | bool | list[str] | list[int] | list[float]
@@ -19,6 +21,11 @@ class ModelBandPresentation(BaseModel):
 
 
 class ModelInfoResponse(BaseModel):
+    model_kind: Literal["xeegnet", "xeegnet_scc"] = "xeegnet"
+    scc_reducer: Literal["node"] | None = None
+    scc_bands: list[ModelBandPresentation] = []
+    feature_names: list[str] = []
+    split_index: int = 0
     name: str
     display_name: str
     architecture: str
@@ -29,6 +36,8 @@ class ModelInfoResponse(BaseModel):
 
 
 class ModelListItem(BaseModel):
+    model_kind: Literal["xeegnet", "xeegnet_scc"] = "xeegnet"
+    scc_reducer: Literal["node"] | None = None
     name: str
     display_name: str
     architecture: str

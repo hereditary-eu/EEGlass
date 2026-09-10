@@ -76,7 +76,7 @@ export function registerVacpScalpTopology(args: RegisterVacpScalpTopologyArgs): 
     createActionDescriptor(
       SCALP_TOPOLOGY_ACTIONS.timeseriesClickFilterSelect,
       clickFilterRef,
-      "Apply the selected scalp band to future timeseries clicks.",
+      "Apply the selected BP band to future timeseries clicks.",
     ),
     () => {
       args.setApplyBandFilterOnClick(true);
@@ -89,7 +89,7 @@ export function registerVacpScalpTopology(args: RegisterVacpScalpTopologyArgs): 
     createActionDescriptor(
       SCALP_TOPOLOGY_ACTIONS.timeseriesClickFilterDeselect,
       clickFilterRef,
-      "Stop applying the selected scalp band to future timeseries clicks.",
+      "Stop applying the selected BP band to future timeseries clicks.",
     ),
     () => {
       args.setApplyBandFilterOnClick(false);
@@ -152,7 +152,7 @@ function buildCapabilitiesSnapshot(
           ref: clickFilterRef,
           kind: "Selection",
           layer: "InteractionFeedbackLayer",
-          title: "Apply selected band to timeseries clicks",
+          title: "Apply BP-band filtering to timeseries clicks",
         },
       ],
       edges: [
@@ -169,12 +169,12 @@ function buildCapabilitiesSnapshot(
         createActionDescriptor(
           SCALP_TOPOLOGY_ACTIONS.timeseriesClickFilterSelect,
           clickFilterRef,
-          "Apply the selected scalp band to future timeseries clicks.",
+          "Apply the selected BP band to future timeseries clicks.",
         ),
         createActionDescriptor(
           SCALP_TOPOLOGY_ACTIONS.timeseriesClickFilterDeselect,
           clickFilterRef,
-          "Stop applying the selected scalp band to future timeseries clicks.",
+          "Stop applying the selected BP band to future timeseries clicks.",
         ),
       ],
     },

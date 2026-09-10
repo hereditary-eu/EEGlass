@@ -1,3 +1,5 @@
+import type { FeatureBranch, SCCResponse, SCCStatsResponse } from "../../types";
+import { BranchToggle } from "../ui/BranchToggle";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { changeset } from "vega";
 import type { View } from "vega";
@@ -26,6 +28,11 @@ import { registerVacpVegaLiteChart } from "../../vacp/registerVegaLiteChart";
 import { ComponentStatusIndicator, MathFormula } from "../ui";
 
 export interface TotalBandPowerChartProps {
+  branch?: FeatureBranch;
+  hasSCC?: boolean;
+  onBranchChange?: (branch: FeatureBranch) => void;
+  scc?: SCCResponse | null;
+  sccStats?: SCCStatsResponse | null;
   bandPower: ModelBandPowerResponse | null;
   bandPowerStats: ModelBandPowerStatsResponse | null;
   bandPowerStatsMode: ModelBandPowerStatsMode;
@@ -76,6 +83,11 @@ interface BandPowerInteractionState {
 }
 
 export function TotalBandPowerChart({
+  branch = "bp",
+  hasSCC = false,
+  onBranchChange,
+  scc = null,
+  sccStats = null,
   bandPower,
   bandPowerStats,
   bandPowerStatsMode,
@@ -108,7 +120,9 @@ export function TotalBandPowerChart({
   const [plotHeight, setPlotHeight] = useState(240);
   useVegaLayoutResize(viewRef);
 
-  const channels = bandPower?.channels ?? [];
+  const isSCC = branch === "scc";
+  const measurement = isSCC ? scc : bandPower;
+  const channels = measurement?.channels ?? [];
   const availableChannels = useMemo(() => channels.map((channel) => channel.channel), [channels]);
   const selectedChannel =
     selectedChannels.find((channel) => availableChannels.includes(channel)) ?? availableChannels[0] ?? null;
@@ -119,17 +133,18 @@ export function TotalBandPowerChart({
   );
   const activeStatsChannel = useMemo(
     () =>
-      bandPowerStats?.channels.find((channel) => channel.channel === selectedChannel) ??
-      bandPowerStats?.channels[0] ??
+      (isSCC ? sccStats : bandPowerStats)?.channels.find((channel) => channel.channel === selectedChannel) ??
+      (isSCC ? sccStats : bandPowerStats)?.channels[0] ??
       null,
-    [bandPowerStats, selectedChannel],
+    [bandPowerStats, sccStats, isSCC, selectedChannel],
   );
   const statsByBand = useMemo(
     () => new Map((activeStatsChannel?.bands ?? []).map((band) => [band.band, band])),
     [activeStatsChannel],
   );
   const classLabels = useMemo(() => getModelClassLabels(modelClasses), [modelClasses]);
-  const displayedCohortLabel = bandPowerStats?.mode === "inter_patient" ? (bandPowerStats.cohort_label ?? null) : null;
+  const activeStats = isSCC ? sccStats : bandPowerStats;
+  const displayedCohortLabel = activeStats?.mode === "inter_patient" ? (activeStats.cohort_label ?? null) : null;
   const rangeColors = useMemo(
     () => getRangeColors(displayedCohortLabel, modelClasses),
     [displayedCohortLabel, modelClasses],
@@ -143,26 +158,24 @@ export function TotalBandPowerChart({
           order: index,
           band: band.band,
           label: getModelBandLabel(band.band, modelBands),
-          relativePower: band.relative_power,
-          relativePowerDb: toRelativePowerDb(band.relative_power),
-          lower2SigmaDb: stats?.lower_2sigma_db ?? null,
-          upper2SigmaDb: stats?.upper_2sigma_db ?? null,
-          meanDb: stats?.mean_db ?? null,
+          value: "mean_coherence" in band ? band.mean_coherence : toRelativePowerDb(band.relative_power),
+          lower: stats ? ("lower_2sigma" in stats ? Math.max(0, stats.lower_2sigma) : stats.lower_2sigma_db) : null,
+          rawLower: stats ? ("lower_2sigma" in stats ? stats.lower_2sigma : stats.lower_2sigma_db) : null,
+          upper: stats ? ("upper_2sigma" in stats ? Math.min(1, stats.upper_2sigma) : stats.upper_2sigma_db) : null,
+          rawUpper: stats ? ("upper_2sigma" in stats ? stats.upper_2sigma : stats.upper_2sigma_db) : null,
+          referenceMean: stats ? ("mean" in stats ? stats.mean : stats.mean_db) : null,
           statsSampleCount: stats?.sample_count ?? null,
           rangeFill: rangeColors.fill,
           rangeStroke: rangeColors.stroke,
-          percent: band.relative_power * 100,
           range: `${band.start_hz.toFixed(1)}-${band.end_hz.toFixed(1)} Hz`,
         };
       }),
     [activeChannel, modelBands, rangeColors.fill, rangeColors.stroke, statsByBand],
   );
-  const hasReferenceRange = values.some(
-    (value) => Number.isFinite(value.lower2SigmaDb) && Number.isFinite(value.upper2SigmaDb),
-  );
-  const hasReferenceMean = values.some((value) => Number.isFinite(value.meanDb));
+  const hasReferenceRange = values.some((value) => Number.isFinite(value.lower) && Number.isFinite(value.upper));
+  const hasReferenceMean = values.some((value) => Number.isFinite(value.referenceMean));
   const valuesRef = useRef<typeof values>([]);
-  const status = getBandPowerStatus({ bandPower, error, isLoading, isLoadingStats, statsError });
+  const status = getBandPowerStatus({ bandPower: measurement, error, isLoading, isLoadingStats, statsError });
 
   useEffect(() => {
     valuesRef.current = values;
@@ -245,12 +258,12 @@ export function TotalBandPowerChart({
                     legend: null,
                   },
                   y: {
-                    field: "lower2SigmaDb",
+                    field: "lower",
                     type: "quantitative" as const,
-                    axis: createPowerAxis(),
-                    scale: createPowerScale(),
+                    axis: createPowerAxis(isSCC),
+                    scale: createPowerScale(isSCC),
                   },
-                  y2: { field: "upper2SigmaDb" },
+                  y2: { field: "upper" },
                 },
               },
             ]
@@ -273,10 +286,10 @@ export function TotalBandPowerChart({
                     legend: null,
                   },
                   y: {
-                    field: "meanDb",
+                    field: "referenceMean",
                     type: "quantitative" as const,
-                    axis: createPowerAxis(),
-                    scale: createPowerScale(),
+                    axis: createPowerAxis(isSCC),
+                    scale: createPowerScale(isSCC),
                   },
                 },
               },
@@ -286,11 +299,11 @@ export function TotalBandPowerChart({
           mark: {
             type: "line" as const,
             interpolate: "monotone" as const,
-            color: "#0e7490",
+            color: isSCC ? "#9333a8" : "#0e7490",
             point: {
               filled: true,
-              fill: "#0e7490",
-              stroke: "#064e56",
+              fill: isSCC ? "#9333a8" : "#0e7490",
+              stroke: isSCC ? "#6b217b" : "#064e56",
               size: 74,
               strokeWidth: 2,
             },
@@ -299,24 +312,44 @@ export function TotalBandPowerChart({
           encoding: {
             x: createBandAxisEncoding(),
             y: {
-              field: "relativePowerDb",
+              field: "value",
               type: "quantitative" as const,
-              axis: createPowerAxis(),
-              scale: createPowerScale(),
+              axis: createPowerAxis(isSCC),
+              scale: createPowerScale(isSCC),
             },
             tooltip: [
               { field: "band", type: "nominal", title: "Band" },
               { field: "range", type: "nominal", title: "Range" },
               { field: "percent", type: "quantitative", title: "Relative power (%)", format: ".2f" },
-              { field: "relativePowerDb", type: "quantitative", title: "Selected window (dB)", format: ".1f" },
-              { field: "meanDb", type: "quantitative", title: "Reference mean (dB)", format: ".1f" },
-              { field: "lower2SigmaDb", type: "quantitative", title: "-2σ (dB)", format: ".1f" },
-              { field: "upper2SigmaDb", type: "quantitative", title: "+2σ (dB)", format: ".1f" },
+              {
+                field: "value",
+                type: "quantitative",
+                title: isSCC ? "Mean coherence" : "Selected window (dB)",
+                format: isSCC ? ".3f" : ".1f",
+              },
+              {
+                field: "referenceMean",
+                type: "quantitative",
+                title: isSCC ? "Reference mean" : "Reference mean (dB)",
+                format: isSCC ? ".3f" : ".1f",
+              },
+              {
+                field: "rawLower",
+                type: "quantitative",
+                title: isSCC ? "−2σ (unclipped)" : "−2σ (dB)",
+                format: isSCC ? ".3f" : ".1f",
+              },
+              {
+                field: "rawUpper",
+                type: "quantitative",
+                title: isSCC ? "+2σ (unclipped)" : "+2σ (dB)",
+                format: isSCC ? ".3f" : ".1f",
+              },
               { field: "statsSampleCount", type: "quantitative", title: "Reference samples", format: ".0f" },
             ],
           },
         },
-        createBandPowerLegendLayer(),
+        createBandPowerLegendLayer(isSCC),
       ],
       config: {
         view: { stroke: null },
@@ -353,8 +386,10 @@ export function TotalBandPowerChart({
             view: result.view,
             spec,
             chartId: TOTAL_BAND_POWER_CHART_ID,
-            title: "Patient View Total Band Power",
-            description: "Total band power Vega-Lite chart for the selected patient window and EEG channel.",
+            title: isSCC ? "Patient View Mean Spectral Connectivity" : "Patient View Total Band Power",
+            description: isSCC
+              ? "Mean coherence of the selected electrode with all other electrodes, across SCC bands."
+              : "Total band power for the selected patient window and EEG channel.",
             extraNodes: [
               {
                 ref: channelRef,
@@ -414,7 +449,7 @@ export function TotalBandPowerChart({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [error, hasReferenceMean, hasReferenceRange, plotHeight, values.length]);
+  }, [error, hasReferenceMean, hasReferenceRange, plotHeight, values.length, isSCC]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -437,22 +472,31 @@ export function TotalBandPowerChart({
     <div className="topology-bandpower">
       <div className="topology-bandpower-header">
         <div>
-          <h4 className="topology-bandpower-title">Total Band Power</h4>
+          <h4 className="topology-bandpower-title">{isSCC ? "Mean Spectral Connectivity" : "Total Band Power"}</h4>
           <p className="topology-bandpower-subtitle">
-            {activeChannel && bandPower
-              ? `Window ${bandPower.window_index + 1}: ${bandPower.start_time.toFixed(1)}s-${bandPower.end_time.toFixed(1)}s · ${activeChannel.channel}`
+            {activeChannel && measurement
+              ? `Window ${measurement.window_index + 1}: ${measurement.start_time.toFixed(1)}s-${measurement.end_time.toFixed(1)}s · ${activeChannel.channel}`
               : "Select a prediction window and channel"}
           </p>
         </div>
         <div className="topology-bandpower-header-static">
           <span className="topology-bandpower-header-stage">
-            {EEG_MODEL_NOTATION_LABELS.filterBank} <MathFormula tex={EEG_MODEL_NOTATION.bandPowerFeature} />
+            {isSCC ? (
+              "Mean coherence · other 18 electrodes"
+            ) : (
+              <>
+                {EEG_MODEL_NOTATION_LABELS.filterBank} <MathFormula tex={EEG_MODEL_NOTATION.bandPowerFeature} />
+              </>
+            )}
             <ComponentStatusIndicator status={status.status} label={status.label} />
           </span>
           {bandPower ? <strong>{bandPower.sampling_frequency.toFixed(0)} Hz</strong> : null}
         </div>
       </div>
 
+      {hasSCC && onBranchChange && (
+        <BranchToggle value={branch} onChange={onBranchChange} label="Spectral measurement branch" />
+      )}
       <div className="topology-bandpower-body">
         <div className="topology-bandpower-channel-list" aria-label="Channel selector">
           {availableChannels.map((channel) => (
@@ -525,12 +569,24 @@ export function TotalBandPowerChart({
           </div>
           <div className="topology-bandpower-plot-frame">
             <div className="topology-bandpower-plot" ref={containerRef} />
+            {isSCC && statsError ? (
+              <div className="spectral-reference-error" role="alert">
+                {statsError}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
 
+      {isSCC && (error || isLoading) ? (
+        <div className="topology-bandpower-overlay" role={error ? "alert" : "status"}>
+          {error ?? "Preparing spectral connectivity…"}
+        </div>
+      ) : null}
       {!isLoading && !error && !channels.length ? (
-        <div className="topology-bandpower-overlay">Click a 4s prediction window to inspect band power.</div>
+        <div className="topology-bandpower-overlay">
+          Click a 4s prediction window to inspect {isSCC ? "spectral connectivity" : "band power"}.
+        </div>
       ) : null}
     </div>
   );
@@ -551,30 +607,30 @@ function createBandAxisEncoding() {
   };
 }
 
-function createPowerAxis() {
+function createPowerAxis(isSCC = false) {
   return {
-    title: "Relative power (dB)",
+    title: isSCC ? "Mean coherence" : "Relative power (dB)",
     titleColor: "#5d6b78",
     titleFontSize: 11,
     labelColor: "#5d6b78",
     labelFontSize: 11,
-    format: ".0f",
+    format: isSCC ? ".2f" : ".0f",
     tickCount: 5,
     gridColor: "#e8eef3",
     domain: false,
   };
 }
 
-function createPowerScale() {
+function createPowerScale(isSCC = false) {
   return {
-    domainMin: MIN_DB_DOMAIN,
-    domainMax: 0,
+    domainMin: isSCC ? 0 : MIN_DB_DOMAIN,
+    domainMax: isSCC ? 1 : 0,
     nice: false,
     zero: false,
   };
 }
 
-function createBandPowerLegendLayer() {
+function createBandPowerLegendLayer(isSCC: boolean) {
   return {
     data: { values: [] },
     mark: {
@@ -588,7 +644,7 @@ function createBandPowerLegendLayer() {
         type: "nominal" as const,
         scale: {
           domain: [...LEGEND_SERIES_DOMAIN],
-          range: ["#0e7490", "transparent", DEFAULT_RANGE_FILL],
+          range: [isSCC ? "#9333a8" : "#0e7490", "transparent", DEFAULT_RANGE_FILL],
         },
         legend: createBandPowerLegend(),
       },
@@ -597,7 +653,7 @@ function createBandPowerLegendLayer() {
         type: "nominal" as const,
         scale: {
           domain: [...LEGEND_SERIES_DOMAIN],
-          range: ["#064e56", DEFAULT_RANGE_STROKE, DEFAULT_RANGE_FILL],
+          range: [isSCC ? "#6b217b" : "#064e56", DEFAULT_RANGE_STROKE, DEFAULT_RANGE_FILL],
         },
       },
       shape: {
@@ -681,33 +737,33 @@ function createBandPowerActionDescriptors({
     createBandPowerActionDescriptor(
       TOTAL_BAND_POWER_ACTIONS.channelNext,
       channelRef,
-      "Select the next EEG channel in the total band power chart.",
+      "Select the next EEG channel in the spectral measurement chart.",
     ),
     createBandPowerActionDescriptor(
       TOTAL_BAND_POWER_ACTIONS.channelPrevious,
       channelRef,
-      "Select the previous EEG channel in the total band power chart.",
+      "Select the previous EEG channel in the spectral measurement chart.",
     ),
     createBandPowerActionDescriptor(
       TOTAL_BAND_POWER_ACTIONS.channelSet,
       channelRef,
-      "Select a specific EEG channel in the total band power chart.",
+      "Select a specific EEG channel in the spectral measurement chart.",
       { channel: { type: "string", enum: channels } },
     ),
     createBandPowerActionDescriptor(
       TOTAL_BAND_POWER_ACTIONS.windowNext,
       windowRef,
-      "Select the next prediction window in the total band power chart.",
+      "Select the next prediction window in the spectral measurement chart.",
     ),
     createBandPowerActionDescriptor(
       TOTAL_BAND_POWER_ACTIONS.windowPrevious,
       windowRef,
-      "Select the previous prediction window in the total band power chart.",
+      "Select the previous prediction window in the spectral measurement chart.",
     ),
     createBandPowerActionDescriptor(
       TOTAL_BAND_POWER_ACTIONS.windowSet,
       windowRef,
-      "Select a specific prediction window in the total band power chart.",
+      "Select a specific prediction window in the spectral measurement chart.",
       { windowIndex: { type: "integer", minimum: 0, maximum: Math.max(0, predictionWindowCount - 1) } },
     ),
   ];
@@ -831,21 +887,23 @@ function getBandPowerStatus({
   isLoading,
   isLoadingStats,
   statsError,
-}: Pick<TotalBandPowerChartProps, "bandPower" | "error" | "isLoading" | "isLoadingStats" | "statsError">): {
+}: Pick<TotalBandPowerChartProps, "error" | "isLoading" | "isLoadingStats" | "statsError"> & {
+  bandPower: ModelBandPowerResponse | SCCResponse | null;
+}): {
   status: "idle" | "loading" | "loaded" | "error";
   label: string;
 } {
   if (error || statsError) {
-    return { status: "error", label: error ?? statsError ?? "Unable to load band power." };
+    return { status: "error", label: error ?? statsError ?? "Unable to load measurements." };
   }
 
   if (isLoading || isLoadingStats) {
-    return { status: "loading", label: isLoading ? "Loading band power" : "Loading reference range" };
+    return { status: "loading", label: isLoading ? "Loading measurements" : "Loading reference range" };
   }
 
   if (bandPower) {
-    return { status: "loaded", label: "Band power loaded" };
+    return { status: "loaded", label: "Measurements loaded" };
   }
 
-  return { status: "idle", label: "Band power idle" };
+  return { status: "idle", label: "Measurements idle" };
 }

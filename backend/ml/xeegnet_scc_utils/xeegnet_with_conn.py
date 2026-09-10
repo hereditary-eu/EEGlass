@@ -1,14 +1,15 @@
 from typing import Optional
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 from backend.ml.scc_cache import (
     DEFAULT_BANDS as SCC_DEFAULT_BANDS,
+)
+from backend.ml.scc_cache import (
     SCCReducer,
-    pairs_to_dense,
     calc_mean_scc_per_channel,
 )
 
@@ -94,14 +95,15 @@ class xEEGNetSCC(nn.Module):
         SCC-branch visualisation, 3-class only. Returns per-channel maps plus
         the SCC branch's band activation and its per-class contributions.
         """
-        scc_mean_per_channel = calc_mean_scc_per_channel(scc_pairs, n_channels=self.n_channels)  # (B,7,C)
+        self.eval()
+        scc_mean_per_channel = calc_mean_scc_per_channel(scc_pairs.detach().cpu().numpy(), n_channels=self.n_channels)
 
         node_contribution = (
             self.reducer._node_contrib(scc_pairs).cpu().numpy() if self.reducer.mode == "node" else None
         )  # (B,7,C) or None
 
-        # spatial model weights for topomap: (C,7) =
-        node_spatial_model_weights = self.reducer.w
+        # Node weights are (bands, channels); edge weights have a different meaning.
+        node_spatial_model_weights = self.reducer.w.detach().cpu().numpy() if self.reducer.mode == "node" else None
 
         # --- Band Activations (SCC branch): the 7-dim input to the head ---
         conn = self.reducer(scc_pairs)  # (B, 7)  raw reduced SCC
@@ -125,7 +127,7 @@ class xEEGNetSCC(nn.Module):
             "scc_mean_per_channel": np.asarray(
                 scc_mean_per_channel
             ),  # (B,7,C)            -> total bandpower plot scc version, optional!
-            "spatial_node_weights": node_spatial_model_weights,  # (C,7)              -> for topomap weight overview (plain weights in overview channel!)
+            "spatial_node_weights": node_spatial_model_weights,  # (7,C), node reducer only
             "node_contribution": node_contribution,  # (B,7,C) or None    -> for topomap
             "band_activation_scc": dense_input_scc.cpu().numpy(),  # (B,7)              -> for band activation plot
             "class_contribution_scc": class_contrib_scc,  # (B,3,7) or None    -> for class contribution plot (or weighted band activation)

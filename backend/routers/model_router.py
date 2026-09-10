@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from uvicorn.protocols.utils import ClientDisconnected
@@ -31,6 +32,7 @@ from backend.pydantic_models.inference import (
     ModelWindowScalpTopologyResponse,
     SetCurrentModelRequest,
 )
+from backend.pydantic_models.scc import SCCResponse, SCCStatsResponse
 from backend.pydantic_models.timeseries import TimeseriesSource
 from backend.services.embedding_service import EmbeddingReductionError
 from backend.services.feature_importance_service import FeatureImportanceService
@@ -43,6 +45,7 @@ from backend.services.model_service import (
     ModelValidationError,
 )
 from backend.services.prediction_cache_service import PredictionCacheService
+from backend.services.scc_service import SCCService
 
 logger = logging.getLogger(__name__)
 model_router = APIRouter(tags=["model"])
@@ -81,7 +84,7 @@ async def get_model_info(model_name: str = DEFAULT_MODEL_NAME) -> ModelInfoRespo
 
 
 @model_router.post("/models/{model_name}/infer", response_model=ModelInferenceResponse)
-async def infer_model(
+def infer_model(
     request: ModelInferenceRequest,
     model_name: str = DEFAULT_MODEL_NAME,
 ) -> ModelInferenceResponse:
@@ -97,7 +100,7 @@ async def infer_model(
 
 
 @model_router.post("/models/{model_name}/class-evidence", response_model=ModelClassEvidenceResponse)
-async def get_model_class_evidence(
+def get_model_class_evidence(
     request: ModelClassEvidenceRequest,
     model_name: str = DEFAULT_MODEL_NAME,
 ) -> ModelClassEvidenceResponse:
@@ -122,7 +125,7 @@ async def get_model_class_weights(model_name: str = DEFAULT_MODEL_NAME) -> Model
 
 
 @model_router.post("/models/{model_name}/band-power", response_model=ModelBandPowerResponse)
-async def get_model_band_power(
+def get_model_band_power(
     request: ModelBandPowerRequest,
     model_name: str = DEFAULT_MODEL_NAME,
 ) -> ModelBandPowerResponse:
@@ -167,9 +170,11 @@ async def get_model_band_power_stats(
 
 
 @model_router.get("/models/{model_name}/scalp-topologies", response_model=ModelScalpTopologyResponse)
-async def get_model_scalp_topologies(model_name: str = DEFAULT_MODEL_NAME) -> ModelScalpTopologyResponse:
+def get_model_scalp_topologies(
+    model_name: str = DEFAULT_MODEL_NAME, branch: Literal["bp", "scc"] = Query("bp")
+) -> ModelScalpTopologyResponse:
     try:
-        return ModelService.get_scalp_topologies(model_name=model_name)
+        return ModelService.get_scalp_topologies(model_name=model_name, branch=branch)
     except ModelServiceError as exc:
         raise _http_error(exc) from exc
 
@@ -178,12 +183,13 @@ async def get_model_scalp_topologies(model_name: str = DEFAULT_MODEL_NAME) -> Mo
     "/models/{model_name}/datasets/{dataset_id}/subjects/{subject_id}/window-scalp-topologies",
     response_model=ModelWindowScalpTopologyResponse,
 )
-async def get_window_scalp_topologies(
+def get_window_scalp_topologies(
     dataset_id: str,
     subject_id: str,
     model_name: str = DEFAULT_MODEL_NAME,
     source: TimeseriesSource = Query("derivatives"),
     window_index: int = Query(0),
+    branch: Literal["bp", "scc"] = Query("bp"),
 ) -> ModelWindowScalpTopologyResponse:
     try:
         return ModelService.compute_window_scalp_topologies(
@@ -192,6 +198,7 @@ async def get_window_scalp_topologies(
             source=source,
             window_index=window_index,
             model_name=model_name,
+            branch=branch,
         )
     except ModelServiceError as exc:
         raise _http_error(exc) from exc
@@ -490,3 +497,39 @@ def _http_error(exc: ModelServiceError | EmbeddingReductionError) -> HTTPExcepti
 
     logger.error(f"Model service error: {exc}")
     return HTTPException(status_code=500, detail=str(exc))
+
+
+@model_router.post("/models/{model_name}/scc", response_model=SCCResponse)
+def get_model_scc(request: ModelBandPowerRequest, model_name: str):
+    try:
+        return SCCService.measurement(
+            ModelService.get_model_spec(model_name),
+            request.dataset_id,
+            request.subject_id,
+            request.source,
+            request.window_index,
+        )
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc
+
+
+@model_router.get(
+    "/models/{model_name}/datasets/{dataset_id}/subjects/{subject_id}/scc-stats", response_model=SCCStatsResponse
+)
+def get_model_scc_stats(
+    model_name: str,
+    dataset_id: str,
+    subject_id: str,
+    source: TimeseriesSource = Query("derivatives"),
+    mode: Literal["intra_patient", "inter_patient"] = Query("intra_patient"),
+    cohort_label: str | None = Query(None),
+):
+    try:
+        from backend.services.model_service import validate_model_input_source
+
+        validate_model_input_source(source)
+        return SCCService.stats(
+            ModelService.get_model_spec(model_name), dataset_id, subject_id, source, mode, cohort_label
+        )
+    except ModelServiceError as exc:
+        raise _http_error(exc) from exc

@@ -331,3 +331,91 @@ select {
     overflow: hidden;
   }
 }
+
+.feature-branch-toggle {
+  display: flex;
+  gap: 3px;
+  justify-content: flex-end;
+  margin: 3px 0;
+}
+.feature-branch-toggle button {
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #fff;
+  color: #475569;
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.feature-branch-toggle button[aria-pressed="true"] {
+  background: #e0f2f5;
+  color: #0e7490;
+  border-color: #0e7490;
+}
+.feature-branch-toggle button[data-branch="scc"][aria-pressed="true"] {
+  background: #f3e8ff;
+  color: #9333a8;
+  border-color: #9333a8;
+}
+.feature-branch-toggle button:focus-visible {
+  outline: 2px solid #0e7490;
+  outline-offset: 2px;
+}
+.feature-branch-legend {
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+  padding: 2px 0;
+}
+.feature-branch-legend span:first-child {
+  color: #0e7490;
+}
+.feature-branch-legend span:last-child {
+  color: #9333a8;
+}
+
+.spectral-reference-error {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  padding: 6px;
+  border: 1px solid #fecaca;
+  border-radius: 5px;
+  color: #991b1b;
+  background: #fff7f7;
+  font-size: 11px;
+}
+
+.classification-band-activation-chart-shell {
+  display: flex;
+  flex-direction: column;
+}
+.classification-band-activation-chart-shell > .classification-band-activation-class-selector {
+  align-self: flex-end;
+  flex-shrink: 0;
+}
+.classification-band-activation-chart-plot {
+  flex: 1;
+  height: auto;
+}
+.topology-panel--compact:has(> .feature-branch-toggle) {
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+.topology-panel--eeg:has(> .feature-branch-toggle) {
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+}
+.topology-bandpower:has(> .feature-branch-toggle) {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.classification-evidence-footer:has(> .feature-branch-toggle) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.classification-evidence-footer .feature-branch-toggle {
+  margin: 0;
+}

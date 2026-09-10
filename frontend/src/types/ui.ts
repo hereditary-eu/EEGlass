@@ -1,3 +1,4 @@
+export type FeatureBranch = "bp" | "scc";
 export type FeatureId = string;
 
 export type FeaturePair = [FeatureId, FeatureId];
@@ -116,6 +117,11 @@ export interface ModelBandPresentation {
 }
 
 export interface ModelInfoResponse {
+  scc_bands: ModelBandPresentation[];
+  feature_names: string[];
+  split_index: number;
+  model_kind: "xeegnet" | "xeegnet_scc";
+  scc_reducer: "node" | null;
   name: string;
   display_name: string;
   architecture: string;
@@ -126,6 +132,8 @@ export interface ModelInfoResponse {
 }
 
 export interface ModelListItem {
+  model_kind: "xeegnet" | "xeegnet_scc";
+  scc_reducer: "node" | null;
   name: string;
   display_name: string;
   architecture: string;
@@ -306,17 +314,22 @@ export interface ModelClassWeight {
 }
 
 export interface ModelClassEvidenceBand {
+  start_hz: number;
+  end_hz: number;
   band: TimeseriesBandFilter;
   feature_value: number;
   class_contributions: ModelClassEvidenceContribution[];
 }
 
 export interface ModelClassWeightsBand {
+  start_hz: number;
+  end_hz: number;
   band: TimeseriesBandFilter;
   class_weights: ModelClassWeight[];
 }
 
 export interface ModelClassEvidenceResponse {
+  scc?: { bands: ModelClassEvidenceBand[] } | null;
   dataset_id: string;
   subject_id: string;
   source: TimeseriesSource;
@@ -334,6 +347,7 @@ export interface ModelClassEvidenceResponse {
 }
 
 export interface ModelClassWeightsResponse {
+  scc?: { bands: ModelClassWeightsBand[] } | null;
   model_name: string;
   checkpoint_signature: string;
   layer_name: string;
@@ -410,6 +424,8 @@ export interface ModelScalpTopologyChannel {
 }
 
 export interface ModelScalpTopologyBand {
+  start_hz: number;
+  end_hz: number;
   band: TimeseriesBandFilter;
   channels: ModelScalpTopologyChannel[];
   grid_values: number[];
@@ -438,13 +454,15 @@ export interface ModelWindowScalpTopologyChannel {
 }
 
 export interface ModelWindowScalpTopologyBand {
+  start_hz: number;
+  end_hz: number;
   band: TimeseriesBandFilter;
   channels: ModelWindowScalpTopologyChannel[];
   grid_values: number[];
 }
 
 export interface ModelWindowScalpTopologyMode {
-  mode: "weighted_contribution" | "input_power";
+  mode: "weighted_contribution" | "input_power" | "scc_node_contribution";
   label: string;
   unit_label: string;
   color_scale: "diverging" | "sequential";
@@ -465,4 +483,38 @@ export interface ModelWindowScalpTopologyResponse {
   layer_name: string;
   grid: ModelScalpTopologyGrid;
   modes: ModelWindowScalpTopologyMode[];
+}
+
+export interface SCCResponse {
+  dataset_id: string;
+  subject_id: string;
+  window_index: number;
+  start_time: number;
+  end_time: number;
+  unit_label: string;
+  channels: {
+    channel: ChannelId;
+    bands: { band: TimeseriesBandFilter; start_hz: number; end_hz: number; mean_coherence: number }[];
+  }[];
+}
+export interface SCCStatsResponse {
+  dataset_id: string;
+  subject_id: string;
+  mode: ModelBandPowerStatsMode;
+  cohort_label: string | null;
+  unit_label: string;
+  subject_count: number;
+  window_count: number;
+  channels: {
+    channel: ChannelId;
+    bands: {
+      band: TimeseriesBandFilter;
+      start_hz: number;
+      end_hz: number;
+      mean: number;
+      lower_2sigma: number;
+      upper_2sigma: number;
+      sample_count: number;
+    }[];
+  }[];
 }

@@ -174,10 +174,16 @@ export function ModelCard({
                     setIsModelConfigOpen(false);
                   }}
                 >
-                  {availableModels.map((model) => (
-                    <option key={model.name} value={model.name}>
-                      {model.display_name}
-                    </option>
+                  {(["xeegnet", "xeegnet_scc"] as const).map((kind) => (
+                    <optgroup key={kind} label={kind === "xeegnet" ? "xEEGNet" : "xEEGNet + SCC · Node"}>
+                      {availableModels
+                        .filter((model) => model.model_kind === kind)
+                        .map((model) => (
+                          <option key={model.name} value={model.name}>
+                            {model.display_name}
+                          </option>
+                        ))}
+                    </optgroup>
                   ))}
                 </select>
                 <p>
@@ -264,9 +270,14 @@ export function ModelCard({
         {modelInfo ? (
           <>
             <div className="overview-model-topology">
-              <ModelScalpTopologyPanel modelName={modelInfo.name} compact />
+              <ModelScalpTopologyPanel
+                key={modelInfo.name}
+                modelName={modelInfo.name}
+                hasSCC={modelInfo.model_kind === "xeegnet_scc"}
+                compact
+              />
             </div>
-            <ModelClassWeightsMatrix modelInfo={modelInfo} />
+            <ModelClassWeightsMatrix key={modelInfo.name} modelInfo={modelInfo} />
           </>
         ) : null}
 

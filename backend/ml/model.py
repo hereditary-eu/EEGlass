@@ -144,6 +144,7 @@ class XEEGNet(nn.Module):
         super().__init__()
 
         self.nb_classes = nb_classes
+        self.chans = chans
         self.return_logits = return_logits
         self.encoder = XEEGNetEncoder(
             chans,
@@ -197,11 +198,10 @@ def build_xeegnet():
     )
 
 
-def build_xeegnet_with_conn():
+def build_xeegnet_with_conn(reducer_mode_scc: str = "node"):
     return xEEGNetSCC(
         base_model=build_xeegnet(),
-        n_bands=PARAMETERS_DEFAULT["n_bands"],
-        reducer_mode_scc=PARAMETERS_DEFAULT["reducer_mode_scc"],
+        reducer_mode_scc=reducer_mode_scc,
         freeze_base=False,
     )
 

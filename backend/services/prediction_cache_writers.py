@@ -10,7 +10,6 @@ from backend.services.embedding_service import cluster_embeddings_density
 from backend.services.model_service import ModelService
 from backend.services.prediction_cache_artifacts import (
     PENULTIMATE_EMBEDDING_LABEL,
-    PENULTIMATE_EMBEDDING_LAYER,
     PREPROCESSING_VERSION,
     WINDOW_EMBEDDING_CLUSTERING_METHOD,
     subject_clustering_path,
@@ -33,6 +32,7 @@ def write_prediction_artifact(
     mean_penultimate_embedding: list[float],
     penultimate_embeddings: list[list[float]],
 ) -> None:
+    spec = ModelService.get_model_spec(model_name)
     embedding_values = [float(value) for value in mean_penultimate_embedding]
     window_embedding_values = [[float(value) for value in row] for row in penultimate_embeddings]
     window_embedding_dimension = len(window_embedding_values[0]) if window_embedding_values else 0
@@ -62,13 +62,13 @@ def write_prediction_artifact(
             true_label=_get_subject_label(dataset_id, subject_id),
         ).model_dump(mode="json"),
         "embedding": {
-            "layer_name": PENULTIMATE_EMBEDDING_LAYER,
+            "layer_name": spec.embedding_layer,
             "label": PENULTIMATE_EMBEDDING_LABEL,
             "dimension": len(embedding_values),
             "values": embedding_values,
         },
         "window_embeddings": {
-            "layer_name": PENULTIMATE_EMBEDDING_LAYER,
+            "layer_name": spec.embedding_layer,
             "label": PENULTIMATE_EMBEDDING_LABEL,
             "dimension": window_embedding_dimension,
             "values": window_embedding_values,
@@ -76,6 +76,12 @@ def write_prediction_artifact(
         "band_power_stats": band_power_stats.model_dump(mode="json"),
         "response": response.model_dump(mode="json"),
     }
+    if spec.model_kind == "xeegnet_scc":
+        from backend.services.scc_service import SCCService
+
+        prediction_artifact["scc_stats"] = SCCService.stats(
+            spec, dataset_id, subject_id, source, "intra_patient"
+        ).model_dump(mode="json")
     write_json_atomic(
         subject_path(dataset_id, model_name, checkpoint_key, subject_id, source),
         prediction_artifact,

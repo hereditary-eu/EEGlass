@@ -11,7 +11,7 @@ from typing import Any, Literal
 import numpy as np
 
 from backend.config import CONFIG
-from backend.ml.model_vars import DEFAULT_MODEL_NAME, get_embedding_feature_names
+from backend.ml.model_vars import DEFAULT_MODEL_NAME
 from backend.pydantic_models.embeddings import EmbeddingReductionMethod
 from backend.pydantic_models.inference import (
     ModelBandPowerStatsResponse,
@@ -38,7 +38,6 @@ from backend.services.model_service import (
 from backend.services.patient_aggregation_service import PatientAggregationService
 from backend.services.prediction_cache_artifacts import (
     PENULTIMATE_EMBEDDING_LABEL,
-    PENULTIMATE_EMBEDDING_LAYER,
     PREPROCESSING_VERSION,
     cache_dir,
     checkpoint_key,
@@ -631,8 +630,17 @@ class PredictionCacheService:
                     continue
 
                 try:
-                    job.message = f"Predicting {subject.id}"
                     loop = asyncio.get_running_loop()
+                    spec = ModelService.get_model_spec(job.model_name)
+                    if spec.model_kind == "xeegnet_scc":
+                        from backend.services.scc_service import SCCService
+
+                        job.message = f"Preparing spectral connectivity for {subject.id}"
+                        await loop.run_in_executor(
+                            cls._executor(),
+                            partial(SCCService.subject_values, spec, job.dataset_id, subject.id, job.source),
+                        )
+                    job.message = f"Predicting {subject.id}"
                     inference_result = await loop.run_in_executor(
                         cls._executor(),
                         partial(
@@ -644,16 +652,20 @@ class PredictionCacheService:
                         ),
                     )
                     response = inference_result.response
-                    write_prediction_artifact(
-                        dataset_id=job.dataset_id,
-                        subject_id=subject.id,
-                        model_name=job.model_name,
-                        source=job.source,
-                        checkpoint_signature=checkpoint_signature,
-                        checkpoint_key=checkpoint_key,
-                        response=response,
-                        mean_penultimate_embedding=inference_result.mean_penultimate_embedding,
-                        penultimate_embeddings=inference_result.penultimate_embeddings,
+                    await loop.run_in_executor(
+                        cls._executor(),
+                        partial(
+                            write_prediction_artifact,
+                            dataset_id=job.dataset_id,
+                            subject_id=subject.id,
+                            model_name=job.model_name,
+                            source=job.source,
+                            checkpoint_signature=checkpoint_signature,
+                            checkpoint_key=checkpoint_key,
+                            response=response,
+                            mean_penultimate_embedding=inference_result.mean_penultimate_embedding,
+                            penultimate_embeddings=inference_result.penultimate_embeddings,
+                        ),
                     )
                     completed_subjects.add(subject.id)
                     failed_subjects.pop(subject.id, None)
@@ -815,9 +827,9 @@ class PredictionCacheService:
             checkpoint_signature=checkpoint_signature,
             checkpoint_key=checkpoint_key,
             preprocessing_version=PREPROCESSING_VERSION,
-            embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
+            embedding_layer=ModelService.get_model_spec(model_name).embedding_layer,
             embedding_label=PENULTIMATE_EMBEDDING_LABEL,
-            feature_names=get_embedding_feature_names(source_dimension),
+            feature_names=ModelService.get_model_spec(model_name).feature_names,
             reduction=ModelPatientEmbeddingReduction(
                 method=reduction_method,
                 status=reduction_status,
@@ -850,7 +862,7 @@ class PredictionCacheService:
                 model_name=model_name,
                 source=source,
                 checkpoint_signature=checkpoint_signature,
-                embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
+                embedding_layer=ModelService.get_model_spec(model_name).embedding_layer,
                 embedding_label=PENULTIMATE_EMBEDDING_LABEL,
                 feature_names=[],
                 reduction=ModelPatientEmbeddingReduction(
@@ -889,9 +901,9 @@ class PredictionCacheService:
                 model_name=model_name,
                 source=source,
                 checkpoint_signature=checkpoint_signature,
-                embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
+                embedding_layer=ModelService.get_model_spec(model_name).embedding_layer,
                 embedding_label=PENULTIMATE_EMBEDDING_LABEL,
-                feature_names=get_embedding_feature_names(source_dimension),
+                feature_names=ModelService.get_model_spec(model_name).feature_names,
                 reduction=ModelPatientEmbeddingReduction(
                     method=reduction_method,
                     status="insufficient_data",
@@ -944,9 +956,9 @@ class PredictionCacheService:
             model_name=model_name,
             source=source,
             checkpoint_signature=checkpoint_signature,
-            embedding_layer=PENULTIMATE_EMBEDDING_LAYER,
+            embedding_layer=ModelService.get_model_spec(model_name).embedding_layer,
             embedding_label=PENULTIMATE_EMBEDDING_LABEL,
-            feature_names=get_embedding_feature_names(source_dimension),
+            feature_names=ModelService.get_model_spec(model_name).feature_names,
             reduction=ModelPatientEmbeddingReduction(
                 method=reduction_method,
                 status=reduction_status,

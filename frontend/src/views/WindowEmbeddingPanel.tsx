@@ -235,7 +235,10 @@ export function WindowEmbeddingPanel({
             ariaLabel="Window embedding reduction method"
           />
           <span className="window-embedding-stage">
-            {EEG_MODEL_NOTATION_LABELS.windowEmbeddingPrefix} <MathFormula tex={EEG_MODEL_NOTATION.classLogits} />
+            {modelInfo?.model_kind === "xeegnet_scc"
+              ? "Classifier input: 7 BP + 7 normalized SCC features before"
+              : EEG_MODEL_NOTATION_LABELS.windowEmbeddingPrefix}{" "}
+            <MathFormula tex={EEG_MODEL_NOTATION.classLogits} />
             <ComponentStatusIndicator status={status.status} label={status.label} />
           </span>
         </div>

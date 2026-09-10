@@ -472,6 +472,12 @@ class TimeseriesService:
 
         metadata_path = model_spec.checkpoint_path.with_name(f"{model_spec.checkpoint_path.stem}_metadata.csv")
         if not metadata_path.is_file():
+            if model_spec.model_kind == "xeegnet_scc":
+                import json
+
+                split_path = Path(__file__).resolve().parents[1] / "ml" / "data_splits.json"
+                split = json.loads(split_path.read_text())[str(model_spec.split_index)]
+                return {f"sub-{pid:03d}": group for group, ids in split.items() for pid in ids}
             return {}
 
         try:

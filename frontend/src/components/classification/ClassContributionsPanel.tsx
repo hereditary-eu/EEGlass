@@ -1,3 +1,4 @@
+import { useFeatureMode } from "../../vacp/useFeatureMode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { View } from "vega";
 import embed from "vega-embed";
@@ -88,6 +89,12 @@ export function ClassContributionsPanel({
   windowIndex,
   compact = false,
 }: ClassContributionsPanelProps) {
+  const [branch, setBranch] = useFeatureMode(
+    "patient-view/contribution-branch",
+    modelInfo?.model_kind === "xeegnet_scc",
+    "combined",
+    ["combined", "bp", "scc"] as const,
+  );
   const [displayMode, setDisplayMode] = useState<EvidenceDisplayMode>("raw");
   const { evidence, isLoading, error } = useModelClassEvidence({
     datasetId,
@@ -105,13 +112,81 @@ export function ClassContributionsPanel({
     return labels;
   }, [evidence]);
 
-  const maxAbsContribution = Math.max(evidence?.global_max_abs_contribution ?? 0, 1e-12);
-  const modelClasses = modelInfo?.classes ?? null;
-  const contributionRows = useMemo(
-    () =>
-      evidence ? createClassContributionRows(evidence, classLabels, modelClasses, displayMode, maxAbsContribution) : [],
-    [classLabels, displayMode, evidence, maxAbsContribution, modelClasses],
+  const visibleEvidence = useMemo(() => {
+    if (!evidence?.scc) return evidence;
+    return {
+      ...evidence,
+      bands: evidence.bands.map((bp, index) => {
+        const scc = evidence.scc!.bands[index]!;
+        if (branch === "bp") return bp;
+        if (branch === "scc") return scc;
+        return {
+          ...bp,
+          class_contributions: bp.class_contributions.map((c, ci) => ({
+            ...c,
+            contribution: c.contribution + (scc.class_contributions[ci]?.contribution ?? 0),
+          })),
+        };
+      }),
+    };
+  }, [evidence, branch]);
+  const maxAbsContribution = Math.max(
+    ...(visibleEvidence?.bands.flatMap((b) => b.class_contributions.map((c) => Math.abs(c.contribution))) ?? []),
+    1e-12,
   );
+  const modelClasses = modelInfo?.classes ?? null;
+  const contributionRows = useMemo(() => {
+    if (!visibleEvidence || !evidence) return [];
+    const rows = createClassContributionRows(
+      visibleEvidence,
+      classLabels,
+      modelClasses,
+      displayMode,
+      maxAbsContribution,
+    );
+    rows.forEach((row) => {
+      const bp = evidence.bands.find((b) => b.band === row.band);
+      const scc = evidence.scc?.bands.find((b) => b.band === row.band);
+      if (bp && branch !== "scc") row.tooltipValue += `; BP ${bp.start_hz}–${bp.end_hz} Hz`;
+      if (scc && branch !== "bp") row.tooltipValue += `; SCC ${scc.start_hz}–${scc.end_hz} Hz`;
+    });
+    if (evidence.scc) {
+      for (const [offset, source] of (["scc", "bp"] as const).entries()) {
+        const bands = source === "scc" ? evidence.scc.bands : evidence.bands;
+        const totals = classLabels.map((label) =>
+          bands.reduce(
+            (sum, band) => sum + (band.class_contributions.find((c) => c.class_label === label)?.contribution ?? 0),
+            0,
+          ),
+        );
+        const scale = Math.max(...totals.map(Math.abs), 1e-12);
+        classLabels.forEach((label, classOrder) =>
+          rows.push({
+            ...createContributionDatum({
+              classLabel: label,
+              classShort: formatClassLabel(label, modelClasses),
+              classOrder,
+              band: source === "scc" ? "ΣSCC" : "ΣBP",
+              bandOrder: 7 + offset,
+              contributionRaw: totals[classOrder]!,
+              contributionRelative: totals[classOrder]!,
+              contributionDisplayed: totals[classOrder]!,
+              colorScale: scale,
+              isTotal: true,
+              isPredictedClass: label === evidence.predicted_label,
+              isWinningLogit: false,
+            }),
+            isHighlighted: branch === source,
+          }),
+        );
+      }
+    }
+    return rows;
+  }, [visibleEvidence, evidence, classLabels, modelClasses, displayMode, maxAbsContribution, branch]);
+  const selectTotal = (band: string) => {
+    const selected = band === "ΣBP" ? "bp" : band === "ΣSCC" ? "scc" : null;
+    if (selected) setBranch((current) => (current === selected ? "combined" : selected));
+  };
   const logitRows = useMemo(
     () => (evidence ? createClassLogitRows(evidence, classLabels, modelClasses) : []),
     [classLabels, evidence, modelClasses],
@@ -127,29 +202,61 @@ export function ClassContributionsPanel({
         </div>
         <div className="classification-evidence-header-side">
           <p className="classification-evidence-stage">
-            {EEG_MODEL_NOTATION_LABELS.denseLayerPrefix} <MathFormula tex={EEG_MODEL_NOTATION.encoderOutput} />{" "}
-            {EEG_MODEL_NOTATION_LABELS.denseLayerConnector} <MathFormula tex={EEG_MODEL_NOTATION.classLogits} />
+            {modelInfo?.model_kind === "xeegnet_scc" ? (
+              "BP + normalized SCC → full logits"
+            ) : (
+              <>
+                {EEG_MODEL_NOTATION_LABELS.denseLayerPrefix} <MathFormula tex={EEG_MODEL_NOTATION.encoderOutput} />{" "}
+                {EEG_MODEL_NOTATION_LABELS.denseLayerConnector} <MathFormula tex={EEG_MODEL_NOTATION.classLogits} />
+              </>
+            )}
             <ComponentStatusIndicator status={status.status} label={status.label} />
           </p>
         </div>
       </div>
 
       <div className="classification-evidence-body">
+        {error && (
+          <div className="classification-evidence-empty" role="alert">
+            {error}
+          </div>
+        )}
         {evidence ? (
           <>
             <div className="classification-evidence-chart-grid">
               <BandClassMatrix
                 cells={contributionRows}
+                onBandClick={evidence.scc ? selectTotal : undefined}
                 className="classification-evidence-heatmap"
-                rowHeight={compact ? 34 : 76}
-                minHeight={compact ? 102 : 120}
+                rowHeight={compact ? (evidence.scc ? 28 : 34) : 76}
+                minHeight={compact ? (evidence.scc ? 84 : 102) : 120}
                 topPadding={compact ? 18 : 31}
                 tooltip={createContributionTooltip()}
               />
-              <ClassLogitPanel rows={logitRows} compact={compact} />
+              <ClassLogitPanel rows={logitRows} compact={compact} hasSCC={!!evidence.scc} />
             </div>
 
             <div className="classification-evidence-footer">
+              {evidence.scc && (
+                <div className="feature-branch-toggle" role="group" aria-label="Isolate class contribution branch">
+                  <button
+                    type="button"
+                    data-branch="scc"
+                    aria-pressed={branch === "scc"}
+                    onClick={() => selectTotal("ΣSCC")}
+                  >
+                    ΣSCC
+                  </button>
+                  <button
+                    type="button"
+                    data-branch="bp"
+                    aria-pressed={branch === "bp"}
+                    onClick={() => selectTotal("ΣBP")}
+                  >
+                    ΣBP
+                  </button>
+                </div>
+              )}
               <div className="classification-evidence-footer-left">
                 <div className="classification-evidence-mode-toggle" aria-label="Evidence value mode">
                   <button
@@ -170,7 +277,7 @@ export function ClassContributionsPanel({
                 <span className="classification-evidence-mode-note">
                   {displayMode === "relative"
                     ? "Relative band salience; logit \u03a9 remains raw"
-                    : "Raw band contributions"}
+                    : `Raw ${evidence.scc ? (branch === "combined" ? "BP + SCC" : branch.toUpperCase()) : "band"} contributions`}
                 </span>
               </div>
               {decision ? (
@@ -197,7 +304,15 @@ export function ClassContributionsPanel({
   );
 }
 
-function ClassLogitPanel({ rows, compact = false }: { rows: ClassLogitDatum[]; compact?: boolean }) {
+function ClassLogitPanel({
+  rows,
+  compact = false,
+  hasSCC = false,
+}: {
+  rows: ClassLogitDatum[];
+  compact?: boolean;
+  hasSCC?: boolean;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
   useVegaLayoutResize(viewRef);
@@ -215,7 +330,8 @@ function ClassLogitPanel({ rows, compact = false }: { rows: ClassLogitDatum[]; c
     }
 
     const yDomain = Array.from(new Set(rows.map((row) => row.classShort)));
-    const chartHeight = getEvidenceChartHeight(yDomain.length, compact);
+    const chartHeight =
+      compact && hasSCC ? Math.max(84, yDomain.length * 28) : getEvidenceChartHeight(yDomain.length, compact);
     const spec: VisualizationSpec = {
       $schema: "https://vega.github.io/schema/vega-lite/v6.json",
       width: "container",
@@ -301,7 +417,7 @@ function ClassLogitPanel({ rows, compact = false }: { rows: ClassLogitDatum[]; c
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [compact, rows]);
+  }, [compact, hasSCC, rows]);
 
   return <div className="classification-evidence-logits-chart" ref={containerRef} />;
 }
@@ -344,7 +460,6 @@ function createClassContributionRows(
       );
     });
   });
-
   return rows;
 }
 
@@ -406,7 +521,7 @@ function createContributionDatum({
     classShort,
     classOrder,
     band,
-    contributionGroup: isTotal ? "Total across bands" : `Band ${band}`,
+    contributionGroup: isTotal ? "Raw branch sum across bands" : `Band ${band}`,
     bandOrder,
     value: contributionDisplayed,
     valueText: contributionText,
@@ -422,7 +537,7 @@ function createContributionDatum({
     isWinningLogit,
     isHighlighted: isWinningLogit,
     tooltipValue: isTotal
-      ? `${classLabel} total logit contribution: ${contributionText}`
+      ? `${classLabel} ${band} raw branch contribution: ${contributionText}`
       : `${band} -> ${classLabel}: ${contributionText}`,
   };
 }
@@ -511,7 +626,7 @@ function getGlobalMaxAbsRelativeContribution(bands: ModelClassEvidenceResponse["
   for (const band of bands) {
     const meanAbs = getMeanAbsBandContribution(band);
     for (const contribution of band.class_contributions) {
-      const relative = Math.abs(Math.abs(contribution.contribution) - meanAbs);
+      const relative = Math.abs(contribution.contribution - getMeanBandContribution(band));
       if (relative > max) max = relative;
     }
   }

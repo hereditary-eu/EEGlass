@@ -9,7 +9,7 @@ import numpy as np
 from scipy.integrate import trapezoid
 
 from backend.ml.data_utils.load_data import preprocess_raw_for_xeegnet, preprocessed_raw_to_windows
-from backend.ml.model import build_xeegnet
+from backend.ml.model import build_xeegnet, build_xeegnet_with_conn
 from backend.ml.model_registry import ModelSpec, get_model_spec, list_model_specs
 from backend.ml.model_vars import (
     DEFAULT_MODEL_NAME,
@@ -18,7 +18,6 @@ from backend.ml.model_vars import (
     MODEL_CLASS_LABELS,
     MODEL_INPUT_SOURCE,
     PARAMETERS_DEFAULT,
-    get_embedding_feature_names,
 )
 from backend.pydantic_models.embeddings import EmbeddingReductionMethod
 from backend.pydantic_models.inference import (
@@ -60,6 +59,7 @@ from backend.services.model_errors import (
     ModelServiceError,
     ModelValidationError,
 )
+from backend.services.scc_service import SCCService
 from backend.services.timeseries_service import (
     TimeseriesNotFoundError,
     TimeseriesReaderUnavailableError,
@@ -186,25 +186,45 @@ class ModelRuntime:
         if not checkpoint_path.is_file():
             raise ModelServiceError(f"Pretrained model weights were not found at '{checkpoint_path}'.")
         stat = checkpoint_path.stat()
-        return f"{checkpoint_path}:{stat.st_mtime_ns}:{stat.st_size}"
+        signature = f"{checkpoint_path}:{stat.st_mtime_ns}:{stat.st_size}"
+        if model_spec.model_kind == "xeegnet_scc":
+            signature += f":scc-features-v1:{SCCService.params(model_spec).key()}"
+        return signature
 
     @classmethod
-    def run_inference(cls, model_spec: ModelSpec, windows: np.ndarray) -> np.ndarray:
-        probabilities, _features = cls.run_inference_with_embeddings(model_spec, windows)
-        return probabilities
+    def subject_pairs(cls, spec, subject_data, dataset_id, subject_id, source):
+        if spec.model_kind == "xeegnet_scc":
+            return SCCService.pairs(spec, dataset_id, subject_id, source, subject_data.windows)
+        return None
 
     @classmethod
-    def run_inference_with_embeddings(cls, model_spec: ModelSpec, windows: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        torch_module = cls.import_torch()
-        model = cls.get_model(torch_module, model_spec)
-        batch = torch_module.tensor(windows, dtype=torch_module.float32)
-
-        with torch_module.no_grad():
-            features = model.encoder(batch)
+    def extract_features(cls, model_spec, windows, scc_pairs=None):
+        torch = cls.import_torch()
+        model = cls.get_model(torch, model_spec)
+        with torch.no_grad():
+            batch = torch.as_tensor(windows, dtype=torch.float32)
+            encoder = model.base.encoder if model_spec.model_kind == "xeegnet_scc" else model.encoder
+            bp = encoder(batch)
+            reduced = normalized = None
+            features = bp
+            if model_spec.model_kind == "xeegnet_scc":
+                if scc_pairs is None or len(scc_pairs) != len(windows):
+                    raise ModelValidationError("Aligned SCC inputs are required for this model.")
+                reduced = model.reducer(torch.as_tensor(scc_pairs, dtype=torch.float32))
+                normalized = model.scc_norm(reduced)
+                features = torch.cat([bp, normalized], dim=1)
             logits = model.Dense(features)
-            probabilities = torch_module.softmax(logits, dim=1)
+        return dict(bp=bp, reduced_scc=reduced, scc=normalized, features=features, logits=logits)
 
-        return probabilities.detach().cpu().numpy(), features.detach().cpu().numpy()
+    @classmethod
+    def run_inference(cls, model_spec, windows, scc_pairs=None):
+        return cls.run_inference_with_embeddings(model_spec, windows, scc_pairs)[0]
+
+    @classmethod
+    def run_inference_with_embeddings(cls, model_spec, windows, scc_pairs=None):
+        torch = cls.import_torch()
+        result = cls.extract_features(model_spec, windows, scc_pairs)
+        return torch.softmax(result["logits"], dim=1).numpy(), result["features"].numpy()
 
     @classmethod
     def get_model(cls, torch_module, model_spec: ModelSpec):
@@ -214,8 +234,8 @@ class ModelRuntime:
             return cached_model
 
         try:
-            model = build_xeegnet()
-            state_dict = torch_module.load(model_spec.checkpoint_path.resolve(), map_location="cpu")
+            model = build_xeegnet_with_conn() if model_spec.model_kind == "xeegnet_scc" else build_xeegnet()
+            state_dict = torch_module.load(model_spec.checkpoint_path.resolve(), map_location="cpu", weights_only=True)
             model.load_state_dict(state_dict)
             model.to("cpu")
             model.eval()
@@ -285,6 +305,11 @@ def build_model_info_response(model_spec: ModelSpec) -> ModelInfoResponse:
         display_name=model_spec.display_name,
         architecture=model_spec.architecture,
         model_summary=build_model_summary(model_spec),
+        model_kind=model_spec.model_kind,
+        scc_reducer=model_spec.scc_reducer,
+        split_index=model_spec.split_index,
+        feature_names=model_spec.feature_names,
+        scc_bands=[dict(band=b, label=b, start_hz=lo, end_hz=hi) for b, lo, hi in model_spec.scc_bands],
         classes=[
             {
                 "class_id": class_spec.class_id,
@@ -332,21 +357,38 @@ def compute_class_evidence_response(
 ) -> ModelClassEvidenceResponse:
     torch_module = ModelRuntime.import_torch()
     model = ModelRuntime.get_model(torch_module, model_spec)
-    window = torch_module.tensor(subject_data.windows[window_index : window_index + 1], dtype=torch_module.float32)
-
-    with torch_module.no_grad():
-        band_features_tensor = model.encoder(window)
-        logits_tensor = model.Dense(band_features_tensor)
-        probabilities_tensor = torch_module.softmax(logits_tensor, dim=1)
-
-    band_features = band_features_tensor.detach().cpu().numpy()[0]
-    dense_weights = model.Dense.weight.detach().cpu().numpy()
-    logits = logits_tensor.detach().cpu().numpy()[0]
-    probabilities = probabilities_tensor.detach().cpu().numpy()[0]
-    contributions_by_class_and_band = dense_weights * band_features[np.newaxis, :]
-    max_abs_contribution = (
-        float(np.max(np.abs(contributions_by_class_and_band))) if contributions_by_class_and_band.size else 0.0
+    pairs = ModelRuntime.subject_pairs(model_spec, subject_data, dataset_id, subject_id, source)
+    features = ModelRuntime.extract_features(
+        model_spec,
+        subject_data.windows[window_index : window_index + 1],
+        pairs[window_index : window_index + 1] if pairs is not None else None,
     )
+    band_features = features["features"].numpy()[0]
+    dense_weights = model.Dense.weight.detach().cpu().numpy()
+    logits = features["logits"].numpy()[0]
+    probabilities = torch_module.softmax(features["logits"], dim=1).numpy()[0]
+    contributions_by_class_and_band = dense_weights * band_features[np.newaxis, :]
+    max_abs_contribution = float(np.max(np.abs(contributions_by_class_and_band)))
+
+    def evidence_bands(bands, offset=0):
+        return [
+            ModelClassEvidenceBand(
+                band=b,
+                start_hz=lo,
+                end_hz=hi,
+                feature_value=float(band_features[i + offset]),
+                class_contributions=[
+                    ModelClassEvidenceContribution(
+                        class_id=c.class_id,
+                        class_label=c.label,
+                        contribution=float(contributions_by_class_and_band[c.class_id, i + offset]),
+                    )
+                    for c in model_spec.classes
+                ],
+            )
+            for i, (b, lo, hi) in enumerate(bands)
+        ]
+
     predicted_class_id = int(np.argmax(probabilities))
     start_time, end_time = subject_data.prediction_ranges[window_index]
 
@@ -364,21 +406,8 @@ def compute_class_evidence_response(
         logits={label: float(logits[class_id]) for class_id, label in MODEL_CLASS_LABELS.items()},
         unit_label="logit contribution",
         global_max_abs_contribution=max_abs_contribution,
-        bands=[
-            ModelClassEvidenceBand(
-                band=band_name,
-                feature_value=float(band_features[band_index]),
-                class_contributions=[
-                    ModelClassEvidenceContribution(
-                        class_id=class_id,
-                        class_label=class_label,
-                        contribution=float(contributions_by_class_and_band[class_id, band_index]),
-                    )
-                    for class_id, class_label in MODEL_CLASS_LABELS.items()
-                ],
-            )
-            for band_index, (band_name, _, _) in enumerate(MODEL_BANDS)
-        ],
+        bands=evidence_bands(model_spec.bands),
+        scc={"bands": evidence_bands(model_spec.scc_bands, 7)} if model_spec.scc_bands else None,
     )
 
 
@@ -396,18 +425,36 @@ def build_class_weights_response(model_spec: ModelSpec) -> ModelClassWeightsResp
         global_max_abs_weight=max_abs_weight,
         bands=[
             ModelClassWeightsBand(
-                band=band_name,
+                band=b,
+                start_hz=lo,
+                end_hz=hi,
                 class_weights=[
                     ModelClassWeight(
-                        class_id=class_id,
-                        class_label=class_label,
-                        weight=float(dense_weights[class_id, band_index]),
+                        class_id=c.class_id, class_label=c.label, weight=float(dense_weights[c.class_id, i])
                     )
-                    for class_id, class_label in MODEL_CLASS_LABELS.items()
+                    for c in model_spec.classes
                 ],
             )
-            for band_index, (band_name, _, _) in enumerate(MODEL_BANDS)
+            for i, (b, lo, hi) in enumerate(model_spec.bands)
         ],
+        scc={
+            "bands": [
+                ModelClassWeightsBand(
+                    band=b,
+                    start_hz=lo,
+                    end_hz=hi,
+                    class_weights=[
+                        ModelClassWeight(
+                            class_id=c.class_id, class_label=c.label, weight=float(dense_weights[c.class_id, i + 7])
+                        )
+                        for c in model_spec.classes
+                    ],
+                )
+                for i, (b, lo, hi) in enumerate(model_spec.scc_bands)
+            ]
+        }
+        if model_spec.scc_bands
+        else None,
     )
 
 
@@ -628,10 +675,19 @@ def build_band_power_stats_response(
     )
 
 
-def build_scalp_topology_response(model_spec: ModelSpec) -> ModelScalpTopologyResponse:
+def build_scalp_topology_response(
+    model_spec: ModelSpec, branch: Literal["bp", "scc"] = "bp"
+) -> ModelScalpTopologyResponse:
     torch_module = ModelRuntime.import_torch()
     model = ModelRuntime.get_model(torch_module, model_spec)
-    conv2_weights = model.encoder.conv2.weight.detach().cpu().numpy().squeeze(1).squeeze(-1)
+    encoder = model.base.encoder if model_spec.model_kind == "xeegnet_scc" else model.encoder
+    conv2_weights = encoder.conv2.weight.detach().cpu().numpy().squeeze(1).squeeze(-1)
+    bands = model_spec.bands
+    if branch == "scc":
+        if model_spec.scc_reducer != "node":
+            raise ModelValidationError("This model has no SCC node weights.")
+        conv2_weights = model.reducer.w.detach().cpu().numpy()
+        bands = model_spec.scc_bands
     grid_resolution = 72
     channel_positions, grid_x, grid_y, interpolated_band_values = compute_mne_topology_grid(
         conv2_weights,
@@ -644,10 +700,11 @@ def build_scalp_topology_response(model_spec: ModelSpec) -> ModelScalpTopologyRe
     global_max_weight = float(np.max(global_values)) if global_values.size else 0.0
 
     return ModelScalpTopologyResponse(
-        layer_name="encoder.conv2",
-        unit_label="weight",
-        global_min_weight=global_min_weight,
-        global_max_weight=global_max_weight,
+        branch=branch,
+        layer_name="reducer.w" if branch == "scc" else "encoder.conv2",
+        unit_label="node weight" if branch == "scc" else "weight",
+        global_min_weight=-max(abs(global_min_weight), abs(global_max_weight)),
+        global_max_weight=max(abs(global_min_weight), abs(global_max_weight)),
         grid=ModelScalpTopologyGrid(
             resolution=grid_resolution,
             x=grid_x.astype(float).ravel().tolist(),
@@ -656,6 +713,8 @@ def build_scalp_topology_response(model_spec: ModelSpec) -> ModelScalpTopologyRe
         bands=[
             ModelScalpTopologyBand(
                 band=band_name,
+                start_hz=start_hz,
+                end_hz=end_hz,
                 grid_values=interpolated_values.astype(float).ravel().tolist(),
                 channels=[
                     ModelScalpTopologyChannel(
@@ -667,8 +726,8 @@ def build_scalp_topology_response(model_spec: ModelSpec) -> ModelScalpTopologyRe
                     for channel_name, channel_weight in zip(MODEL_CHANNELS, band_weights, strict=True)
                 ],
             )
-            for (band_name, _, _), band_weights, interpolated_values in zip(
-                MODEL_BANDS,
+            for (band_name, start_hz, end_hz), band_weights, interpolated_values in zip(
+                bands,
                 conv2_weights,
                 interpolated_band_values,
                 strict=True,
@@ -685,11 +744,48 @@ def compute_window_scalp_topology_response(
     subject_id: str,
     source: TimeseriesSource,
     window_index: int,
+    branch: Literal["bp", "scc"] = "bp",
 ) -> ModelWindowScalpTopologyResponse:
     validate_window_index(window_index, len(subject_data.prediction_ranges))
     torch_module = ModelRuntime.import_torch()
     model = ModelRuntime.get_model(torch_module, model_spec)
-    conv2_weights = model.encoder.conv2.weight.detach().cpu().numpy().squeeze(1).squeeze(-1)
+    encoder = model.base.encoder if model_spec.model_kind == "xeegnet_scc" else model.encoder
+    conv2_weights = encoder.conv2.weight.detach().cpu().numpy().squeeze(1).squeeze(-1)
+    if branch == "scc":
+        pairs = ModelRuntime.subject_pairs(model_spec, subject_data, dataset_id, subject_id, source)
+        if pairs is None:
+            raise ModelValidationError("This model has no SCC branch.")
+        with torch_module.no_grad():
+            values = model.reducer._node_contrib(
+                torch_module.as_tensor(pairs[window_index : window_index + 1], dtype=torch_module.float32)
+            ).numpy()[0]
+        positions, gx, gy, grids = compute_mne_topology_grid(values, 72)
+        start, end = subject_data.prediction_ranges[window_index]
+        return ModelWindowScalpTopologyResponse(
+            branch="scc",
+            dataset_id=dataset_id,
+            subject_id=subject_id,
+            source=source,
+            model_name=model_spec.name,
+            checkpoint_signature=ModelRuntime.checkpoint_signature(model_spec),
+            window_index=window_index,
+            start_time=start,
+            end_time=end,
+            layer_name="reducer",
+            grid=ModelScalpTopologyGrid(resolution=72, x=gx.ravel().tolist(), y=gy.ravel().tolist()),
+            modes=[
+                build_window_scalp_topology_mode(
+                    mode="scc_node_contribution",
+                    label="SCC node contribution before batch normalization",
+                    unit_label="SCC reducer contribution",
+                    color_scale="diverging",
+                    values=values,
+                    interpolated_values=grids,
+                    channel_positions=positions,
+                    bands=model_spec.scc_bands,
+                )
+            ],
+        )
     band_power_response = compute_band_power_response(
         subject_data=subject_data,
         dataset_id=dataset_id,
@@ -761,7 +857,8 @@ def compute_window_scalp_topology_response(
 
 def build_window_scalp_topology_mode(
     *,
-    mode: Literal["weighted_contribution", "input_power"],
+    bands=MODEL_BANDS,
+    mode: Literal["weighted_contribution", "input_power", "scc_node_contribution"],
     label: str,
     unit_label: str,
     color_scale: Literal["diverging", "sequential"],
@@ -790,6 +887,8 @@ def build_window_scalp_topology_mode(
         bands=[
             ModelWindowScalpTopologyBand(
                 band=band_name,
+                start_hz=start_hz,
+                end_hz=end_hz,
                 grid_values=interpolated_band_values.astype(float).ravel().tolist(),
                 channels=[
                     ModelWindowScalpTopologyChannel(
@@ -801,8 +900,8 @@ def build_window_scalp_topology_mode(
                     for channel_name, channel_value in zip(MODEL_CHANNELS, band_values, strict=True)
                 ],
             )
-            for (band_name, _, _), band_values, interpolated_band_values in zip(
-                MODEL_BANDS,
+            for (band_name, start_hz, end_hz), band_values, interpolated_band_values in zip(
+                bands,
                 values,
                 interpolated_values,
                 strict=True,
@@ -923,6 +1022,8 @@ class ModelService:
                     display_name=model_spec.display_name,
                     architecture=model_spec.architecture,
                     is_current=model_spec.name == cls._current_model_name,
+                    model_kind=model_spec.model_kind,
+                    scc_reducer=model_spec.scc_reducer,
                 )
                 for model_spec in model_specs
             ],
@@ -931,8 +1032,9 @@ class ModelService:
     @classmethod
     def set_current_model(cls, model_name: str) -> ModelInfoResponse:
         model_spec = cls._get_model_spec(model_name)
+        response = build_model_info_response(model_spec)
         cls._current_model_name = model_spec.name
-        return build_model_info_response(model_spec)
+        return response
 
     @classmethod
     def infer_subject(
@@ -982,7 +1084,9 @@ class ModelService:
         model_spec = cls._get_model_spec(model_name)
         subject_data = SubjectPreprocessingService.get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
         probabilities, penultimate_embeddings = ModelRuntime.run_inference_with_embeddings(
-            model_spec, subject_data.windows
+            model_spec,
+            subject_data.windows,
+            ModelRuntime.subject_pairs(model_spec, subject_data, dataset_id, subject_id, source),
         )
         response = build_inference_response(
             dataset_id=dataset_id,
@@ -1031,9 +1135,9 @@ class ModelService:
             model_name=model_spec.name,
             source=source,
             checkpoint_signature=ModelRuntime.checkpoint_signature(model_spec),
-            embedding_layer="encoder",
+            embedding_layer=model_spec.embedding_layer,
             embedding_label="window penultimate embedding",
-            feature_names=get_embedding_feature_names(source_dimension),
+            feature_names=model_spec.feature_names,
             reduction=ModelPatientEmbeddingReduction(
                 method=reduction_method,
                 status=reduction_status,
@@ -1069,10 +1173,16 @@ class ModelService:
         subject_data = SubjectPreprocessingService.get_prepared_subject_data(model_spec, dataset_id, subject_id, source)
         if include_penultimate_embedding:
             probabilities, penultimate_embeddings = ModelRuntime.run_inference_with_embeddings(
-                model_spec, subject_data.windows
+                model_spec,
+                subject_data.windows,
+                ModelRuntime.subject_pairs(model_spec, subject_data, dataset_id, subject_id, source),
             )
         else:
-            probabilities = ModelRuntime.run_inference(model_spec, subject_data.windows)
+            probabilities = ModelRuntime.run_inference(
+                model_spec,
+                subject_data.windows,
+                ModelRuntime.subject_pairs(model_spec, subject_data, dataset_id, subject_id, source),
+            )
             penultimate_embeddings = np.empty((0, 0), dtype=float)
 
         response = build_inference_response(
@@ -1214,16 +1324,18 @@ class ModelService:
         return response
 
     @classmethod
-    def get_scalp_topologies(cls, model_name: str = DEFAULT_MODEL_NAME) -> ModelScalpTopologyResponse:
+    def get_scalp_topologies(
+        cls, model_name: str = DEFAULT_MODEL_NAME, branch: Literal["bp", "scc"] = "bp"
+    ) -> ModelScalpTopologyResponse:
         model_spec = cls._get_model_spec(model_name)
         checkpoint_signature = ModelRuntime.checkpoint_signature(model_spec)
-        cache_key = f"{model_spec.name}:{checkpoint_signature}"
+        cache_key = f"{model_spec.name}:{checkpoint_signature}:{branch}"
         cached_response = cls._scalp_topology_cache.get(cache_key)
         if cached_response is not None:
             cls._scalp_topology_cache.move_to_end(cache_key)
             return cached_response
 
-        response = build_scalp_topology_response(model_spec)
+        response = build_scalp_topology_response(model_spec, branch)
         remember(cls._scalp_topology_cache, cache_key, response, cls._SCALP_TOPOLOGY_CACHE_LIMIT)
         return response
 
@@ -1235,12 +1347,13 @@ class ModelService:
         source: TimeseriesSource = "derivatives",
         window_index: int = 0,
         model_name: str = DEFAULT_MODEL_NAME,
+        branch: Literal["bp", "scc"] = "bp",
     ) -> ModelWindowScalpTopologyResponse:
         validate_model_input_source(source)
         cls._ensure_inference_available()
         model_spec = cls._get_model_spec(model_name)
         checkpoint_signature = ModelRuntime.checkpoint_signature(model_spec)
-        cache_key = (model_spec.name, dataset_id, subject_id, source, window_index, checkpoint_signature)
+        cache_key = (model_spec.name, dataset_id, subject_id, source, window_index, checkpoint_signature, branch)
         cached_response = cls._window_scalp_topology_cache.get(cache_key)
         if cached_response is not None:
             cls._window_scalp_topology_cache.move_to_end(cache_key)
@@ -1254,6 +1367,7 @@ class ModelService:
             subject_id=subject_id,
             source=source,
             window_index=window_index,
+            branch=branch,
         )
         remember(cls._window_scalp_topology_cache, cache_key, response, cls._WINDOW_SCALP_TOPOLOGY_CACHE_LIMIT)
         return response

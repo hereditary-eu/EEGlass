@@ -111,6 +111,7 @@ def export_patient_embeddings(
     source: str = DEFAULT_SOURCE,
     output_path: str | Path | None = None,
 ) -> Path:
+    model_spec = get_model_spec(model_name)
     checkpoint_signature = get_checkpoint_signature(model_name)
     checkpoint_key = get_checkpoint_key(checkpoint_signature)
     cache_dir = (
@@ -128,6 +129,8 @@ def export_patient_embeddings(
         embedding_values = [float(value) for value in artifact["embedding"]["values"]]
         if embedding_dimension == 0:
             embedding_dimension = len(embedding_values)
+        if len(embedding_values) != len(model_spec.feature_names):
+            raise RuntimeError(f"Invalid embedding dimension in {artifact_path}")
 
         summary = artifact["summary"]
         rows.append(
@@ -141,7 +144,14 @@ def export_patient_embeddings(
                 "predicted_label": summary.get("predicted_label"),
                 "mean_confidence": summary.get("mean_confidence"),
                 "total_windows": summary.get("total_windows"),
-                **{f"embedding_{index}": value for index, value in enumerate(embedding_values)},
+                **{
+                    (
+                        model_spec.feature_names[index].lower().replace(" ", "_")
+                        if model_spec.model_kind == "xeegnet_scc"
+                        else f"embedding_{index}"
+                    ): value
+                    for index, value in enumerate(embedding_values)
+                },
             }
         )
 
@@ -158,7 +168,12 @@ def export_patient_embeddings(
         "predicted_label",
         "mean_confidence",
         "total_windows",
-        *[f"embedding_{index}" for index in range(embedding_dimension)],
+        *[
+            model_spec.feature_names[index].lower().replace(" ", "_")
+            if model_spec.model_kind == "xeegnet_scc"
+            else f"embedding_{index}"
+            for index in range(embedding_dimension)
+        ],
     ]
 
     resolved_output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -172,11 +187,9 @@ def export_patient_embeddings(
 
 
 def get_checkpoint_signature(model_name: str) -> str:
-    checkpoint_path = get_model_spec(model_name).checkpoint_path.resolve()
-    if not checkpoint_path.is_file():
-        raise FileNotFoundError(f"Model checkpoint not found: {checkpoint_path}")
-    stat = checkpoint_path.stat()
-    return f"{checkpoint_path}:{stat.st_mtime_ns}:{stat.st_size}"
+    from backend.services.model_service import ModelService
+
+    return ModelService.get_checkpoint_signature(model_name)
 
 
 def get_checkpoint_key(checkpoint_signature: str) -> str:

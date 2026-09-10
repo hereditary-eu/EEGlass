@@ -10,6 +10,7 @@ from typing import Any
 import numpy as np
 
 from backend.config import CONFIG
+from backend.ml.model_registry import get_model_spec
 from backend.ml.model_vars import MODEL_BANDS, MODEL_CHANNELS, MODEL_INPUT_PROTOCOL_VERSION
 from backend.pydantic_models.timeseries import TimeseriesSource
 
@@ -154,9 +155,13 @@ def is_model_artifact_valid(
         and artifact.get("checkpoint_key") == checkpoint_key_value
         and isinstance(artifact.get("response"), dict)
         and isinstance(artifact.get("summary"), dict)
-        and is_embedding_summary_valid(artifact.get("embedding"))
-        and is_window_embedding_summary_valid(artifact.get("window_embeddings"))
+        and is_embedding_summary_valid(artifact.get("embedding"), model_name)
+        and is_window_embedding_summary_valid(artifact.get("window_embeddings"), model_name)
         and is_band_power_stats_summary_valid(artifact.get("band_power_stats"))
+        and (
+            get_model_spec(model_name).model_kind != "xeegnet_scc"
+            or is_scc_stats_summary_valid(artifact.get("scc_stats"), model_name)
+        )
     )
 
 
@@ -183,26 +188,58 @@ def is_clustering_artifact_valid(
     )
 
 
-def is_embedding_summary_valid(embedding: Any) -> bool:
+def is_scc_stats_summary_valid(value: Any, model_name: str) -> bool:
+    from pydantic import ValidationError
+
+    from backend.pydantic_models.scc import SCCStatsResponse
+
+    spec = get_model_spec(model_name)
+    try:
+        stats = SCCStatsResponse.model_validate(value)
+    except ValidationError:
+        return False
+    if (
+        stats.mode != "intra_patient"
+        or stats.unit_label != "mean coherence"
+        or stats.subject_count != 1
+        or stats.window_count < 1
+        or [c.channel for c in stats.channels] != list(spec.channels)
+    ):
+        return False
+    for channel in stats.channels:
+        if [(b.band, b.start_hz, b.end_hz) for b in channel.bands] != list(spec.scc_bands):
+            return False
+        for band in channel.bands:
+            if (
+                band.sample_count != stats.window_count
+                or not np.isfinite([band.mean, band.lower_2sigma, band.upper_2sigma]).all()
+                or not 0 <= band.mean <= 1
+                or not band.lower_2sigma <= band.mean <= band.upper_2sigma
+            ):
+                return False
+    return True
+
+
+def is_embedding_summary_valid(embedding: Any, model_name: str) -> bool:
     return bool(
         isinstance(embedding, dict)
-        and embedding.get("layer_name") == PENULTIMATE_EMBEDDING_LAYER
+        and embedding.get("layer_name") == get_model_spec(model_name).embedding_layer
         and embedding.get("label") == PENULTIMATE_EMBEDDING_LABEL
         and isinstance(embedding.get("values"), list)
         and embedding.get("dimension") == len(embedding.get("values"))
-        and len(embedding.get("values")) > 0
+        and len(embedding.get("values")) == len(get_model_spec(model_name).feature_names)
         and all(isinstance(value, (int, float)) and np.isfinite(value) for value in embedding.get("values"))
     )
 
 
-def is_window_embedding_summary_valid(window_embeddings: Any) -> bool:
+def is_window_embedding_summary_valid(window_embeddings: Any, model_name: str) -> bool:
     if not (
         isinstance(window_embeddings, dict)
-        and window_embeddings.get("layer_name") == PENULTIMATE_EMBEDDING_LAYER
+        and window_embeddings.get("layer_name") == get_model_spec(model_name).embedding_layer
         and window_embeddings.get("label") == PENULTIMATE_EMBEDDING_LABEL
         and isinstance(window_embeddings.get("values"), list)
         and isinstance(window_embeddings.get("dimension"), int)
-        and window_embeddings.get("dimension") > 0
+        and window_embeddings.get("dimension") == len(get_model_spec(model_name).feature_names)
     ):
         return False
 

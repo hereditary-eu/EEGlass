@@ -57,6 +57,12 @@ const ACTION_NAMES = [
   "patient_view.scalp_view.band_set",
   "patient_view.scalp_view.timeseries_click_filter_select",
   "patient_view.scalp_view.timeseries_click_filter_deselect",
+  "overview.spatial_weights_branch.set_mode",
+  "overview.dense_weights_branch.set_mode",
+  "patient_view.activation_overlay.set_mode",
+  "patient_view.contribution_branch.set_mode",
+  "patient_view.scalp_branch.set_mode",
+  "patient_view.measurement_branch.set_mode",
   VACP_APPLY_STATE_ACTION,
 ] as const;
 

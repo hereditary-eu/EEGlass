@@ -31,6 +31,26 @@ $M_{l,f} \hat{Z}_f$ gives the signed per-band class contribution shown in the da
 In short: fixed bandpass _filters_ $\rightarrow$ learned spatial _mixing_ $\rightarrow$ _bandpower_ $\rightarrow$ linear _classifier_.
 Every intermediate value has a direct physical meaning, so clinicians inspect architecture-intrinsic evidence rather than post-hoc saliency maps.
 
+## Node-SCC models
+
+The pretrained-model selector supports the three-class node-SCC checkpoints v200–v204 alongside the five baseline xEEGNet checkpoints. Model metadata controls the available BP/SCC views; the default model remains unchanged.
+
+For SCC models, the classifier receives seven BP activations followed by seven batch-normalized SCC activations. Both branches use the wrapper's outer `Dense` weights, so their class contributions add exactly to the full-model logits. Embeddings and feature exports use the same 14 inputs. The original BP and SCC frequency boundaries are preserved separately and shown in tooltips.
+
+The spatial-weight, dense-weight, patient-scalp, and spectral-measurement panels have independent branch selectors. Band Activations can overlay SCC, and the contribution table's ΣSCC/ΣBP totals isolate each branch while retaining the full prediction. In SCC measurement mode, each electrode shows its mean coherence with the other 18 electrodes. Intra-patient references summarize windows; inter-patient references give each patient equal weight and require a completed **Compute all** job.
+
+Raw connectivity is shared across checkpoints through the SCC cache. Predictions, normalized features, and learned contributions remain checkpoint-specific. SCC-derived prediction signatures include the transform identity and feature-layout version; baseline cache signatures are preserved. Dashboard inference imports the local model implementation without training utilities.
+
+Run the SCC integration checks from the repository root:
+
+```bash
+uv run python -m unittest discover -s backend/tests -v
+bunx tsc --noEmit
+bun run build
+```
+
+The backend checks cover strict checkpoint loading, forward-pass parity, logit and node-contribution decompositions, real coherence computation, concurrent cache reuse, reference weighting, failures, model switching, and named exports.
+
 ## Supported Dimensionality Reductions
 
 <img src="./figures/pca.png" width="32%"> <img src="./figures/tsne.png" width="32%"> <img src="./figures/umap.png" width="32%">

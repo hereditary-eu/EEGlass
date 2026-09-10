@@ -44,6 +44,7 @@ interface TimeseriesSlotProps {
 
 export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
   const windowSizeSeconds = ts.inferenceResult?.window_size_seconds ?? DEFAULT_WINDOW_SIZE_SECONDS;
+  const filterBand = ts.modelInfo?.bands.find((band) => band.band === ts.selectedTimeseriesBandFilter);
 
   const windowAnnotationRows = useMemo(
     () => createWindowAnnotationRows(ts.inferenceResult, ts.modelInfo?.classes ?? []),
@@ -110,7 +111,10 @@ export function TimeseriesSlot({ ts }: TimeseriesSlotProps) {
             {ts.signal?.preview ? <span className="timeseries-slot-status">Preview</span> : null}
             {!ts.signal ? <span className="timeseries-slot-status">Idle</span> : null}
             {ts.selectedTimeseriesBandFilter ? (
-              <span className="timeseries-slot-status">Filter: {ts.selectedTimeseriesBandFilter}</span>
+              <span className="timeseries-slot-status">
+                BP filter: {ts.selectedTimeseriesBandFilter}
+                {filterBand ? ` (${filterBand.start_hz}–${filterBand.end_hz} Hz)` : ""}
+              </span>
             ) : null}
             {ts.source === "raw" ? <span className="timeseries-slot-status">Predictions use derivatives</span> : null}
             <button

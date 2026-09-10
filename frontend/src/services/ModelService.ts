@@ -1,3 +1,4 @@
+import type { FeatureBranch, SCCResponse, SCCStatsResponse } from "../types";
 import { ApiClient } from "./ApiClient";
 import { API_ROUTES } from "./ApiRoutes";
 import type {
@@ -214,11 +215,13 @@ export class ModelService {
     windowIndex: number,
     source: TimeseriesSource = "derivatives",
     modelName?: string,
+    branch: FeatureBranch = "bp",
   ): Promise<ModelWindowScalpTopologyResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
     return ApiClient.get<ModelWindowScalpTopologyResponse>(
       `${API_ROUTES.model.windowScalpTopologies(datasetId, subjectId, resolvedModelName)}?${this.toQueryString({
         source,
+        branch,
         window_index: windowIndex,
       })}`,
     );
@@ -329,9 +332,44 @@ export class ModelService {
     return ApiClient.get<ModelClassWeightsResponse>(API_ROUTES.model.classWeights(resolvedModelName));
   }
 
-  static async getScalpTopologies(modelName?: string): Promise<ModelScalpTopologyResponse> {
+  static async getScalpTopologies(
+    modelName?: string,
+    branch: FeatureBranch = "bp",
+  ): Promise<ModelScalpTopologyResponse> {
     const resolvedModelName = await this.resolveModelName(modelName);
-    return ApiClient.get<ModelScalpTopologyResponse>(API_ROUTES.model.scalpTopologies(resolvedModelName));
+    return ApiClient.get<ModelScalpTopologyResponse>(
+      `${API_ROUTES.model.scalpTopologies(resolvedModelName)}?branch=${branch}`,
+    );
+  }
+
+  static async computeSCC(
+    datasetId: string,
+    subjectId: string,
+    windowIndex: number,
+    modelName: string,
+  ): Promise<SCCResponse> {
+    return ApiClient.post<SCCResponse>(API_ROUTES.model.scc(modelName), {
+      dataset_id: datasetId,
+      subject_id: subjectId,
+      window_index: windowIndex,
+      source: "derivatives",
+    });
+  }
+
+  static async getSCCStats(
+    datasetId: string,
+    subjectId: string,
+    modelName: string,
+    mode: ModelBandPowerStatsMode,
+    cohortLabel: string | null,
+  ): Promise<SCCStatsResponse> {
+    return ApiClient.get<SCCStatsResponse>(
+      `${API_ROUTES.model.sccStats(datasetId, subjectId, modelName)}?${this.toQueryString({
+        source: "derivatives",
+        mode,
+        cohort_label: cohortLabel ?? undefined,
+      })}`,
+    );
   }
 
   private static async resolveModelName(modelName?: string): Promise<string> {

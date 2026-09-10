@@ -16,6 +16,8 @@ class ModelScalpTopologyChannel(BaseModel):
 
 class ModelScalpTopologyBand(BaseModel):
     band: str
+    start_hz: float = 0
+    end_hz: float = 0
     channels: list[ModelScalpTopologyChannel]
     grid_values: list[float]
 
@@ -27,6 +29,7 @@ class ModelScalpTopologyGrid(BaseModel):
 
 
 class ModelScalpTopologyResponse(BaseModel):
+    branch: Literal["bp", "scc"] = "bp"
     layer_name: str
     unit_label: str
     global_min_weight: float
@@ -44,12 +47,14 @@ class ModelWindowScalpTopologyChannel(BaseModel):
 
 class ModelWindowScalpTopologyBand(BaseModel):
     band: str
+    start_hz: float = 0
+    end_hz: float = 0
     channels: list[ModelWindowScalpTopologyChannel]
     grid_values: list[float]
 
 
 class ModelWindowScalpTopologyMode(BaseModel):
-    mode: Literal["weighted_contribution", "input_power"]
+    mode: Literal["weighted_contribution", "input_power", "scc_node_contribution"]
     label: str
     unit_label: str
     color_scale: Literal["diverging", "sequential"]
@@ -59,6 +64,7 @@ class ModelWindowScalpTopologyMode(BaseModel):
 
 
 class ModelWindowScalpTopologyResponse(BaseModel):
+    branch: Literal["bp", "scc"] = "bp"
     dataset_id: str
     subject_id: str
     source: TimeseriesSource

@@ -1,3 +1,4 @@
+import type { FeatureBranch } from "../../types";
 import { useEffect, useState } from "react";
 
 import { ModelService } from "../../services/ModelService";
@@ -14,8 +15,11 @@ const DEFAULT_MODEL_CACHE_KEY = "__default__";
 const scalpTopologyCache = new Map<string, ModelScalpTopologyResponse>();
 const scalpTopologyPromises = new Map<string, Promise<ModelScalpTopologyResponse>>();
 
-export function useModelScalpTopologies(modelName?: string | null): UseModelScalpTopologiesResult {
-  const cacheKey = modelName ?? DEFAULT_MODEL_CACHE_KEY;
+export function useModelScalpTopologies(
+  modelName?: string | null,
+  branch: FeatureBranch = "bp",
+): UseModelScalpTopologiesResult {
+  const cacheKey = `${modelName ?? DEFAULT_MODEL_CACHE_KEY}:${branch}`;
   const [scalpTopologies, setScalpTopologies] = useState<ModelScalpTopologyResponse | null>(
     () => scalpTopologyCache.get(cacheKey) ?? null,
   );
@@ -38,7 +42,7 @@ export function useModelScalpTopologies(modelName?: string | null): UseModelScal
 
     const topologyPromise =
       scalpTopologyPromises.get(cacheKey) ??
-      ModelService.getScalpTopologies(modelName ?? undefined).catch((loadError) => {
+      ModelService.getScalpTopologies(modelName ?? undefined, branch).catch((loadError) => {
         scalpTopologyPromises.delete(cacheKey);
         throw loadError;
       });
@@ -67,7 +71,7 @@ export function useModelScalpTopologies(modelName?: string | null): UseModelScal
     return () => {
       isCurrent = false;
     };
-  }, [cacheKey, modelName]);
+  }, [cacheKey, modelName, branch]);
 
   return { scalpTopologies, isLoading, error };
 }

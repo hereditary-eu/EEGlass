@@ -1,3 +1,5 @@
+import { BranchToggle } from "../ui/BranchToggle";
+import { useFeatureMode } from "../../vacp/useFeatureMode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { changeset } from "vega";
 import type { View } from "vega";
@@ -44,6 +46,12 @@ export function BandActivationChart({
   modelInfo,
   windowIndex,
 }: BandActivationChartProps) {
+  const [branch, setBranch] = useFeatureMode(
+    "patient-view/activation-overlay",
+    modelInfo?.model_kind === "xeegnet_scc",
+    "bp",
+    ["bp", "scc"] as const,
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
   const [plotHeight, setPlotHeight] = useState(132);
@@ -66,7 +74,11 @@ export function BandActivationChart({
   }, [evidence, modelInfo]);
   const values = useMemo(
     () =>
-      evidence?.bands.map((band, order) => {
+      [
+        ...(evidence?.bands.map((band) => ({ ...band, branch: "BP" })) ?? []),
+        ...(branch === "scc" ? (evidence?.scc?.bands.map((band) => ({ ...band, branch: "SCC" })) ?? []) : []),
+      ].map((band, index) => {
+        const order = index % 7;
         const contribution = selectedClassLabel
           ? band.class_contributions.find((item) => item.class_label === selectedClassLabel)
           : null;
@@ -74,6 +86,9 @@ export function BandActivationChart({
         const activation = contribution ? contribution.contribution : band.feature_value;
 
         return {
+          branch: band.branch,
+          frequencyRange: `${band.start_hz}–${band.end_hz} Hz`,
+          units: selectedClassLabel ? "logit contribution" : band.branch === "SCC" ? "normalized SCC" : "dB",
           order,
           band: band.band,
           label: getModelBandLabel(band.band, modelInfo?.bands),
@@ -84,7 +99,7 @@ export function BandActivationChart({
           activationText: formatActivation(activation),
         };
       }) ?? [],
-    [evidence, modelInfo?.bands, selectedClassLabel],
+    [evidence, modelInfo?.bands, selectedClassLabel, branch],
   );
   const valuesRef = useRef<typeof values>([]);
   const status = getActivationStatus({ error, evidence, isLoading });
@@ -115,7 +130,7 @@ export function BandActivationChart({
         return;
       }
 
-      const nextHeight = Math.max(88, Math.floor(entry.contentRect.height));
+      const nextHeight = Math.max(32, Math.floor(entry.contentRect.height));
       setPlotHeight((current) => (current !== nextHeight ? nextHeight : current));
       resizeVegaView(viewRef.current);
     });
@@ -147,60 +162,47 @@ export function BandActivationChart({
       },
       background: "transparent",
       data: { name: ACTIVATION_DATA_NAME, values },
-      layer: [
-        {
-          mark: {
-            type: "rule",
-            color: "#cbd5e1",
-            strokeDash: [4, 3],
-          },
-          encoding: {
-            y: {
-              datum: 0,
-              type: "quantitative",
-              axis: createActivationAxis(),
-              scale: createActivationScale(activationScaleDomain),
-            },
-          },
+      resolve: { scale: { y: branch === "scc" && !selectedClassLabel ? "independent" : "shared" } },
+      layer: ["BP", ...(branch === "scc" ? ["SCC"] : [])].map((series) => ({
+        transform: [{ filter: `datum.branch === '${series}'` }],
+        mark: {
+          type: "line" as const,
+          interpolate: "monotone" as const,
+          color: series === "BP" ? "#0e7490" : "#9333a8",
+          strokeWidth: 2.2,
+          ...(series === "SCC" ? { strokeDash: [5, 3] } : {}),
+          point: { filled: true, size: 45 },
         },
-        {
-          mark: {
-            type: "line",
-            interpolate: "monotone",
-            point: {
-              filled: true,
-              fill: "#0e7490",
-              stroke: "#064e56",
-              size: 58,
-              strokeWidth: 1.8,
+        encoding: {
+          x: createBandAxisEncoding(),
+          y: {
+            field: "activation",
+            type: "quantitative" as const,
+            axis: {
+              ...createActivationAxis(),
+              orient: series === "SCC" && !selectedClassLabel ? ("right" as const) : ("left" as const),
+              title: selectedClassLabel ? "Logit contribution" : series === "BP" ? "BP (dB)" : "Normalized SCC",
+              titleAngle: 0,
+              titleX: 0,
+              titleY: -6,
+              titleAlign: series === "SCC" && !selectedClassLabel ? ("right" as const) : ("left" as const),
+              titleBaseline: "bottom" as const,
+              grid: !!selectedClassLabel || series === "BP",
+              titleColor: selectedClassLabel ? "#5d6b78" : series === "BP" ? "#0e7490" : "#9333a8",
             },
-            color: "#0e7490",
-            strokeWidth: 2.2,
+            scale: createActivationScale(activationScaleDomain),
           },
-          encoding: {
-            x: createBandAxisEncoding(),
-            y: {
-              field: "activation",
-              type: "quantitative",
-              axis: createActivationAxis(),
-              scale: createActivationScale(activationScaleDomain),
-            },
-            tooltip: [
-              { field: "band", type: "nominal", title: "Band" },
-              { field: "classLabel", type: "nominal", title: "View" },
-              {
-                field: "rawActivation",
-                type: "quantitative",
-                title: `Activation ${EEG_MODEL_NOTATION.encoderOutput}`,
-                format: ".4f",
-              },
-              { field: "multiplier", type: "quantitative", title: "Class multiplier", format: "+.4f" },
-              { field: "activation", type: "quantitative", title: "Displayed value", format: "+.4f" },
-              { field: "activationText", type: "nominal", title: "Displayed" },
-            ],
-          },
+          tooltip: [
+            { field: "branch", type: "nominal" as const, title: "Branch" },
+            { field: "band", type: "nominal" as const, title: "Band" },
+            { field: "frequencyRange", type: "nominal" as const, title: "Frequency range" },
+            { field: "rawActivation", type: "quantitative" as const, title: "Classifier input", format: ".4f" },
+            { field: "multiplier", type: "quantitative" as const, title: "Class weight", format: "+.4f" },
+            { field: "activation", type: "quantitative" as const, title: "Displayed value", format: "+.4f" },
+            { field: "units", type: "nominal" as const, title: "Units" },
+          ],
         },
-      ],
+      })),
       config: {
         view: { stroke: null },
       },
@@ -240,7 +242,7 @@ export function BandActivationChart({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [activationScaleDomain, activationScaleDomainKey, plotHeight, values.length]);
+  }, [activationScaleDomain, activationScaleDomainKey, plotHeight, values.length, branch, selectedClassLabel]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -276,7 +278,11 @@ export function BandActivationChart({
           </p>
         </div>
         <span className="classification-band-activation-chart-stage">
-          {selectedClassLabel ? (
+          {branch === "scc" ? (
+            <span>
+              {selectedClassLabel ? "BP + normalized SCC × class weights" : "BP + normalized SCC classifier inputs"}
+            </span>
+          ) : selectedClassLabel ? (
             <>
               <MathFormula tex={EEG_MODEL_NOTATION.encoderOutput} />{" "}
               {EEG_MODEL_NOTATION_LABELS.bandActivationDenseMultiplier}
@@ -292,6 +298,9 @@ export function BandActivationChart({
       </div>
 
       <div className="classification-band-activation-chart-shell">
+        {modelInfo?.model_kind === "xeegnet_scc" && (
+          <BranchToggle value={branch} onChange={setBranch} label="SCC activation overlay" bpLabel="–" />
+        )}
         {classLabels.length ? (
           <div className="classification-band-activation-class-selector" aria-label="Band activation class multiplier">
             {classLabels.map((classLabel) => {
@@ -318,6 +327,12 @@ export function BandActivationChart({
             })}
           </div>
         ) : null}
+        {branch === "scc" && (
+          <div className="feature-branch-legend">
+            <span>— BP</span>
+            <span>–– SCC</span>
+          </div>
+        )}
         <div className="classification-band-activation-chart-plot" ref={containerRef} />
         {!values.length || error ? (
           <div
@@ -341,7 +356,7 @@ function createBandAxisEncoding() {
     sort: { field: "order", order: "ascending" as const },
     axis: {
       title: null,
-      labelAngle: -90,
+      labelAngle: 0,
       labelColor: "#5d6b78",
       labelFontSize: 10,
       tickColor: "#d7e0e8",

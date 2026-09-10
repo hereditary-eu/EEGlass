@@ -1,3 +1,5 @@
+import { BranchToggle } from "../ui/BranchToggle";
+import { useFeatureMode } from "../../vacp/useFeatureMode";
 import { useMemo, useState } from "react";
 
 import { EEG_MODEL_NOTATION, EEG_MODEL_NOTATION_LABELS } from "../../constants/eegModelNotation";
@@ -11,17 +13,19 @@ import "./TopologyAttributionPanel.css";
 interface ModelScalpTopologyPanelProps {
   modelName?: string | null;
   compact?: boolean;
+  hasSCC?: boolean;
 }
 
-export function ModelScalpTopologyPanel({ modelName, compact = false }: ModelScalpTopologyPanelProps) {
+export function ModelScalpTopologyPanel({ modelName, compact = false, hasSCC = false }: ModelScalpTopologyPanelProps) {
+  const [branch, setBranch] = useFeatureMode("overview/spatial-weights-branch", hasSCC, "bp", ["bp", "scc"] as const);
   const [selectedBand, setSelectedBand] = useState<TimeseriesBandFilter | null>("alpha");
-  const { scalpTopologies, isLoading, error } = useModelScalpTopologies(modelName);
+  const { scalpTopologies, isLoading, error } = useModelScalpTopologies(modelName, branch);
   const activeBand = useMemo(() => findScalpBand(scalpTopologies, selectedBand), [scalpTopologies, selectedBand]);
   const bandOptions = useMemo(
     () =>
       (scalpTopologies?.bands ?? []).map((band) => ({
         band: band.band,
-        label: band.band,
+        label: `${band.band} (${band.start_hz}–${band.end_hz} Hz)`,
       })),
     [scalpTopologies],
   );
@@ -41,10 +45,12 @@ export function ModelScalpTopologyPanel({ modelName, compact = false }: ModelSca
       <div className="topology-panel-header">
         <h3 className="topology-panel-title">{compact ? "Spatial Weights" : "Model Scalp View"}</h3>
         <p className="topology-panel-stage">
-          {EEG_MODEL_NOTATION_LABELS.spatialLayer} <MathFormula tex={EEG_MODEL_NOTATION.spatialWeight} />
+          {branch === "scc" ? "SCC node weights" : EEG_MODEL_NOTATION_LABELS.spatialLayer}{" "}
+          <MathFormula tex={branch === "scc" ? "w_{f,c}^{SCC}" : EEG_MODEL_NOTATION.spatialWeight} />
         </p>
       </div>
 
+      {hasSCC && <BranchToggle value={branch} onChange={setBranch} label="Spatial weights branch" />}
       <BandSelector
         bands={bandOptions}
         selectedBand={activeBand?.band ?? selectedBand}
@@ -64,7 +70,7 @@ export function ModelScalpTopologyPanel({ modelName, compact = false }: ModelSca
           error={error}
           emptyMessage="No model scalp topology data available."
           compact={compact}
-          ariaLabel="Model spatial weight topomap"
+          ariaLabel={branch === "scc" ? "SCC node weight topomap" : "Model spatial weight topomap"}
         />
       </div>
     </div>
@@ -72,7 +78,9 @@ export function ModelScalpTopologyPanel({ modelName, compact = false }: ModelSca
 }
 
 interface BandSelectorProps {
-  bands: Array<Pick<ModelBandPresentation, "band" | "label">>;
+  bands: Array<
+    Pick<ModelBandPresentation, "band" | "label"> & Partial<Pick<ModelBandPresentation, "start_hz" | "end_hz">>
+  >;
   selectedBand: TimeseriesBandFilter | null;
   onSelectedBandChange: (band: TimeseriesBandFilter) => void;
   compact?: boolean;
@@ -91,9 +99,10 @@ export function BandSelector({ bands, selectedBand, onSelectedBandChange, compac
           className={`topology-panel-band-button${
             selectedBand === band.band ? " topology-panel-band-button--active" : ""
           }`}
+          title={band.start_hz !== undefined ? `${band.label}: ${band.start_hz}–${band.end_hz} Hz` : band.label}
           onClick={() => onSelectedBandChange(band.band)}
         >
-          {band.label}
+          {band.band}
         </button>
       ))}
     </div>

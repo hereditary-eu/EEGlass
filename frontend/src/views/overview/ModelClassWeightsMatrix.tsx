@@ -1,3 +1,5 @@
+import { BranchToggle } from "../../components/ui/BranchToggle";
+import { useFeatureMode } from "../../vacp/useFeatureMode";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -18,6 +20,12 @@ interface ModelClassWeightsMatrixProps {
 const weightsCache = new Map<string, ModelClassWeightsResponse>();
 
 export function ModelClassWeightsMatrix({ modelInfo }: ModelClassWeightsMatrixProps) {
+  const [branch, setBranch] = useFeatureMode(
+    "overview/dense-weights-branch",
+    modelInfo.model_kind === "xeegnet_scc",
+    "bp",
+    ["bp", "scc"] as const,
+  );
   const [weights, setWeights] = useState<ModelClassWeightsResponse | null>(
     () => weightsCache.get(modelInfo.name) ?? null,
   );
@@ -68,18 +76,29 @@ export function ModelClassWeightsMatrix({ modelInfo }: ModelClassWeightsMatrixPr
 
   const activeWeights = weights?.model_name === modelInfo.name ? weights : null;
   const cells = useMemo(
-    () => (activeWeights ? createWeightCells(activeWeights, modelInfo) : []),
-    [activeWeights, modelInfo],
+    () =>
+      activeWeights
+        ? createWeightCells(
+            { ...activeWeights, bands: branch === "scc" ? (activeWeights.scc?.bands ?? []) : activeWeights.bands },
+            modelInfo,
+          )
+        : [],
+    [activeWeights, modelInfo, branch],
   );
 
   return (
     <div className="overview-model-class-weights">
       <div className="overview-model-section-heading">
         <h3>Dense weights</h3>
-        <span>{activeWeights?.layer_name ?? "Dense"}: bands to classes</span>
+        <span>
+          {activeWeights?.layer_name ?? "Dense"}: {branch.toUpperCase()} bands to classes
+        </span>
         {/* <span>{activeWeights?.unit_label ?? "weight"}</span> */}
       </div>
 
+      {modelInfo.model_kind === "xeegnet_scc" && (
+        <BranchToggle value={branch} onChange={setBranch} label="Dense weights branch" />
+      )}
       <div className="overview-model-class-weights-shell">
         {cells.length ? (
           <BandClassMatrix
@@ -124,7 +143,7 @@ function createWeightCells(weights: ModelClassWeightsResponse, modelInfo: ModelI
         valueText,
         weight,
         cellColor: getBandClassDivergingColor(weight, maxAbsWeight),
-        tooltipValue: `${bandLabel} -> ${modelClass.label}: ${valueText}`,
+        tooltipValue: `${bandLabel} (${band.start_hz}–${band.end_hz} Hz) -> ${modelClass.label}: ${valueText}`,
       };
     }),
   );
