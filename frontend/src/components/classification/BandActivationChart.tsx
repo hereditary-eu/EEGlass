@@ -1,4 +1,3 @@
-import { BranchToggle } from "../ui/BranchToggle";
 import { useFeatureMode } from "../../vacp/useFeatureMode";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { changeset } from "vega";
@@ -38,6 +37,7 @@ interface BandActivationDatum {
 }
 
 const ACTIVATION_DATA_NAME = "bandActivationValues";
+type ActivationBranch = "combined" | "bp" | "scc";
 
 export function BandActivationChart({
   datasetId,
@@ -46,12 +46,14 @@ export function BandActivationChart({
   modelInfo,
   windowIndex,
 }: BandActivationChartProps) {
+  const hasSCC = modelInfo?.model_kind === "xeegnet_scc";
   const [branch, setBranch] = useFeatureMode(
     "patient-view/activation-overlay",
-    modelInfo?.model_kind === "xeegnet_scc",
-    "bp",
-    ["bp", "scc"] as const,
+    hasSCC,
+    "combined",
+    ["combined", "bp", "scc"] as const,
   );
+  const activeBranch: ActivationBranch = hasSCC ? branch : "bp";
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
   const [plotHeight, setPlotHeight] = useState(132);
@@ -75,8 +77,10 @@ export function BandActivationChart({
   const values = useMemo(
     () =>
       [
-        ...(evidence?.bands.map((band) => ({ ...band, branch: "BP" })) ?? []),
-        ...(branch === "scc" ? (evidence?.scc?.bands.map((band) => ({ ...band, branch: "SCC" })) ?? []) : []),
+        ...(activeBranch !== "scc" ? (evidence?.bands.map((band) => ({ ...band, branch: "BP" })) ?? []) : []),
+        ...(activeBranch !== "bp"
+          ? (evidence?.scc?.bands.map((band) => ({ ...band, branch: "SCC" })) ?? [])
+          : []),
       ].map((band, index) => {
         const order = index % 7;
         const contribution = selectedClassLabel
@@ -99,7 +103,7 @@ export function BandActivationChart({
           activationText: formatActivation(activation),
         };
       }) ?? [],
-    [evidence, modelInfo?.bands, selectedClassLabel, branch],
+    [evidence, modelInfo?.bands, selectedClassLabel, activeBranch],
   );
   const valuesRef = useRef<typeof values>([]);
   const status = getActivationStatus({ error, evidence, isLoading });
@@ -162,8 +166,8 @@ export function BandActivationChart({
       },
       background: "transparent",
       data: { name: ACTIVATION_DATA_NAME, values },
-      resolve: { scale: { y: branch === "scc" && !selectedClassLabel ? "independent" : "shared" } },
-      layer: ["BP", ...(branch === "scc" ? ["SCC"] : [])].map((series) => ({
+      resolve: { scale: { y: activeBranch === "combined" && !selectedClassLabel ? "independent" : "shared" } },
+      layer: getVisibleSeries(activeBranch).map((series) => ({
         transform: [{ filter: `datum.branch === '${series}'` }],
         mark: {
           type: "line" as const,
@@ -180,14 +184,20 @@ export function BandActivationChart({
             type: "quantitative" as const,
             axis: {
               ...createActivationAxis(),
-              orient: series === "SCC" && !selectedClassLabel ? ("right" as const) : ("left" as const),
+              orient:
+                series === "SCC" && activeBranch === "combined" && !selectedClassLabel
+                  ? ("right" as const)
+                  : ("left" as const),
               title: selectedClassLabel ? "Logit contribution" : series === "BP" ? "BP (dB)" : "Normalized SCC",
               titleAngle: 0,
               titleX: 0,
               titleY: -6,
-              titleAlign: series === "SCC" && !selectedClassLabel ? ("right" as const) : ("left" as const),
+              titleAlign:
+                series === "SCC" && activeBranch === "combined" && !selectedClassLabel
+                  ? ("right" as const)
+                  : ("left" as const),
               titleBaseline: "bottom" as const,
-              grid: !!selectedClassLabel || series === "BP",
+              grid: !!selectedClassLabel || series === "BP" || activeBranch === "scc",
               titleColor: selectedClassLabel ? "#5d6b78" : series === "BP" ? "#0e7490" : "#9333a8",
             },
             scale: createActivationScale(activationScaleDomain),
@@ -242,7 +252,7 @@ export function BandActivationChart({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [activationScaleDomain, activationScaleDomainKey, plotHeight, values.length, branch, selectedClassLabel]);
+  }, [activationScaleDomain, activationScaleDomainKey, plotHeight, values.length, activeBranch, selectedClassLabel]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -278,10 +288,14 @@ export function BandActivationChart({
           </p>
         </div>
         <span className="classification-band-activation-chart-stage">
-          {branch === "scc" ? (
+          {hasSCC && activeBranch === "combined" ? (
             <span>
               {selectedClassLabel ? "BP + normalized SCC × class weights" : "BP + normalized SCC classifier inputs"}
             </span>
+          ) : hasSCC && activeBranch === "scc" ? (
+            <span>{selectedClassLabel ? "Normalized SCC × class weights" : "Normalized SCC classifier inputs"}</span>
+          ) : hasSCC && activeBranch === "bp" ? (
+            <span>{selectedClassLabel ? "BP × class weights" : "BP classifier inputs"}</span>
           ) : selectedClassLabel ? (
             <>
               <MathFormula tex={EEG_MODEL_NOTATION.encoderOutput} />{" "}
@@ -298,36 +312,43 @@ export function BandActivationChart({
       </div>
 
       <div className="classification-band-activation-chart-shell">
-        {modelInfo?.model_kind === "xeegnet_scc" && (
-          <BranchToggle value={branch} onChange={setBranch} label="SCC activation overlay" bpLabel="–" />
-        )}
-        {classLabels.length ? (
-          <div className="classification-band-activation-class-selector" aria-label="Band activation class multiplier">
-            {classLabels.map((classLabel) => {
-              const isSelected = classLabel === selectedClassLabel;
-              const colors = getEmbeddingClassColors(classLabel, modelInfo?.classes);
-              return (
-                <button
-                  key={classLabel}
-                  type="button"
-                  className={`classification-band-activation-class-button${
-                    isSelected ? " classification-band-activation-class-button--active" : ""
-                  }`}
-                  style={
-                    isSelected
-                      ? { backgroundColor: colors.fill, color: colors.stroke, borderColor: colors.stroke }
-                      : { borderColor: colors.fill }
-                  }
-                  title={isSelected ? "Clear class multiplier" : `Apply ${classLabel} dense multipliers`}
-                  onClick={() => setSelectedClassLabel((current) => (current === classLabel ? null : classLabel))}
-                >
-                  {formatCompactClassLabel(classLabel, modelInfo?.classes)}
-                </button>
-              );
-            })}
+        {(hasSCC || classLabels.length > 0) && (
+          <div className="classification-band-activation-controls">
+            {hasSCC && <ActivationBranchSelector value={branch} onChange={setBranch} />}
+            {classLabels.length > 0 && (
+              <div
+                className="classification-band-activation-class-selector"
+                aria-label="Band activation class multiplier"
+              >
+                {classLabels.map((classLabel) => {
+                  const isSelected = classLabel === selectedClassLabel;
+                  const colors = getEmbeddingClassColors(classLabel, modelInfo?.classes);
+                  return (
+                    <button
+                      key={classLabel}
+                      type="button"
+                      className={`classification-band-activation-class-button${
+                        isSelected ? " classification-band-activation-class-button--active" : ""
+                      }`}
+                      style={
+                        isSelected
+                          ? { backgroundColor: colors.fill, color: colors.stroke, borderColor: colors.stroke }
+                          : { borderColor: colors.fill }
+                      }
+                      title={isSelected ? "Clear class multiplier" : `Apply ${classLabel} dense multipliers`}
+                      onClick={() =>
+                        setSelectedClassLabel((current) => (current === classLabel ? null : classLabel))
+                      }
+                    >
+                      {formatCompactClassLabel(classLabel, modelInfo?.classes)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        ) : null}
-        {branch === "scc" && (
+        )}
+        {hasSCC && activeBranch === "combined" && (
           <div className="feature-branch-legend">
             <span>— BP</span>
             <span>–– SCC</span>
@@ -347,6 +368,50 @@ export function BandActivationChart({
       </div>
     </div>
   );
+}
+
+function ActivationBranchSelector({
+  value,
+  onChange,
+}: {
+  value: ActivationBranch;
+  onChange: (branch: ActivationBranch) => void;
+}) {
+  const options = [
+    { value: "combined", label: "Both", title: "Show BP and SCC" },
+    { value: "bp", label: "BP", title: "Show BP only" },
+    { value: "scc", label: "SCC", title: "Show SCC only" },
+  ] as const;
+
+  return (
+    <div
+      className="classification-band-activation-class-selector classification-band-activation-branch-selector"
+      role="group"
+      aria-label="Visible activation series"
+    >
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className={`classification-band-activation-class-button${
+            value === option.value ? " classification-band-activation-class-button--active" : ""
+          }`}
+          data-branch={option.value}
+          aria-pressed={value === option.value}
+          title={option.title}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function getVisibleSeries(branch: ActivationBranch): Array<"BP" | "SCC"> {
+  if (branch === "bp") return ["BP"];
+  if (branch === "scc") return ["SCC"];
+  return ["BP", "SCC"];
 }
 
 function createBandAxisEncoding() {

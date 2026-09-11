@@ -155,6 +155,7 @@ def is_model_artifact_valid(
         and artifact.get("checkpoint_key") == checkpoint_key_value
         and isinstance(artifact.get("response"), dict)
         and isinstance(artifact.get("summary"), dict)
+        and is_branch_contribution_summary_valid(artifact.get("summary"), model_name)
         and is_embedding_summary_valid(artifact.get("embedding"), model_name)
         and is_window_embedding_summary_valid(artifact.get("window_embeddings"), model_name)
         and is_band_power_stats_summary_valid(artifact.get("band_power_stats"))
@@ -162,6 +163,38 @@ def is_model_artifact_valid(
             get_model_spec(model_name).model_kind != "xeegnet_scc"
             or is_scc_stats_summary_valid(artifact.get("scc_stats"), model_name)
         )
+    )
+
+
+def is_branch_contribution_summary_valid(summary: Any, model_name: str) -> bool:
+    from pydantic import ValidationError
+
+    from backend.pydantic_models.prediction_cache import ModelPredictionSummary
+
+    if get_model_spec(model_name).model_kind != "xeegnet_scc":
+        return True
+    try:
+        prediction_summary = ModelPredictionSummary.model_validate(summary)
+        contribution_summary = prediction_summary.branch_contributions
+    except ValidationError:
+        return False
+    if contribution_summary is None:
+        return False
+    if (
+        contribution_summary.window_count != prediction_summary.total_windows
+        or contribution_summary.analyzed_window_count > contribution_summary.window_count
+    ):
+        return False
+    if len(contribution_summary.branches) != 2 or {branch.branch for branch in contribution_summary.branches} != {
+        "bp",
+        "scc",
+    }:
+        return False
+    return all(
+        metric.lower_95 <= metric.mean <= metric.upper_95
+        for branch in contribution_summary.branches
+        for metric in (branch.share, branch.addend_spread, branch.cancellation)
+        if metric is not None
     )
 
 

@@ -15,6 +15,7 @@ import type {
 import { ModelScalpTopologyPanel } from "../../components";
 import { PredictionCacheProgressBar } from "./PredictionCacheProgressBar";
 import { ModelClassWeightsMatrix } from "./ModelClassWeightsMatrix";
+import { ModelBranchContributionOverview } from "./ModelBranchContributionOverview";
 import { getCacheSummary, isCacheJobRunning } from "./overviewUtils";
 
 interface ModelCardProps {
@@ -114,7 +115,11 @@ export function ModelCard({
   };
 
   return (
-    <section className="overview-placeholder-card overview-model-card">
+    <section
+      className={`overview-placeholder-card overview-model-card${
+        modelInfo?.model_kind === "xeegnet_scc" ? " overview-model-card--scc" : ""
+      }`}
+    >
       <div className="overview-model-card-header">
         <div>
           <p className="overview-kicker">Model card</p>
@@ -278,6 +283,9 @@ export function ModelCard({
               />
             </div>
             <ModelClassWeightsMatrix key={modelInfo.name} modelInfo={modelInfo} />
+            {modelInfo.model_kind === "xeegnet_scc" && (
+              <ModelBranchContributionOverview cacheStatus={cacheStatus} isCacheRunning={isCacheRunning} />
+            )}
           </>
         ) : null}
 

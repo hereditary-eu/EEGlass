@@ -209,7 +209,7 @@ select {
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 3fr) minmax(0, 3fr) minmax(0, 4fr);
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 0.45rem;
   overflow: hidden;
@@ -333,34 +333,55 @@ select {
 }
 
 .feature-branch-toggle {
-  display: flex;
-  gap: 3px;
-  justify-content: flex-end;
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  width: fit-content;
+  gap: 0;
   margin: 3px 0;
+  overflow: hidden;
+  border: 1px solid #d7e0e8;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 82%);
 }
+
 .feature-branch-toggle button {
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #fff;
-  color: #475569;
-  padding: 3px 9px;
-  font: inherit;
-  font-size: 10px;
+  border: 0;
+  border-right: 1px solid #d7e0e8;
+  border-radius: 0;
+  background: transparent;
+  color: #748391;
+  padding: 0.13rem 0.34rem;
+  font-size: 0.58rem;
+  font-weight: 750;
+  line-height: 1.1;
   cursor: pointer;
 }
+
+.feature-branch-toggle button:last-child {
+  border-right: 0;
+}
+
+.feature-branch-toggle button:hover {
+  background: #f8fbfd;
+  color: #334155;
+}
+
 .feature-branch-toggle button[aria-pressed="true"] {
-  background: #e0f2f5;
+  background: rgb(14 116 144 / 10%);
   color: #0e7490;
   border-color: #0e7490;
 }
+
 .feature-branch-toggle button[data-branch="scc"][aria-pressed="true"] {
-  background: #f3e8ff;
+  background: rgb(147 51 168 / 10%);
   color: #9333a8;
   border-color: #9333a8;
 }
+
 .feature-branch-toggle button:focus-visible {
-  outline: 2px solid #0e7490;
-  outline-offset: 2px;
+  outline: 2px solid currentcolor;
+  outline-offset: -2px;
 }
 .feature-branch-legend {
   display: flex;

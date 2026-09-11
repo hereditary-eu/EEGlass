@@ -60,6 +60,23 @@
   align-items: baseline;
 }
 
+.topology-panel-model-header-controls {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.topology-panel-model-header-controls .topology-panel-stage {
+  min-width: 0;
+}
+
+.topology-panel-model-header-controls .feature-branch-toggle {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
 .topology-panel-eyebrow {
   margin: 0 0 0.15rem;
   color: #748391;

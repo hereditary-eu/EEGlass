@@ -44,13 +44,15 @@ export function ModelScalpTopologyPanel({ modelName, compact = false, hasSCC = f
     <div className={`topology-panel topology-panel--model${compact ? " topology-panel--compact" : ""}`}>
       <div className="topology-panel-header">
         <h3 className="topology-panel-title">{compact ? "Spatial Weights" : "Model Scalp View"}</h3>
-        <p className="topology-panel-stage">
-          {branch === "scc" ? "SCC node weights" : EEG_MODEL_NOTATION_LABELS.spatialLayer}{" "}
-          <MathFormula tex={branch === "scc" ? "w_{f,c}^{SCC}" : EEG_MODEL_NOTATION.spatialWeight} />
-        </p>
+        <div className="topology-panel-model-header-controls">
+          <p className="topology-panel-stage">
+            {branch === "scc" ? "SCC node weights" : EEG_MODEL_NOTATION_LABELS.spatialLayer}{" "}
+            <MathFormula tex={branch === "scc" ? "w_{f,c}^{SCC}" : EEG_MODEL_NOTATION.spatialWeight} />
+          </p>
+          {hasSCC && <BranchToggle value={branch} onChange={setBranch} label="Spatial weights branch" />}
+        </div>
       </div>
 
-      {hasSCC && <BranchToggle value={branch} onChange={setBranch} label="Spatial weights branch" />}
       <BandSelector
         bands={bandOptions}
         selectedBand={activeBand?.band ?? selectedBand}

@@ -130,7 +130,12 @@
   overflow: auto hidden;
 }
 
+.classification-evidence-chart-grid--with-branch-totals {
+  grid-template-columns: minmax(0, 1fr) 9.5rem 4.6rem;
+}
+
 .classification-evidence-heatmap,
+.classification-evidence-branch-totals,
 .classification-evidence-logits-chart {
   min-width: 0;
   min-height: 0;
@@ -139,6 +144,74 @@
   border-radius: 10px;
   background: #ffffff;
   overflow: hidden;
+}
+
+.classification-evidence-branch-totals {
+  display: grid;
+  grid-template-rows: auto 0.85rem 2rem;
+  border-color: rgb(100 116 139 / 45%);
+  background: rgb(248 250 252 / 96%);
+}
+
+.classification-evidence-branch-totals-chart {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.classification-evidence-branch-totals-chart > div {
+  width: 100%;
+}
+
+.classification-evidence-branch-magnitude-label {
+  display: grid;
+  place-items: center;
+  border-top: 1px solid rgb(100 116 139 / 32%);
+  color: #748391;
+  font-size: 0.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.classification-evidence-branch-magnitudes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.classification-evidence-branch-magnitude {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 0.18rem;
+  padding: 0.2rem 0.3rem;
+  color: #5d6b78;
+  font-size: 0.56rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: right;
+}
+
+.classification-evidence-branch-magnitude + .classification-evidence-branch-magnitude {
+  border-left: 1px solid rgb(100 116 139 / 24%);
+}
+
+.classification-evidence-branch-magnitude-track {
+  height: 0.28rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.classification-evidence-branch-magnitude-track > span {
+  display: block;
+  min-width: 1px;
+  height: 100%;
+  border-radius: inherit;
+  background: #0e7490;
+}
+
+.classification-evidence-branch-magnitude[data-branch="scc"] .classification-evidence-branch-magnitude-track > span {
+  background: #9333a8;
 }
 
 .classification-evidence-logits-chart {
@@ -248,6 +321,10 @@
 .classification-evidence--compact .classification-evidence-chart-grid {
   grid-template-columns: minmax(0, 1fr) 3.7rem;
   gap: 0.28rem;
+}
+
+.classification-evidence--compact .classification-evidence-chart-grid--with-branch-totals {
+  grid-template-columns: minmax(0, 1fr) 7.6rem 3.7rem;
 }
 
 .classification-evidence--compact .classification-evidence-footer {
@@ -368,31 +445,40 @@
   height: auto;
 }
 
-.classification-band-activation-chart-shell > .feature-branch-toggle,
-.classification-band-activation-chart-shell > .feature-branch-legend {
+.classification-band-activation-controls {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.18rem;
+}
+
+.classification-band-activation-branch-selector {
   flex-shrink: 0;
-  margin: 0;
+}
+
+.classification-band-activation-branch-selector button[data-branch="bp"][aria-pressed="true"] {
+  background: rgb(14 116 144 / 10%);
+  color: #0e7490;
+  border-color: #0e7490;
+}
+
+.classification-band-activation-branch-selector button[data-branch="scc"][aria-pressed="true"] {
+  background: rgb(147 51 168 / 10%);
+  color: #9333a8;
+  border-color: #9333a8;
+}
+
+.classification-band-activation-branch-selector button[data-branch="combined"][aria-pressed="true"] {
+  border-color: #94a3b8;
+  background: linear-gradient(90deg, rgb(14 116 144 / 20%) 0 50%, rgb(147 51 168 / 20%) 50% 100%);
+  color: #334155;
 }
 
 .classification-band-activation-chart-shell > .feature-branch-legend {
   position: absolute;
   top: 0.5rem;
   left: 0.45rem;
-}
-
-.classification-evidence--compact:has(.feature-branch-toggle) .classification-evidence-footer {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 3px 6px;
-}
-
-.classification-evidence--compact:has(.feature-branch-toggle) .classification-evidence-decision {
-  grid-column: 1 / -1;
-  justify-self: start;
-}
-
-.classification-evidence--compact:has(.feature-branch-toggle) .classification-evidence-chart-grid {
-  min-height: 86px;
 }
 
 .classification-band-activation-chart-plot > div {

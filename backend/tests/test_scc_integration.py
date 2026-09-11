@@ -16,6 +16,13 @@ from fastapi.testclient import TestClient
 from backend.app import app
 from backend.ml.model_registry import get_model_spec, list_model_specs
 from backend.ml.scc_cache import SCCStore, calc_mean_scc_per_channel, compute_scc_windows
+from backend.pydantic_models.class_evidence import (
+    ModelClassWeight,
+    ModelClassWeightsBand,
+    ModelClassWeightsResponse,
+    ModelSCCWeights,
+)
+from backend.pydantic_models.prediction_cache import ModelPredictionSummary
 from backend.services.model_errors import ModelNotFoundError, ModelServiceError, ModelValidationError
 from backend.services.model_service import (
     ModelRuntime,
@@ -24,6 +31,8 @@ from backend.services.model_service import (
     compute_class_evidence_response,
     compute_window_scalp_topology_response,
 )
+from backend.services.prediction_cache_artifacts import is_branch_contribution_summary_valid
+from backend.services.prediction_cache_branch_contributions import build_branch_contribution_summary
 from backend.services.scc_service import SCCService
 from backend.services.timeseries_service import TimeseriesService
 
@@ -102,6 +111,56 @@ class SCCIntegrationTests(unittest.TestCase):
         self.assertAlmostEqual(stats.channels[0].bands[0].lower_2sigma, -0.1)
         self.assertEqual(stats.subject_count, 2)
         self.assertEqual(stats.window_count, 10)
+
+    def test_cached_branch_contribution_summary_uses_equal_window_shares_and_tracks_addend_spread(self):
+        def band(name, feature_index):
+            return ModelClassWeightsBand(
+                band=name,
+                class_weights=[ModelClassWeight(class_id=0, class_label="Healthy", weight=1.0)],
+                start_hz=float(feature_index),
+                end_hz=float(feature_index + 1),
+            )
+
+        weights = ModelClassWeightsResponse(
+            model_name="fixture",
+            checkpoint_signature="fixture",
+            layer_name="Dense",
+            unit_label="weight",
+            global_max_abs_weight=1.0,
+            bands=[band("bp-1", 0), band("bp-2", 1)],
+            scc=ModelSCCWeights(bands=[band("scc-1", 2), band("scc-2", 3)]),
+        )
+        summary = build_branch_contribution_summary(
+            [[1.0, 1.0, 1.0, 1.0], [3.0, 1.0, 1.0, 0.0]],
+            weights,
+        )
+        branches = {branch.branch: branch for branch in summary.branches}
+
+        self.assertEqual(summary.window_count, 2)
+        self.assertEqual(summary.analyzed_window_count, 2)
+        self.assertAlmostEqual(branches["scc"].share.mean, 0.35)
+        self.assertAlmostEqual(branches["bp"].share.mean, 0.65)
+        self.assertAlmostEqual(branches["bp"].addend_spread.mean, 0.125)
+        self.assertAlmostEqual(branches["scc"].addend_spread.mean, 0.5)
+        self.assertAlmostEqual(branches["bp"].cancellation.mean, 0.0)
+        self.assertAlmostEqual(branches["scc"].cancellation.mean, 0.0)
+
+        cancellation_summary = build_branch_contribution_summary([[3.0, -1.0, 5.0, -3.0]], weights)
+        cancellation_branches = {branch.branch: branch for branch in cancellation_summary.branches}
+        self.assertAlmostEqual(cancellation_branches["bp"].share.mean, 0.5)
+        self.assertAlmostEqual(cancellation_branches["scc"].share.mean, 0.5)
+        self.assertAlmostEqual(cancellation_branches["bp"].cancellation.mean, 0.5)
+        self.assertAlmostEqual(cancellation_branches["scc"].cancellation.mean, 0.75)
+
+        prediction_summary = ModelPredictionSummary(
+            subject_id="sub-001",
+            total_windows=2,
+            windows_per_class=[],
+            branch_contributions=summary,
+        ).model_dump()
+        self.assertTrue(is_branch_contribution_summary_valid(prediction_summary, self.spec.name))
+        prediction_summary["branch_contributions"]["window_count"] = 3
+        self.assertFalse(is_branch_contribution_summary_valid(prediction_summary, self.spec.name))
 
     def test_cache_cold_warm_concurrent_and_invalid_shape(self):
         with tempfile.TemporaryDirectory() as directory:

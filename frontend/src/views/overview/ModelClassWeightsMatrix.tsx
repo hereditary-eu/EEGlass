@@ -90,15 +90,16 @@ export function ModelClassWeightsMatrix({ modelInfo }: ModelClassWeightsMatrixPr
     <div className="overview-model-class-weights">
       <div className="overview-model-section-heading">
         <h3>Dense weights</h3>
-        <span>
-          {activeWeights?.layer_name ?? "Dense"}: {branch.toUpperCase()} bands to classes
-        </span>
-        {/* <span>{activeWeights?.unit_label ?? "weight"}</span> */}
+        <div className="overview-model-section-heading-controls">
+          <span>
+            {activeWeights?.layer_name ?? "Dense"}: {branch.toUpperCase()} bands to classes
+          </span>
+          {modelInfo.model_kind === "xeegnet_scc" && (
+            <BranchToggle value={branch} onChange={setBranch} label="Dense weights branch" />
+          )}
+        </div>
       </div>
 
-      {modelInfo.model_kind === "xeegnet_scc" && (
-        <BranchToggle value={branch} onChange={setBranch} label="Dense weights branch" />
-      )}
       <div className="overview-model-class-weights-shell">
         {cells.length ? (
           <BandClassMatrix

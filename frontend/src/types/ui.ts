@@ -191,6 +191,27 @@ export interface ModelPredictionClassWindowCount {
   count: number;
 }
 
+export interface ModelContributionDistribution {
+  mean: number;
+  lower_95: number;
+  upper_95: number;
+}
+
+export interface ModelBranchContributionStats {
+  branch: "bp" | "scc";
+  share: ModelContributionDistribution;
+  addend_spread?: ModelContributionDistribution | null;
+  cancellation?: ModelContributionDistribution | null;
+}
+
+export interface ModelBranchContributionSummary {
+  version: 1;
+  interval_method: "empirical_95";
+  window_count: number;
+  analyzed_window_count: number;
+  branches: ModelBranchContributionStats[];
+}
+
 export interface ModelPredictionSummary {
   subject_id: string;
   true_label?: string | null;
@@ -198,6 +219,7 @@ export interface ModelPredictionSummary {
   mean_confidence?: number | null;
   total_windows: number;
   windows_per_class: ModelPredictionClassWindowCount[];
+  branch_contributions?: ModelBranchContributionSummary | null;
 }
 
 export interface ModelPredictionCacheStatus {

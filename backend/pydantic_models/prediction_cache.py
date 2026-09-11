@@ -8,6 +8,27 @@ from backend.ml.model_vars import normalize_model_class_label
 from backend.pydantic_models.timeseries import TimeseriesSource
 
 
+class ModelContributionDistribution(BaseModel):
+    mean: float = Field(ge=0, le=1)
+    lower_95: float = Field(ge=0, le=1)
+    upper_95: float = Field(ge=0, le=1)
+
+
+class ModelBranchContributionStats(BaseModel):
+    branch: Literal["bp", "scc"]
+    share: ModelContributionDistribution
+    addend_spread: ModelContributionDistribution | None = None
+    cancellation: ModelContributionDistribution | None = None
+
+
+class ModelBranchContributionSummary(BaseModel):
+    version: Literal[1] = 1
+    interval_method: Literal["empirical_95"] = "empirical_95"
+    window_count: int = Field(ge=1)
+    analyzed_window_count: int = Field(ge=1)
+    branches: list[ModelBranchContributionStats]
+
+
 class ModelPredictionCacheJobRequest(BaseModel):
     source: TimeseriesSource = "derivatives"
 
@@ -51,6 +72,7 @@ class ModelPredictionSummary(BaseModel):
     mean_confidence: float | None = None
     total_windows: int = 0
     windows_per_class: list[ModelPredictionClassWindowCount]
+    branch_contributions: ModelBranchContributionSummary | None = None
 
     @field_validator("true_label", "predicted_label")
     @classmethod

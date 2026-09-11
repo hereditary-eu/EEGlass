@@ -183,6 +183,8 @@ export function ClassContributionsPanel({
     }
     return rows;
   }, [visibleEvidence, evidence, classLabels, modelClasses, displayMode, maxAbsContribution, branch]);
+  const bandContributionRows = contributionRows.filter((row) => !row.isTotal);
+  const branchTotalRows = contributionRows.filter((row) => row.isTotal);
   const selectTotal = (band: string) => {
     const selected = band === "ΣBP" ? "bp" : band === "ΣSCC" ? "scc" : null;
     if (selected) setBranch((current) => (current === selected ? "combined" : selected));
@@ -223,40 +225,24 @@ export function ClassContributionsPanel({
         )}
         {evidence ? (
           <>
-            <div className="classification-evidence-chart-grid">
+            <div
+              className={`classification-evidence-chart-grid${evidence.scc ? " classification-evidence-chart-grid--with-branch-totals" : ""}`}
+            >
               <BandClassMatrix
-                cells={contributionRows}
-                onBandClick={evidence.scc ? selectTotal : undefined}
+                cells={bandContributionRows}
                 className="classification-evidence-heatmap"
                 rowHeight={compact ? (evidence.scc ? 28 : 34) : 76}
                 minHeight={compact ? (evidence.scc ? 84 : 102) : 120}
                 topPadding={compact ? 18 : 31}
                 tooltip={createContributionTooltip()}
               />
+              {evidence.scc && (
+                <BranchTotalsPanel rows={branchTotalRows} compact={compact} onBandClick={selectTotal} />
+              )}
               <ClassLogitPanel rows={logitRows} compact={compact} hasSCC={!!evidence.scc} />
             </div>
 
             <div className="classification-evidence-footer">
-              {evidence.scc && (
-                <div className="feature-branch-toggle" role="group" aria-label="Isolate class contribution branch">
-                  <button
-                    type="button"
-                    data-branch="scc"
-                    aria-pressed={branch === "scc"}
-                    onClick={() => selectTotal("ΣSCC")}
-                  >
-                    ΣSCC
-                  </button>
-                  <button
-                    type="button"
-                    data-branch="bp"
-                    aria-pressed={branch === "bp"}
-                    onClick={() => selectTotal("ΣBP")}
-                  >
-                    ΣBP
-                  </button>
-                </div>
-              )}
               <div className="classification-evidence-footer-left">
                 <div className="classification-evidence-mode-toggle" aria-label="Evidence value mode">
                   <button
@@ -299,6 +285,61 @@ export function ClassContributionsPanel({
             Click a 4s prediction window to inspect class contributions.
           </div>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+function BranchTotalsPanel({
+  rows,
+  compact,
+  onBandClick,
+}: {
+  rows: ClassContributionDatum[];
+  compact: boolean;
+  onBandClick: (band: string) => void;
+}) {
+  const magnitudes = ["ΣSCC", "ΣBP"].map((band) => ({
+    band,
+    value: rows
+      .filter((row) => row.band === band)
+      .reduce((sum, row) => sum + Math.abs(row.contributionRaw), 0),
+  }));
+  const totalMagnitude = magnitudes.reduce((sum, { value }) => sum + value, 0);
+  const percentages = magnitudes.map(({ value }) => (totalMagnitude > 0 ? (value / totalMagnitude) * 100 : 0));
+  const displayedPercentages = totalMagnitude > 0 ? [Math.round(percentages[0]!), 0] : [0, 0];
+  displayedPercentages[1] = totalMagnitude > 0 ? 100 - displayedPercentages[0]! : 0;
+
+  return (
+    <div className="classification-evidence-branch-totals">
+      <BandClassMatrix
+        cells={rows}
+        onBandClick={onBandClick}
+        className="classification-evidence-branch-totals-chart"
+        rowHeight={compact ? 28 : 76}
+        minHeight={compact ? 84 : 120}
+        topPadding={compact ? 18 : 31}
+        showClassAxis={false}
+        tooltip={createContributionTooltip()}
+      />
+      <div className="classification-evidence-branch-magnitude-label">Share of |contribution|</div>
+      <div className="classification-evidence-branch-magnitudes" aria-label="Relative total contribution by branch">
+        {magnitudes.map(({ band }, index) => {
+          const percentage = percentages[index]!;
+          return (
+            <div
+              key={band}
+              className="classification-evidence-branch-magnitude"
+              data-branch={band === "ΣSCC" ? "scc" : "bp"}
+              title={`${band} share of absolute contribution: ${percentage.toFixed(1)}%`}
+            >
+              <span>{displayedPercentages[index]}%</span>
+              <div className="classification-evidence-branch-magnitude-track" aria-hidden="true">
+                <span style={{ width: `${percentage}%` }} />
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

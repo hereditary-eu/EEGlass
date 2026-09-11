@@ -16,6 +16,7 @@ from backend.services.prediction_cache_artifacts import (
     subject_path,
     write_json_atomic,
 )
+from backend.services.prediction_cache_branch_contributions import build_branch_contribution_summary
 from backend.services.prediction_cache_summary import build_prediction_summary
 from backend.services.timeseries_service import TimeseriesService, TimeseriesServiceError
 
@@ -48,6 +49,19 @@ def write_prediction_artifact(
         mode="intra_patient",
         model_name=model_name,
     )
+    prediction_summary = build_prediction_summary(
+        response=response,
+        true_label=_get_subject_label(dataset_id, subject_id),
+    )
+    if spec.model_kind == "xeegnet_scc":
+        prediction_summary = prediction_summary.model_copy(
+            update={
+                "branch_contributions": build_branch_contribution_summary(
+                    window_embedding_values,
+                    ModelService.get_class_weights(model_name),
+                )
+            }
+        )
     prediction_artifact = {
         "preprocessing_version": PREPROCESSING_VERSION,
         "model_name": model_name,
@@ -57,10 +71,7 @@ def write_prediction_artifact(
         "subject_id": subject_id,
         "source": source,
         "created_at": _now(),
-        "summary": build_prediction_summary(
-            response=response,
-            true_label=_get_subject_label(dataset_id, subject_id),
-        ).model_dump(mode="json"),
+        "summary": prediction_summary.model_dump(mode="json"),
         "embedding": {
             "layer_name": spec.embedding_layer,
             "label": PENULTIMATE_EMBEDDING_LABEL,
