@@ -323,7 +323,9 @@
 }
 
 .classification-evidence--compact .classification-evidence-body {
+  grid-template-rows: auto auto;
   gap: 0.38rem;
+  min-height: 5rem;
   padding: 0.42rem;
 }
 

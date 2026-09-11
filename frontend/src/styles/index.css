@@ -238,11 +238,16 @@ select {
 }
 
 .patient-view-slot--classification-stack {
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, max-content);
 }
 
 .patient-view-slot--classification-stack > .classification-band-activation-chart {
   border-bottom: 1px solid #d7e0e8;
+}
+
+.patient-view-slot--classification-stack > .classification-evidence {
+  height: auto;
+  max-height: 100%;
 }
 
 .patient-view-slot--timeseries {
