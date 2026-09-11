@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ModelBandPowerStatsMode, ModelInfoResponse, SCCResponse, SCCStatsResponse } from "../../types";
 import { ModelService } from "../../services/ModelService";
 import { useFeatureMode } from "../../vacp/useFeatureMode";
@@ -14,7 +14,7 @@ export function SpectralMeasurementsPanel(
   const hasSCC = props.modelInfo?.model_kind === "xeegnet_scc";
   const [branch, setBranch] = useFeatureMode("patient-view/measurement-branch", hasSCC, "bp", ["bp", "scc"] as const);
   const [scc, setSCC] = useState<SCCResponse | null>(null);
-  const [stats, setStats] = useState<SCCStatsResponse | null>(null);
+  const [stats, setStats] = useState<SCCStatsResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingStats, setLoadingStats] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +23,8 @@ export function SpectralMeasurementsPanel(
   // SCC reference failures must stay visible; BP's existing unavailable-reference
   // fallback must not change the selected SCC reference mode.
   const [sccStatsMode, setSCCStatsMode] = useState<ModelBandPowerStatsMode>("intra_patient");
-  const [sccCohort, setSCCCohort] = useState<string | null>(null);
+  const [sccCohorts, setSCCCohorts] = useState<string[]>([]);
+  const statsCacheRef = useRef(new Map<string, SCCStatsResponse>());
   const name = props.modelInfo?.name;
   useEffect(() => {
     let current = true;
@@ -48,21 +49,54 @@ export function SpectralMeasurementsPanel(
   }, [branch, name, props.datasetId, props.subjectId, props.selectedWindowIndex]);
   useEffect(() => {
     let current = true;
-    setStats(null);
+    setStats([]);
     setStatsError(null);
     setLoadingStats(false);
     if (branch !== "scc" || !name || props.selectedWindowIndex === null) return;
+    const cohortLabels = sccStatsMode === "inter_patient" && sccCohorts.length ? sccCohorts : [null];
+    const requests = cohortLabels.map((cohortLabel) => {
+      const cacheKey = `${name}::${props.datasetId}::${props.subjectId}::${sccStatsMode}::${cohortLabel ?? "all"}`;
+      return { cohortLabel, cacheKey, cached: statsCacheRef.current.get(cacheKey) };
+    });
+    const cachedStats = requests.every((request) => request.cached)
+      ? requests.map((request) => request.cached as SCCStatsResponse)
+      : null;
+    if (cachedStats) {
+      setStats(cachedStats);
+      setInterUnavailable(false);
+      return;
+    }
+
     setLoadingStats(true);
-    ModelService.getSCCStats(props.datasetId, props.subjectId, name, sccStatsMode, sccCohort)
-      .then((value) => {
+    Promise.all(
+      requests.map((request) =>
+        request.cached
+          ? Promise.resolve(request.cached)
+          : ModelService.getSCCStats(
+              props.datasetId,
+              props.subjectId,
+              name,
+              sccStatsMode,
+              request.cohortLabel,
+            ).then((value) => {
+              statsCacheRef.current.set(request.cacheKey, value);
+              return value;
+            }),
+      ),
+    )
+      .then((values) => {
         if (current) {
-          setStats(value);
+          setStats(values);
           setInterUnavailable(false);
         }
       })
       .catch((e) => {
         if (current) {
-          const unavailable = e.statusCode === 404 && sccStatsMode === "inter_patient" && !sccCohort;
+          const unavailable =
+            e.statusCode === 404 &&
+            sccStatsMode === "inter_patient" &&
+            cohortLabels.length === 1 &&
+            cohortLabels[0] === null;
           setInterUnavailable(unavailable);
           setStatsError(
             unavailable
@@ -84,7 +118,7 @@ export function SpectralMeasurementsPanel(
     props.subjectId,
     props.selectedWindowIndex === null,
     sccStatsMode,
-    sccCohort,
+    sccCohorts,
     props.isInterStatsUnavailable,
   ]);
   return (
@@ -96,16 +130,18 @@ export function SpectralMeasurementsPanel(
       scc={scc}
       sccStats={stats}
       bandPowerStatsMode={branch === "scc" ? sccStatsMode : props.bandPowerStatsMode}
-      bandPowerStatsCohortLabel={branch === "scc" ? sccCohort : props.bandPowerStatsCohortLabel}
+      bandPowerStatsCohortLabels={branch === "scc" ? sccCohorts : props.bandPowerStatsCohortLabels}
       onBandPowerStatsModeChange={
         branch === "scc"
           ? (mode) => {
               setSCCStatsMode(mode);
-              if (mode === "intra_patient") setSCCCohort(null);
+              if (mode === "intra_patient") setSCCCohorts([]);
             }
           : props.onBandPowerStatsModeChange
       }
-      onBandPowerStatsCohortLabelChange={branch === "scc" ? setSCCCohort : props.onBandPowerStatsCohortLabelChange}
+      onBandPowerStatsCohortLabelsChange={
+        branch === "scc" ? setSCCCohorts : props.onBandPowerStatsCohortLabelsChange
+      }
       modelBands={branch === "scc" ? (props.modelInfo?.scc_bands ?? []) : props.modelBands}
       isLoading={branch === "scc" ? loading : props.isLoading}
       isLoadingStats={branch === "scc" ? loadingStats : props.isLoadingStats}

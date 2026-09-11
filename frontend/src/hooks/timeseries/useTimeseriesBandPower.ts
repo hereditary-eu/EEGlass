@@ -18,9 +18,9 @@ export function useTimeseriesBandPower({
   lockedPredictionWindowIndex,
 }: UseTimeseriesBandPowerOptions) {
   const [bandPower, setBandPower] = useState<ModelBandPowerResponse | null>(null);
-  const [bandPowerStats, setBandPowerStats] = useState<ModelBandPowerStatsResponse | null>(null);
+  const [bandPowerStats, setBandPowerStats] = useState<ModelBandPowerStatsResponse[]>([]);
   const [bandPowerStatsMode, setBandPowerStatsMode] = useState<ModelBandPowerStatsMode>("intra_patient");
-  const [bandPowerStatsCohortLabel, setBandPowerStatsCohortLabel] = useState<string | null>(null);
+  const [bandPowerStatsCohortLabels, setBandPowerStatsCohortLabels] = useState<string[]>([]);
   const [isLoadingBandPower, setIsLoadingBandPower] = useState(false);
   const [isLoadingBandPowerStats, setIsLoadingBandPowerStats] = useState(false);
   const [isInterBandPowerStatsUnavailable, setIsInterBandPowerStatsUnavailable] = useState(false);
@@ -34,8 +34,8 @@ export function useTimeseriesBandPower({
     bandPowerCacheRef.current.clear();
     bandPowerStatsCacheRef.current.clear();
     setBandPower(null);
-    setBandPowerStats(null);
-    setBandPowerStatsCohortLabel(null);
+    setBandPowerStats([]);
+    setBandPowerStatsCohortLabels([]);
     setIsLoadingBandPower(false);
     setIsLoadingBandPowerStats(false);
     setIsInterBandPowerStatsUnavailable(false);
@@ -98,7 +98,7 @@ export function useTimeseriesBandPower({
     const requestModelName = modelName;
     if (!canLoadBandPowerStats || !requestModelName) {
       setIsLoadingBandPowerStats(false);
-      setBandPowerStats(null);
+      setBandPowerStats([]);
       setBandPowerStatsError(null);
       setIsInterBandPowerStatsUnavailable(false);
       return;
@@ -106,11 +106,16 @@ export function useTimeseriesBandPower({
 
     const requestSource = MODEL_INPUT_SOURCE;
     const requestMode = bandPowerStatsMode;
-    const requestCohortLabel = requestMode === "inter_patient" ? bandPowerStatsCohortLabel : null;
-    const cacheKey = `${requestModelName}::${datasetId}::${subjectId}::${requestSource}::${requestMode}::${requestCohortLabel ?? "all"}`;
-    const cachedBandPowerStats = bandPowerStatsCacheRef.current.get(cacheKey);
-    if (cachedBandPowerStats) {
-      setBandPowerStats(cachedBandPowerStats);
+    const requestCohortLabels =
+      requestMode === "inter_patient" && bandPowerStatsCohortLabels.length
+        ? bandPowerStatsCohortLabels
+        : [null];
+    const requests = requestCohortLabels.map((cohortLabel) => {
+      const cacheKey = `${requestModelName}::${datasetId}::${subjectId}::${requestSource}::${requestMode}::${cohortLabel ?? "all"}`;
+      return { cohortLabel, cacheKey, cached: bandPowerStatsCacheRef.current.get(cacheKey) };
+    });
+    if (requests.every((request) => request.cached)) {
+      setBandPowerStats(requests.map((request) => request.cached as ModelBandPowerStatsResponse));
       setBandPowerStatsError(null);
       setIsLoadingBandPowerStats(false);
       return;
@@ -120,22 +125,30 @@ export function useTimeseriesBandPower({
     setIsLoadingBandPowerStats(true);
     setBandPowerStatsError(null);
 
-    ModelService.getBandPowerStats(
-      datasetId,
-      subjectId,
-      requestSource,
-      requestMode,
-      requestModelName,
-      requestCohortLabel,
+    Promise.all(
+      requests.map((request) =>
+        request.cached
+          ? Promise.resolve(request.cached)
+          : ModelService.getBandPowerStats(
+              datasetId,
+              subjectId,
+              requestSource,
+              requestMode,
+              requestModelName,
+              request.cohortLabel,
+            ).then((response) => {
+              bandPowerStatsCacheRef.current.set(request.cacheKey, response);
+              return response;
+            }),
+      ),
     )
-      .then((response) => {
+      .then((responses) => {
         if (!isCurrent) {
           return;
         }
 
-        bandPowerStatsCacheRef.current.set(cacheKey, response);
-        setBandPowerStats(response);
-        if (response.mode === "inter_patient") {
+        setBandPowerStats(responses);
+        if (requestMode === "inter_patient") {
           setIsInterBandPowerStatsUnavailable(false);
         }
       })
@@ -144,14 +157,19 @@ export function useTimeseriesBandPower({
           return;
         }
 
-        if (requestMode === "inter_patient" && getErrorStatusCode(loadError) === 404 && !requestCohortLabel) {
+        if (
+          requestMode === "inter_patient" &&
+          getErrorStatusCode(loadError) === 404 &&
+          requestCohortLabels.length === 1 &&
+          requestCohortLabels[0] === null
+        ) {
           setIsInterBandPowerStatsUnavailable(true);
           setBandPowerStatsMode("intra_patient");
           setBandPowerStatsError(null);
           return;
         }
 
-        setBandPowerStats(null);
+        setBandPowerStats([]);
         setBandPowerStatsError(getBandPowerErrorMessage(loadError));
       })
       .finally(() => {
@@ -163,12 +181,12 @@ export function useTimeseriesBandPower({
     return () => {
       isCurrent = false;
     };
-  }, [bandPowerStatsCohortLabel, bandPowerStatsMode, canLoadBandPowerStats, datasetId, modelName, subjectId]);
+  }, [bandPowerStatsCohortLabels, bandPowerStatsMode, canLoadBandPowerStats, datasetId, modelName, subjectId]);
 
   const updateBandPowerStatsMode = useCallback((mode: ModelBandPowerStatsMode) => {
     setBandPowerStatsMode(mode);
     if (mode !== "inter_patient") {
-      setBandPowerStatsCohortLabel(null);
+      setBandPowerStatsCohortLabels([]);
     }
   }, []);
 
@@ -176,14 +194,14 @@ export function useTimeseriesBandPower({
     bandPower,
     bandPowerStats,
     bandPowerStatsMode,
-    bandPowerStatsCohortLabel,
+    bandPowerStatsCohortLabels,
     isInterBandPowerStatsUnavailable,
     isLoadingBandPower,
     isLoadingBandPowerStats,
     bandPowerError,
     bandPowerStatsError,
     setBandPowerStatsMode: updateBandPowerStatsMode,
-    setBandPowerStatsCohortLabel,
+    setBandPowerStatsCohortLabels,
     clearBandPowerData,
   };
 }

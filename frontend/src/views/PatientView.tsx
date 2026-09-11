@@ -228,7 +228,7 @@ export function PatientView() {
           bandPower={ts.bandPower}
           bandPowerStats={ts.bandPowerStats}
           bandPowerStatsMode={ts.bandPowerStatsMode}
-          bandPowerStatsCohortLabel={ts.bandPowerStatsCohortLabel}
+          bandPowerStatsCohortLabels={ts.bandPowerStatsCohortLabels}
           isInterStatsUnavailable={ts.isInterBandPowerStatsUnavailable}
           isLoading={ts.isLoadingBandPower}
           isLoadingStats={ts.isLoadingBandPowerStats}
@@ -242,7 +242,7 @@ export function PatientView() {
           onChannelSelect={ts.handleSingleChannelSelect}
           onWindowSelect={ts.setLockedPredictionWindowIndex}
           onBandPowerStatsModeChange={ts.setBandPowerStatsMode}
-          onBandPowerStatsCohortLabelChange={ts.setBandPowerStatsCohortLabel}
+          onBandPowerStatsCohortLabelsChange={ts.setBandPowerStatsCohortLabels}
         />
       </article>
 

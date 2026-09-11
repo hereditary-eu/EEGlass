@@ -32,11 +32,11 @@ export interface TotalBandPowerChartProps {
   hasSCC?: boolean;
   onBranchChange?: (branch: FeatureBranch) => void;
   scc?: SCCResponse | null;
-  sccStats?: SCCStatsResponse | null;
+  sccStats?: SCCStatsResponse[];
   bandPower: ModelBandPowerResponse | null;
-  bandPowerStats: ModelBandPowerStatsResponse | null;
+  bandPowerStats: ModelBandPowerStatsResponse[];
   bandPowerStatsMode: ModelBandPowerStatsMode;
-  bandPowerStatsCohortLabel: string | null;
+  bandPowerStatsCohortLabels: string[];
   isInterStatsUnavailable: boolean;
   isLoading: boolean;
   isLoadingStats: boolean;
@@ -50,12 +50,13 @@ export interface TotalBandPowerChartProps {
   onChannelSelect: (channel: ChannelId) => void;
   onWindowSelect: (windowIndex: number) => void;
   onBandPowerStatsModeChange: (mode: ModelBandPowerStatsMode) => void;
-  onBandPowerStatsCohortLabelChange: (label: string | null) => void;
+  onBandPowerStatsCohortLabelsChange: (labels: string[]) => void;
 }
 
 const MIN_RELATIVE_POWER_FOR_DB = 1e-6;
 const MIN_DB_DOMAIN = -40;
 const BAND_POWER_DATA_NAME = "bandPowerValues";
+const BAND_POWER_REFERENCE_DATA_NAME = "bandPowerReferenceValues";
 const TOTAL_BAND_POWER_CHART_ID = "patient-view/total-band-power";
 const SELECTED_WINDOW_SERIES = "Selected window value";
 const REFERENCE_MEAN_SERIES = "Reference mean";
@@ -87,11 +88,11 @@ export function TotalBandPowerChart({
   hasSCC = false,
   onBranchChange,
   scc = null,
-  sccStats = null,
+  sccStats = [],
   bandPower,
   bandPowerStats,
   bandPowerStatsMode,
-  bandPowerStatsCohortLabel,
+  bandPowerStatsCohortLabels,
   isInterStatsUnavailable,
   isLoading,
   isLoadingStats,
@@ -105,7 +106,7 @@ export function TotalBandPowerChart({
   onChannelSelect,
   onWindowSelect,
   onBandPowerStatsModeChange,
-  onBandPowerStatsCohortLabelChange,
+  onBandPowerStatsCohortLabelsChange,
 }: TotalBandPowerChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<View | null>(null);
@@ -131,50 +132,69 @@ export function TotalBandPowerChart({
     () => channels.find((channel) => channel.channel === selectedChannel) ?? channels[0] ?? null,
     [channels, selectedChannel],
   );
-  const activeStatsChannel = useMemo(
-    () =>
-      (isSCC ? sccStats : bandPowerStats)?.channels.find((channel) => channel.channel === selectedChannel) ??
-      (isSCC ? sccStats : bandPowerStats)?.channels[0] ??
-      null,
-    [bandPowerStats, sccStats, isSCC, selectedChannel],
-  );
-  const statsByBand = useMemo(
-    () => new Map((activeStatsChannel?.bands ?? []).map((band) => [band.band, band])),
-    [activeStatsChannel],
-  );
   const classLabels = useMemo(() => getModelClassLabels(modelClasses), [modelClasses]);
   const activeStats = isSCC ? sccStats : bandPowerStats;
-  const displayedCohortLabel = activeStats?.mode === "inter_patient" ? (activeStats.cohort_label ?? null) : null;
-  const rangeColors = useMemo(
-    () => getRangeColors(displayedCohortLabel, modelClasses),
-    [displayedCohortLabel, modelClasses],
-  );
 
   const values = useMemo(
     () =>
       (activeChannel?.bands ?? []).map((band, index) => {
-        const stats = statsByBand.get(band.band);
         return {
           order: index,
           band: band.band,
           label: getModelBandLabel(band.band, modelBands),
           value: "mean_coherence" in band ? band.mean_coherence : toRelativePowerDb(band.relative_power),
-          lower: stats ? ("lower_2sigma" in stats ? Math.max(0, stats.lower_2sigma) : stats.lower_2sigma_db) : null,
-          rawLower: stats ? ("lower_2sigma" in stats ? stats.lower_2sigma : stats.lower_2sigma_db) : null,
-          upper: stats ? ("upper_2sigma" in stats ? Math.min(1, stats.upper_2sigma) : stats.upper_2sigma_db) : null,
-          rawUpper: stats ? ("upper_2sigma" in stats ? stats.upper_2sigma : stats.upper_2sigma_db) : null,
-          referenceMean: stats ? ("mean" in stats ? stats.mean : stats.mean_db) : null,
-          statsSampleCount: stats?.sample_count ?? null,
-          rangeFill: rangeColors.fill,
-          rangeStroke: rangeColors.stroke,
+          percent: "relative_power" in band ? band.relative_power * 100 : null,
           range: `${band.start_hz.toFixed(1)}-${band.end_hz.toFixed(1)} Hz`,
         };
       }),
-    [activeChannel, modelBands, rangeColors.fill, rangeColors.stroke, statsByBand],
+    [activeChannel, modelBands],
   );
-  const hasReferenceRange = values.some((value) => Number.isFinite(value.lower) && Number.isFinite(value.upper));
-  const hasReferenceMean = values.some((value) => Number.isFinite(value.referenceMean));
+  const referenceValues = useMemo(
+    () =>
+      activeStats.flatMap((statsResponse, statsIndex) => {
+        const statsChannel =
+          statsResponse.channels.find((channel) => channel.channel === selectedChannel) ??
+          statsResponse.channels[0] ??
+          null;
+        const statsByBand = new Map((statsChannel?.bands ?? []).map((band) => [band.band, band]));
+        const cohortLabel = statsResponse.mode === "inter_patient" ? (statsResponse.cohort_label ?? null) : null;
+        const colors = getRangeColors(cohortLabel, modelClasses);
+        const referenceLabel = cohortLabel
+          ? `${formatCompactClassLabel(cohortLabel, modelClasses)} patient means`
+          : statsResponse.mode === "inter_patient"
+            ? "All patient means"
+            : "Patient windows";
+
+        return (activeChannel?.bands ?? []).flatMap((band, index) => {
+          const stats = statsByBand.get(band.band);
+          if (!stats) return [];
+          return [
+            {
+              order: index,
+              band: band.band,
+              label: getModelBandLabel(band.band, modelBands),
+              cohortKey: cohortLabel ?? `${statsResponse.mode}-${statsIndex}`,
+              referenceLabel,
+              lower: "lower_2sigma" in stats ? Math.max(0, stats.lower_2sigma) : stats.lower_2sigma_db,
+              rawLower: "lower_2sigma" in stats ? stats.lower_2sigma : stats.lower_2sigma_db,
+              upper: "upper_2sigma" in stats ? Math.min(1, stats.upper_2sigma) : stats.upper_2sigma_db,
+              rawUpper: "upper_2sigma" in stats ? stats.upper_2sigma : stats.upper_2sigma_db,
+              referenceMean: "mean" in stats ? stats.mean : stats.mean_db,
+              statsSampleCount: stats.sample_count,
+              rangeFill: colors.fill,
+              rangeStroke: colors.stroke,
+            },
+          ];
+        });
+      }),
+    [activeChannel, activeStats, modelBands, modelClasses, selectedChannel],
+  );
+  const hasReferenceRange = referenceValues.some(
+    (value) => Number.isFinite(value.lower) && Number.isFinite(value.upper),
+  );
+  const hasReferenceMean = referenceValues.some((value) => Number.isFinite(value.referenceMean));
   const valuesRef = useRef<typeof values>([]);
+  const referenceValuesRef = useRef<typeof referenceValues>([]);
   const status = getBandPowerStatus({ bandPower: measurement, error, isLoading, isLoadingStats, statsError });
 
   useEffect(() => {
@@ -182,10 +202,15 @@ export function TotalBandPowerChart({
   }, [values]);
 
   useEffect(() => {
-    if (bandPowerStatsCohortLabel && !classLabels.includes(bandPowerStatsCohortLabel)) {
-      onBandPowerStatsCohortLabelChange(null);
+    referenceValuesRef.current = referenceValues;
+  }, [referenceValues]);
+
+  useEffect(() => {
+    const validCohortLabels = bandPowerStatsCohortLabels.filter((label) => classLabels.includes(label));
+    if (validCohortLabels.length !== bandPowerStatsCohortLabels.length) {
+      onBandPowerStatsCohortLabelsChange(validCohortLabels);
     }
-  }, [bandPowerStatsCohortLabel, classLabels, onBandPowerStatsCohortLabelChange]);
+  }, [bandPowerStatsCohortLabels, classLabels, onBandPowerStatsCohortLabelsChange]);
 
   useEffect(() => {
     interactionRef.current = {
@@ -240,11 +265,16 @@ export function TotalBandPowerChart({
         resize: true,
       },
       background: "transparent",
-      data: { name: BAND_POWER_DATA_NAME, values },
+      datasets: {
+        [BAND_POWER_DATA_NAME]: values,
+        [BAND_POWER_REFERENCE_DATA_NAME]: referenceValues,
+      },
+      data: { name: BAND_POWER_DATA_NAME },
       layer: [
         ...(hasReferenceRange
           ? [
               {
+                data: { name: BAND_POWER_REFERENCE_DATA_NAME },
                 mark: {
                   type: "area" as const,
                   interpolate: "monotone" as const,
@@ -257,6 +287,7 @@ export function TotalBandPowerChart({
                     scale: null,
                     legend: null,
                   },
+                  detail: { field: "cohortKey", type: "nominal" as const },
                   y: {
                     field: "lower",
                     type: "quantitative" as const,
@@ -264,6 +295,7 @@ export function TotalBandPowerChart({
                     scale: createPowerScale(isSCC),
                   },
                   y2: { field: "upper" },
+                  tooltip: createReferenceTooltip(isSCC),
                 },
               },
             ]
@@ -271,6 +303,7 @@ export function TotalBandPowerChart({
         ...(hasReferenceMean
           ? [
               {
+                data: { name: BAND_POWER_REFERENCE_DATA_NAME },
                 mark: {
                   type: "line" as const,
                   interpolate: "monotone" as const,
@@ -285,12 +318,14 @@ export function TotalBandPowerChart({
                     scale: null,
                     legend: null,
                   },
+                  detail: { field: "cohortKey", type: "nominal" as const },
                   y: {
                     field: "referenceMean",
                     type: "quantitative" as const,
                     axis: createPowerAxis(isSCC),
                     scale: createPowerScale(isSCC),
                   },
+                  tooltip: createReferenceTooltip(isSCC),
                 },
               },
             ]
@@ -327,25 +362,6 @@ export function TotalBandPowerChart({
                 title: isSCC ? "Mean coherence" : "Selected window (dB)",
                 format: isSCC ? ".3f" : ".1f",
               },
-              {
-                field: "referenceMean",
-                type: "quantitative",
-                title: isSCC ? "Reference mean" : "Reference mean (dB)",
-                format: isSCC ? ".3f" : ".1f",
-              },
-              {
-                field: "rawLower",
-                type: "quantitative",
-                title: isSCC ? "−2σ (unclipped)" : "−2σ (dB)",
-                format: isSCC ? ".3f" : ".1f",
-              },
-              {
-                field: "rawUpper",
-                type: "quantitative",
-                title: isSCC ? "+2σ (unclipped)" : "+2σ (dB)",
-                format: isSCC ? ".3f" : ".1f",
-              },
-              { field: "statsSampleCount", type: "quantitative", title: "Reference samples", format: ".0f" },
             ],
           },
         },
@@ -375,6 +391,12 @@ export function TotalBandPowerChart({
               changeset()
                 .remove(() => true)
                 .insert(valuesRef.current),
+            )
+            .change(
+              BAND_POWER_REFERENCE_DATA_NAME,
+              changeset()
+                .remove(() => true)
+                .insert(referenceValuesRef.current),
             )
             .runAsync()
             .catch(() => undefined);
@@ -449,7 +471,7 @@ export function TotalBandPowerChart({
       viewRef.current = null;
       resultPromise.then((result) => result.finalize()).catch(() => undefined);
     };
-  }, [error, hasReferenceMean, hasReferenceRange, plotHeight, values.length, isSCC]);
+  }, [error, hasReferenceMean, hasReferenceRange, plotHeight, referenceValues.length, values.length, isSCC]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -464,9 +486,15 @@ export function TotalBandPowerChart({
           .remove(() => true)
           .insert(values),
       )
+      .change(
+        BAND_POWER_REFERENCE_DATA_NAME,
+        changeset()
+          .remove(() => true)
+          .insert(referenceValues),
+      )
       .runAsync()
       .catch(() => undefined);
-  }, [values]);
+  }, [referenceValues, values]);
 
   return (
     <div className="topology-bandpower">
@@ -513,7 +541,7 @@ export function TotalBandPowerChart({
 
         <div className="topology-bandpower-plot-shell">
           <div className="topology-bandpower-range-controls" aria-label="Band power reference range">
-            <span>{getStatsModeLabel(bandPowerStatsMode, bandPowerStatsCohortLabel, modelClasses)}</span>
+            <span>{getStatsModeLabel(bandPowerStatsMode, bandPowerStatsCohortLabels, modelClasses)}</span>
             <div className="topology-bandpower-range-actions">
               <div className="topology-bandpower-range-switch">
                 <button
@@ -538,11 +566,11 @@ export function TotalBandPowerChart({
                   className={`topology-bandpower-cohort-selector${
                     bandPowerStatsMode === "inter_patient" ? "" : " topology-bandpower-cohort-selector--reserved"
                   }`}
-                  aria-label="Inter-patient cohort range"
+                  aria-label="Inter-patient cohort ranges"
                   aria-hidden={bandPowerStatsMode !== "inter_patient"}
                 >
                   {classLabels.map((classLabel) => {
-                    const isSelected = classLabel === bandPowerStatsCohortLabel;
+                    const isSelected = bandPowerStatsCohortLabels.includes(classLabel);
                     const colors = getEmbeddingClassColors(classLabel, modelClasses);
                     return (
                       <button
@@ -556,8 +584,15 @@ export function TotalBandPowerChart({
                             ? { backgroundColor: colors.fill, color: colors.stroke, borderColor: colors.stroke }
                             : { borderColor: colors.fill }
                         }
-                        title={isSelected ? "Show all-patient range" : `Show ${classLabel} inter-patient range`}
-                        onClick={() => onBandPowerStatsCohortLabelChange(isSelected ? null : classLabel)}
+                        aria-pressed={isSelected}
+                        title={`${isSelected ? "Hide" : "Show"} ${classLabel} inter-patient range`}
+                        onClick={() =>
+                          onBandPowerStatsCohortLabelsChange(
+                            isSelected
+                              ? bandPowerStatsCohortLabels.filter((label) => label !== classLabel)
+                              : [...bandPowerStatsCohortLabels, classLabel],
+                          )
+                        }
                       >
                         {formatCompactClassLabel(classLabel, modelClasses)}
                       </button>
@@ -630,6 +665,32 @@ function createPowerScale(isSCC = false) {
   };
 }
 
+function createReferenceTooltip(isSCC: boolean) {
+  return [
+    { field: "referenceLabel", type: "nominal" as const, title: "Reference" },
+    { field: "band", type: "nominal" as const, title: "Band" },
+    {
+      field: "referenceMean",
+      type: "quantitative" as const,
+      title: isSCC ? "Reference mean" : "Reference mean (dB)",
+      format: isSCC ? ".3f" : ".1f",
+    },
+    {
+      field: "rawLower",
+      type: "quantitative" as const,
+      title: isSCC ? "−2σ (unclipped)" : "−2σ (dB)",
+      format: isSCC ? ".3f" : ".1f",
+    },
+    {
+      field: "rawUpper",
+      type: "quantitative" as const,
+      title: isSCC ? "+2σ (unclipped)" : "+2σ (dB)",
+      format: isSCC ? ".3f" : ".1f",
+    },
+    { field: "statsSampleCount", type: "quantitative" as const, title: "Reference samples", format: ".0f" },
+  ];
+}
+
 function createBandPowerLegendLayer(isSCC: boolean) {
   return {
     data: { values: [] },
@@ -695,16 +756,19 @@ function createBandPowerLegend() {
 
 function getStatsModeLabel(
   mode: ModelBandPowerStatsMode,
-  cohortLabel: string | null,
+  cohortLabels: string[],
   modelClasses: ModelClassPresentation[],
 ): string {
   if (mode === "intra_patient") {
     return "2sigma range: patient windows";
   }
 
-  return cohortLabel
-    ? `2sigma range: ${formatCompactClassLabel(cohortLabel, modelClasses)} patient means`
-    : "2sigma range: patient means";
+  if (!cohortLabels.length) {
+    return "2sigma range: patient means";
+  }
+
+  const selectedClasses = cohortLabels.map((label) => formatCompactClassLabel(label, modelClasses)).join(", ");
+  return `2sigma ${cohortLabels.length === 1 ? "range" : "ranges"}: ${selectedClasses} patient means`;
 }
 
 function getRangeColors(

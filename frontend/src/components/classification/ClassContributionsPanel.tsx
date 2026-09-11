@@ -309,15 +309,22 @@ function BranchTotalsPanel({
   const percentages = magnitudes.map(({ value }) => (totalMagnitude > 0 ? (value / totalMagnitude) * 100 : 0));
   const displayedPercentages = totalMagnitude > 0 ? [Math.round(percentages[0]!), 0] : [0, 0];
   displayedPercentages[1] = totalMagnitude > 0 ? 100 - displayedPercentages[0]! : 0;
+  const rowHeight = compact ? 28 : 76;
+  const minChartHeight = compact ? 84 : 120;
+  const classCount = new Set(rows.map((row) => row.classShort)).size;
+  const chartHeight = Math.max(minChartHeight, classCount * rowHeight);
 
   return (
-    <div className="classification-evidence-branch-totals">
+    <div
+      className="classification-evidence-branch-totals"
+      style={{ gridTemplateRows: `${chartHeight}px 0.85rem 2rem` }}
+    >
       <BandClassMatrix
         cells={rows}
         onBandClick={onBandClick}
         className="classification-evidence-branch-totals-chart"
-        rowHeight={compact ? 28 : 76}
-        minHeight={compact ? 84 : 120}
+        rowHeight={rowHeight}
+        minHeight={minChartHeight}
         topPadding={compact ? 18 : 31}
         showClassAxis={false}
         tooltip={createContributionTooltip()}
