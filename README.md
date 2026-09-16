@@ -5,6 +5,8 @@ This dataset and model focuses on Alzheimer’s Disease (AD) and Frontotemporal 
 
 ![EEGlass Preview](./figures/screenshot.png)
 
+You can find the full paper [here](https://diglib.eg.org/server/api/core/bitstreams/7d3b2ed3-7011-4cb8-b3cf-5a4a37630f3b/content).
+
 ## The Model
 
 xEEGNet is a fully interpretable classifier with only $F \cdot (C + L + 2) = 168$ trainable parameters.
@@ -112,3 +114,21 @@ The compose setup starts three services:
 - `frontend`: serves the UI on <http://localhost:3000>.
 
 The default dataset is large. `docker-compose.yml` also contains a commented smaller dataset URL (only 5 patients instead of 88) that can be swapped into `DATASET_URL` to test the download flow without downloading the full 4.2 GB dataset.
+
+# Citation
+
+If you find EEGlass useful or relevant to your work, please feel free to cite it as follows:
+
+```bibtex
+@inproceedings{2026-eeglass,
+	booktitle = {VCBM 2026 - Eurographics Workshop on Visual Computing for Biology and Medicine - Short Papers},
+	editor    = {Krueger, Robert and Mörth, Eric and Furmanová, Katarina},
+	title     = {{EEGlass: A Fully Interpretable EEG Dementia Screening Assistant}},
+	author    = {Waldert, Peter and Grabner, Michael and Schilcher, Lukas and Tscheppe, Niklas and Tussardi, Gaia and Kantz, Benedikt and Lengauer, Stefan and Schreck, Tobias},
+	year      = {2026},
+	publisher = {The Eurographics Association},
+	issn      = {2070-5786},
+	isbn      = {978-3-03868-324-7},
+	doi       = {10.2312/vcbm.20261002}
+}
+```
