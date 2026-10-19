@@ -137,14 +137,11 @@ class xEEGNetSCC(nn.Module):
         if not isinstance(X, (list, tuple)) or len(X) != 2:
             raise TypeError("xEEGNetSCC now expects input as [x, scc_pairs].")
         x, scc_pairs = X
-
         # encoder output (B, emb_size)
         emb = self.base.encoder(x)  # (B, emb_size=n_bands=7?)
-        conn = self.reducer(scc_pairs)  # (B, n_bands)?
-
-        # conn_normalized = F.normalize(conn, p=2, dim=1)  # L2 normalize across bands
-        conn_normalized = self.scc_norm(conn)
-        out = torch.cat([emb, conn_normalized], dim=1)
+        scc = self.reducer(scc_pairs)  # (B, n_bands)?
+        scc_normalized = self.scc_norm(scc)
+        out = torch.cat([emb, scc_normalized], dim=1)
         out = self.Dense(out)
         if not (self.base.return_logits):
             if self.base.nb_classes <= 2:
