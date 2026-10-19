@@ -39,6 +39,8 @@ data/
 stuff
 local/
 *local*
+paper/
+paper
 
 .vscode/tasks.json
 tinymist.lock
