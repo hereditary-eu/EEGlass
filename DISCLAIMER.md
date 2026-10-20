@@ -5,8 +5,7 @@ This file is the release disclaimer required by the HEREDITARY misuse self-asses
 > **Research use only. Not a medical device.**
 > This software was developed in the HEREDITARY project as a research prototype. It has not been assessed or certified under the EU Medical Device Regulation (EU) 2017/745. It must not be used to diagnose, treat, monitor or make any other decision about individual patients.
 
-<!-- To be shown in the user interface:
-"Research prototype of the HEREDITARY project. Not a medical device and not for clinical use. Do not enter personal or patient data." (not yet shown, as of 2026-10-18) -->
+<!-- Shown in the user interface, right of the page title in the header of every view (`frontend/src/layouts/AppLayout.tsx`): "Research prototype · Not a medical device · Not for clinical use" -->
 
 ## 1. Overview
 
@@ -65,7 +64,7 @@ This repository and the released files contain no personal data, pseudonymized r
 ## 7. Responsible use and reporting
 
 - **Terms of use.** Public read-only demo; no user data upload path. Licensed under MIT (`LICENSE`).
-- **Pre-release actions.** This disclaimer is linked from the repository README since 2026-10-18. Since the same date the repository carries an MIT `LICENSE` file. Still open: show the research-use-only line in the dashboard interface.
+- **Pre-release actions.** This disclaimer is linked from the repository README, the repository carries an MIT `LICENSE` file, and the interface shows a short not-a-medical-device line (right of the page title in the header of every view, `frontend/src/layouts/AppLayout.tsx`).
 - **Contact for misuse or vulnerability reports.** peter.waldert@tugraz.at
 
 ## 8. Acknowledgement
