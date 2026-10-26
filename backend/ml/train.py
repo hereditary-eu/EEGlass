@@ -31,6 +31,7 @@ def save_model(model, model_path, df_metadata=None):
     model.eval()
     model.to(device="cpu")
     resolved_model_path = Path(model_path)
+    resolved_model_path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), resolved_model_path)
     if df_metadata is not None:
         metadata_path = resolved_model_path.with_name(f"{resolved_model_path.stem}_metadata.csv")

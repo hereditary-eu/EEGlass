@@ -335,9 +335,8 @@ def adapt_data_for_task(data_x_y_scc_id, task):
 
 
 def generate_model_path(pretrained_model_dir, task, name):
-    """Generate a model path based on the task and name."""
+    """Generate a model path using the notebook's established task layout."""
 
     if task == "three_class":
         return Path(pretrained_model_dir) / name
-    else:
-        return Path(pretrained_model_dir) / task / name
+    return Path(pretrained_model_dir) / task / name
