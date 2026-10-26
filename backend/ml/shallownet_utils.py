@@ -55,6 +55,9 @@ def train_model(
     """
     copy of selfeeg.ssl.fine_tune function with the possibility to give
     a different validation loss function (and args)
+
+    Adapted from selfEEG (https://github.com/MedMaxLab/selfEEG),
+    Copyright (c) 2023 MedMax Team, MIT License.
     """
 
     if validation_loss_args is None:

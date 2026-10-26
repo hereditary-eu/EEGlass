@@ -64,6 +64,7 @@ export function AppLayout() {
               ) : null}
             </div>
           </div>
+          <p className="app-disclaimer">Research prototype · Not a medical device · Not for clinical use</p>
         </header>
 
         <Outlet context={{ setPatientViewHeaderDetails } satisfies PatientViewOutletContext} />

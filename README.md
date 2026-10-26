@@ -1,11 +1,24 @@
 # EEGlass
 
-To make clinical diagnoses more understandable, we present EEGlass, a visual interactive dashboard on top of the efficient xEEGNet classifier network architecture, which puts a special emphasis on explainability of the model and outcome.
-This dataset and model focuses on Alzheimer’s Disease (AD) and Frontotemporal Dementia (FTD); every step in the classification is presented in a visual and understandable way, on top of an integrated Electroencephalography (EEG) database viewer.
+[![DOI](https://img.shields.io/badge/DOI-10.2312%2Fvcbm.20261002-blue)](https://doi.org/10.2312/vcbm.20261002)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+
+Code behind _EEGlass: A Fully Interpretable EEG Dementia Screening Assistant_, presented at EG [VCBM 2026](https://doi.org/10.2312/vcbm.20261002).
+
+[Demo](https://hereditary.cgv.tugraz.at/all-in-on-eeg/) · [Paper](https://doi.org/10.2312/vcbm.20261002)
 
 ![EEGlass Preview](./figures/screenshot.png)
 
-You can find the full paper [here](https://doi.org/10.2312/vcbm.20261002).
+> **Research use only. Not a medical device.** See [DISCLAIMER.md](DISCLAIMER.md) for intended use, data provenance and limitations.
+
+## Overview
+
+EEGlass is a visual interactive dashboard for inspecting an interpretable EEG classifier.
+It is built on xEEGNet, a network with only 168 trainable parameters, trained to separate recordings of Alzheimer's Disease (AD), Frontotemporal Dementia (FTD) and cognitively normal (CN) participants of a public research cohort.
+Every step of the classification is shown visually, next to an integrated Electroencephalography (EEG) database viewer, so that researchers can see which channels and frequency bands drive the model instead of reading post-hoc saliency maps.
+
+An optional chat assistant can read and operate the dashboard views.
+It stays inactive until you enter your own API key for an OpenAI-compatible endpoint or Google Gemini; your browser then sends the chat and the current dashboard state directly to that provider (see [DISCLAIMER.md](DISCLAIMER.md)).
 
 ## The Model
 
@@ -31,7 +44,7 @@ $$\mathbf{\Omega} = M \hat{\mathbf{Z}} \in \mathbb{R}^{L}, \qquad \mathbf{y} = \
 $M_{l,f} \hat{Z}_f$ gives the signed per-band class contribution shown in the dashboard.
 
 In short: fixed bandpass _filters_ $\rightarrow$ learned spatial _mixing_ $\rightarrow$ _bandpower_ $\rightarrow$ linear _classifier_.
-Every intermediate value has a direct physical meaning, so clinicians inspect architecture-intrinsic evidence rather than post-hoc saliency maps.
+Every intermediate value has a direct physical meaning, so users inspect architecture-intrinsic evidence rather than post-hoc saliency maps.
 
 ## Node-SCC models
 
@@ -60,25 +73,39 @@ PCA, t-SNE and UMAP projections, selectable in all embedding views (PCA is the d
 
 ## Example Use-Case
 
-As an example workflow, a user can start with a new participant by selecting a typical point in the window embedding (R2) to see the predicted output. The Total Band Power panel immediately shows how typical this window's band powers are for the patient, and whether the (e.g. alpha) bands align more with the healthy or AD/FTD cohort (R3). The Scalp View and Band Activations panel make explicit which channels and bands drove the prediction (R1).
+As an example workflow, a user can start with a participant by selecting a typical point in the window embedding (R2) to see the predicted output. The Total Band Power panel immediately shows how typical this window's band powers are for the patient, and whether the (e.g. alpha) bands align more with the healthy or AD/FTD cohort (R3). The Scalp View and Band Activations panel make explicit which channels and bands drove the prediction (R1).
 
 Inspecting the raw signal, the user can judge for themselves whether the window looks atypical, where, for each patient and time window individually, the topomap, band activations, and total band power panel indicate which channels and bandpowers are worth a closer look (the corresponding bandpass filter can also be applied to the time-series view), directing the user to the most interesting aspects and making comparison easy while keeping them in control.
 
-## Contribute
+## Data
 
-Combination of all frontend and backend utilities, and baseline for xEEG dashboard development.
+EEGlass uses the public OpenNeuro dataset [ds004504](https://openneuro.org/datasets/ds004504), _A dataset of EEG recordings from Alzheimer's disease, Frontotemporal dementia and Healthy subjects_ (Miltiadous et al.; 88 participants, 19-channel scalp EEG, CC0).
+The data is not part of this repository: the Docker setup downloads it from a TU Graz-hosted copy (`DATASET_URL` in `docker-compose.yml`, 4.2 GB).
+A smaller 5-patient subset for testing is listed there as a comment.
+
+## Running locally
+
+### Docker
+
+Build and start the full stack:
+
+```bash
+docker compose up --build
+```
+
+The compose setup starts three services:
+
+- `dataset-downloader`: downloads and extracts the configured dataset into the `datasets` Docker volume, then exits.
+- `backend`: starts only after `dataset-downloader` completed successfully. It serves the API on <http://localhost:8000>.
+- `frontend`: serves the UI on <http://localhost:3000>.
+
+### Development
 
 To install dependencies:
 
 ```bash
-uv install
-bun install
-```
-
-If uv version is newer, use:
-
-```
 uv sync
+bun install
 ```
 
 To start a development server:
@@ -97,31 +124,13 @@ prettier -w .
 
 Also useful: `ruff check --fix --unsafe-fixes`.
 
----
-
-### Docker Deployment
-
-Build and start the full stack:
-
-```bash
-docker compose up --build
-```
-
-The compose setup starts three services:
-
-- `dataset-downloader`: downloads and extracts the configured dataset into the `datasets` Docker volume, then exits.
-- `backend`: starts only after `dataset-downloader` completed successfully. It serves the API on <http://localhost:8000>.
-- `frontend`: serves the UI on <http://localhost:3000>.
-
-The default dataset is large. `docker-compose.yml` also contains a commented smaller dataset URL (only 5 patients instead of 88) that can be swapped into `DATASET_URL` to test the download flow without downloading the full 4.2 GB dataset.
-
-# Citation
+## Citation
 
 If you find EEGlass useful or relevant to your work, please feel free to cite it as follows:
 
 ```bibtex
 @inproceedings{2026-eeglass,
-	booktitle = {VCBM 2026 - Eurographics Workshop on Visual Computing for Biology and Medicine - Short Papers},
+	booktitle = {VCBM 2026 - Eurographics Symposium on Visual Computing for Biology and Medicine},
 	editor    = {Krueger, Robert and Mörth, Eric and Furmanová, Katarina},
 	title     = {{EEGlass: A Fully Interpretable EEG Dementia Screening Assistant}},
 	author    = {Waldert, Peter and Grabner, Michael and Schilcher, Lukas and Tscheppe, Niklas and Tussardi, Gaia and Kantz, Benedikt and Lengauer, Stefan and Schreck, Tobias},
@@ -132,3 +141,18 @@ If you find EEGlass useful or relevant to your work, please feel free to cite it
 	doi       = {10.2312/vcbm.20261002}
 }
 ```
+
+## Acknowledgement
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/funded-by-the-eu-dark.png">
+  <img src="figures/funded-by-the-eu.png" alt="Funded by the European Union" width="240">
+</picture>
+
+Funded by the European Union under grant agreement No 101137074 ([HEREDITARY](https://hereditary-project.eu/)).
+Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the European Health and Digital Executive Agency (HaDEA).
+Neither the European Union nor the granting authority can be held responsible for them.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
