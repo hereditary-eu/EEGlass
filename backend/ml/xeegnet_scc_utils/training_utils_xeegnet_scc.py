@@ -66,9 +66,15 @@ def build_model_for_version(
             Fs=srate,
             global_pooling=True,
         )
-    # if model_kind == "shallownet":
-    #     return ShallowNet(nb_classes=nb_classes, Chans=Chans, Samples=sample_length, seed=seed)
-    # raise ValueError(f"Unsupported model_kind: {model_kind}")
+    if model_kind == "shallownet":
+        return selfeeg.models.ShallowNet(
+            nb_classes=nb_classes,
+            Chans=Chans,
+            Samples=sample_length,
+            seed=max(1, seed),
+            return_logits=True,
+        )
+    raise ValueError(f"Unsupported model_kind: {model_kind}")
 
 
 def _predict_from_loader(model, loader, device):
@@ -206,7 +212,7 @@ def _prepare(
     if return_subject_ids:
         if model_kind.casefold() == "xeegnet_scc":
             _, _, subject_ids_train, _, _, subject_ids_val, _, _, _, _, subject_ids_test, _ = xy
-        elif model_kind.casefold() == "xeegnet":
+        elif model_kind.casefold() in ("xeegnet", "shallownet"):
             _, _, subject_ids_train, _, _, subject_ids_val, _, _, subject_ids_test = xy
         subject_ids = {"train": subject_ids_train, "val": subject_ids_val, "test": subject_ids_test}
         return model, loaders, model_name, subject_ids

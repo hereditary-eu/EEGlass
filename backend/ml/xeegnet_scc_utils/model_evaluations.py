@@ -19,7 +19,11 @@ __all__ = [
     "generate_model_path",
 ]
 
-MODEL_PREFIXES_BIB = {"xeegnet": "xeegnet_model", "xeegnet_scc": "xeegnet_scc_model"}
+MODEL_PREFIXES_BIB = {
+    "xeegnet": "xeegnet_model",
+    "xeegnet_scc": "xeegnet_scc_model",
+    "shallownet": "shallownet_model",
+}
 
 
 def generate_model_name(
@@ -35,7 +39,7 @@ def generate_model_name(
             model_name = f"{model_prefix}_v{model_version}.pt"
         else:
             raise ValueError(f"Unsupported reducer_mode_scc: {reducer_mode_scc}")
-    elif model_kind == "xeegnet":
+    elif model_kind in ("xeegnet", "shallownet"):
         model_name = f"{model_prefix}_v{model_version}.pt"
 
     if n_max is not None:
