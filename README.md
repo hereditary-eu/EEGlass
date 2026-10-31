@@ -5,7 +5,7 @@
 
 Code behind _EEGlass: A Fully Interpretable EEG Dementia Screening Assistant_, presented at EG [VCBM 2026](https://doi.org/10.2312/vcbm.20261002).
 
-[Demo](https://hereditary.cgv.tugraz.at/all-in-on-eeg/) · [Paper](https://doi.org/10.2312/vcbm.20261002)
+[Live Demo](https://hereditary.cgv.tugraz.at/all-in-on-eeg/) · [Paper](https://doi.org/10.2312/vcbm.20261002)
 
 ![EEGlass Preview](./figures/screenshot.png)
 
@@ -130,15 +130,15 @@ If you find EEGlass useful or relevant to your work, please feel free to cite it
 
 ```bibtex
 @inproceedings{2026-eeglass,
-	booktitle = {VCBM 2026 - Eurographics Symposium on Visual Computing for Biology and Medicine},
-	editor    = {Krueger, Robert and Mörth, Eric and Furmanová, Katarina},
-	title     = {{EEGlass: A Fully Interpretable EEG Dementia Screening Assistant}},
-	author    = {Waldert, Peter and Grabner, Michael and Schilcher, Lukas and Tscheppe, Niklas and Tussardi, Gaia and Kantz, Benedikt and Lengauer, Stefan and Schreck, Tobias},
-	year      = {2026},
-	publisher = {The Eurographics Association},
-	issn      = {2070-5786},
-	isbn      = {978-3-03868-324-7},
-	doi       = {10.2312/vcbm.20261002}
+  booktitle = {VCBM 2026 - Eurographics Symposium on Visual Computing for Biology and Medicine},
+  editor    = {Krueger, Robert and Mörth, Eric and Furmanová, Katarina},
+  title     = {{EEGlass: A Fully Interpretable EEG Dementia Screening Assistant}},
+  author    = {Waldert, Peter and Grabner, Michael and Schilcher, Lukas and Tscheppe, Niklas and Tussardi, Gaia and Kantz, Benedikt and Lengauer, Stefan and Schreck, Tobias},
+  year      = {2026},
+  publisher = {The Eurographics Association},
+  issn      = {2070-5786},
+  isbn      = {978-3-03868-324-7},
+  doi       = {10.2312/vcbm.20261002}
 }
 ```
 
