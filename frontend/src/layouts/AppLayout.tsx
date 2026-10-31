@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import type { TimeseriesSubjectSplit } from "../types";
+import euLogo from "../assets/logos/funded-by-the-eu.png";
+import hereditaryLogo from "../assets/logos/hereditary.png";
 
 export interface PatientViewHeaderDetails {
   datasetId: string;
@@ -64,7 +66,19 @@ export function AppLayout() {
               ) : null}
             </div>
           </div>
-          <p className="app-disclaimer">Research prototype · Not a medical device · Not for clinical use</p>
+          <div className="app-header-meta">
+            <p className="app-disclaimer">Research prototype · Not a medical device · Not for clinical use</p>
+            <a
+              className="app-logos"
+              href="https://hereditary-project.eu/"
+              target="_blank"
+              rel="noreferrer"
+              title="HEREDITARY · funded by the European Union under grant agreement No 101137074"
+            >
+              <img src={hereditaryLogo} alt="HEREDITARY" className="app-logo app-logo--hereditary" />
+              <img src={euLogo} alt="Funded by the European Union" className="app-logo app-logo--eu" />
+            </a>
+          </div>
         </header>
 
         <Outlet context={{ setPatientViewHeaderDetails } satisfies PatientViewOutletContext} />
