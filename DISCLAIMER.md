@@ -23,7 +23,7 @@ This file is the release disclaimer required by the HEREDITARY misuse self-asses
 
 ## 2. Intended use
 
-**Primary intended use.** Research into interpretable machine learning for EEG, through visualisation. EEGlass makes every step of the xEEGNet classifier inspectable — fixed bandpass filters, learned spatial mixing, band power, linear classifier — so that a researcher can see which channels and frequency bands drove a dementia-screening prediction, instead of reading a post-hoc saliency map. It also serves as an EEG database viewer over the bundled public cohort.
+**Primary intended use.** Research into interpretable machine learning for EEG, through visualisation. xEEGNet is a small convolutional network with 168 trainable parameters that classifies resting-state EEG as Alzheimer's disease, frontotemporal dementia or cognitively normal, built so that each layer has a physical meaning (Zanola et al., *xEEGNet: towards explainable AI in EEG dementia classification*, Journal of Neural Engineering 22(4), 2025, https://doi.org/10.1088/1741-2552/adf6e6). EEGlass makes every step of the xEEGNet classifier inspectable — fixed bandpass filters, learned spatial mixing, band power, linear classifier — so that a researcher can see which channels and frequency bands drove a dementia-screening prediction, instead of reading a post-hoc saliency map. It also serves as an EEG database viewer over the bundled public cohort.
 
 **Intended users.** Biomedical and visualization researchers, data scientists, and developers building on interpretable EEG models.
 
@@ -31,7 +31,7 @@ This file is the release disclaimer required by the HEREDITARY misuse self-asses
 - clinical diagnosis, prognosis or treatment of individual patients;
 - decisions about individuals, such as insurance, employment or access to care;
 - re-identification of individuals or linkage with other data sources;
-- populations, devices or data types not described in Section 3 — in particular, any EEG montage, sampling rate or recording site other than the one used in ds004504.
+- populations, devices or data types not described in Section 3 — in particular, any electrode layout (montage), sampling rate or recording site other than the ones used in ds004504 (19 scalp electrodes in the standard 10-20 placement).
 
 ## 3. Data provenance
 
@@ -56,10 +56,10 @@ This repository and the released files contain no personal data, pseudonymized r
 
 ## 6. Known limitations and risks
 
-- **Generalizability.** Unknown outside the 88-subject single-site cohort. Performance on other montages, amplifiers, sampling rates, preprocessing pipelines or populations has not been measured.
+- **Generalizability.** Unknown outside the 88-subject single-site cohort. Performance on other electrode layouts, amplifiers, sampling rates, preprocessing pipelines or populations has not been measured.
 - **Known biases and confounders.** Single recording site and single acquisition protocol; site-specific artifacts and filter settings may be learned as signal. Class balance in `ds004504` is uneven.
-- **Failure modes.** Short or artifact-heavy windows, non-19-channel recordings, and montages differing from the training setup yield unreliable output. The model classifies 4-second windows, so single-window predictions are noisy by design and must be read alongside the per-patient aggregate views.
-- **Privacy risks.** No membership-inference or model-inversion test was run; it was judged unnecessary because training data is public and de-identified and the model has 168 parameters. The only data egress is the opt-in chat assistant (Section 4), which sends what the user types and the public dashboard state to the provider the user chose.
+- **Failure modes.** Short or artifact-heavy windows, non-19-channel recordings, and electrode layouts differing from the training setup yield unreliable output. The model classifies 4-second windows, so single-window predictions are noisy by design and must be read alongside the per-patient aggregate views.
+- **Privacy risks.** No membership-inference or model-inversion test was run; it was judged unnecessary because training data is public and de-identified and the model has 168 parameters. The only way data leaves EEGlass is the opt-in chat assistant (Section 4), which sends what the user types and the public dashboard state to the provider the user chose.
 
 ## 7. Responsible use and reporting
 
